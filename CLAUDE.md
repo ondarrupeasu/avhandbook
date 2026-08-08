@@ -1,4 +1,7 @@
-# AVBible — brief
+# AVHandbook — brief
+
+> Renombrado desde "AV Bible" el 8 ago 2026 (se quita "Bible"; se mantiene "AV" porque
+> se añadirá teoría de sonido → alcance audiovisual). Producto: **AVHandbook**.
 
 > Cerebro del proyecto. Idea nº3 de `~/Proyectos/IDEAS.md`.
 
@@ -8,12 +11,12 @@ Categorías: Image & Signal, Color Science, Artifacts & Defects, Optics & Sensor
 Narrative & Camera, Monitoring & Scopes (y en camino Signals & Connectivity + Lighting).
 Rigor técnico según EBU, SMPTE, ITU-R, DCI. En pleno repaso 2026 (ver más abajo).
 
-- **Web**: https://avbible.cinemafilmak.com (github.io/av-bible redirige ahí)
-- **Repo**: https://github.com/ondarrupeasu/av-bible
+- **Web**: https://avhandbook.cinemafilmak.com (github.io/avhandbook redirige ahí)
+- **Repo**: https://github.com/ondarrupeasu/avhandbook
 
 ## Stack
 React 18 + Vite 5. Sin librerías de UI: canvas nativo, CSS-in-JS inline y Web APIs.
-Todo vive en `src/App.jsx` (~2100 líneas, un solo componente `AVBible`).
+Todo vive en `src/App.jsx` (~2100 líneas, un solo componente `AVHandbook`).
 
 Paleta: fondo `#060609`, accent amber `#f59e0b`, tipografía system-ui.
 Hub con cards por categoría → módulo individual. Upload de imagen global en el
@@ -22,13 +25,13 @@ Responsive, prioridad desktop.
 
 ## Cómo se despliega
 `push a main` → GitHub Actions (`.github/workflows/deploy.yml`) → build → `gh-pages`.
-Pages sirve desde `gh-pages` en el dominio propio **avbible.cinemafilmak.com**
+Pages sirve desde `gh-pages` en el dominio propio **avhandbook.cinemafilmak.com**
 (`public/CNAME` + `vite.config.js` con `base: './'` relativo). Sin tokens manuales.
 
 ⚠️ **`public/.nojekyll` es imprescindible.** Sin él, el build de Jekyll (legacy) de
 Pages falla con "Page build failed" sobre el bundle SPA y **la web se queda congelada
 en la versión anterior aunque el push salga verde**. Si tras un deploy no cambia nada:
-`gh api repos/ondarrupeasu/av-bible/pages` (¿status errored?) y, si hace falta,
+`gh api repos/ondarrupeasu/avhandbook/pages` (¿status errored?) y, si hace falta,
 `gh api -X POST .../pages/builds` para reencolar.
 
 **No commitear `dist/`**: el build se genera en CI. `main` contiene solo el fuente.

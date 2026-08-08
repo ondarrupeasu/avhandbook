@@ -5,7 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 // ─────────────────────────────────────────────
 const STRINGS = {
   en: {
-    appTitle: "AV Bible",
+    appTitle: "AVHandbook",
     appSubtitle: "Interactive Audiovisual Reference",
     backToHub: "← All Modules",
     uploadImage: "Upload your image",
@@ -3384,7 +3384,7 @@ function HubCard({ id, catColor, onClick }) {
 // ─────────────────────────────────────────────
 // Main App
 // ─────────────────────────────────────────────
-export default function AVBible() {
+export default function AVHandbook() {
   const [activeModule, setActiveModule] = useState(null);
   const [userImage, setUserImage] = useState(null);
   const [defaultImage, setDefaultImage] = useState(null);
@@ -3428,7 +3428,7 @@ export default function AVBible() {
             background:"linear-gradient(90deg,#f59e0b,#fb923c)",
             WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
           }}>
-            AV Bible
+            AVHandbook
           </div>
           <div style={{color:"#4b5563",fontSize:11,fontFamily:"monospace"}}>Interactive Audiovisual Reference</div>
         </div>
