@@ -64,6 +64,9 @@ const STRINGS = {
       balancedAudio: { title: "Balanced Audio", desc: "Why XLR rejects noise — differential signalling & phantom" },
       prodSound: { title: "Production Sound", desc: "Room tone, wind, handling, reflections, hum — and the fix" },
       syncTimecode: { title: "Sync & Timecode", desc: "Sync sound, 48 kHz, jam sync, slate, iXML/BWF" },
+      postFlow: { title: "Post Audio & the D/M/E Mix", desc: "Dialogue, music, effects — the stems and the M&E" },
+      stereoSurround: { title: "Stereo & Surround", desc: "Mono compatibility, LCR, 5.1, Atmos and phase" },
+      audioFormats: { title: "Formats & Sampling", desc: "48 kHz / 24-bit, WAV/BWF, and why not 44.1" },
     },
   },
 };
@@ -108,7 +111,7 @@ const CATEGORIES = [
   },
   {
     id: "audio", label: T.categories.audio,
-    modules: ["audioChain","polarPatterns","micTypes","balancedAudio","levels","loudness","prodSound","syncTimecode"],
+    modules: ["audioChain","polarPatterns","micTypes","balancedAudio","levels","loudness","prodSound","syncTimecode","postFlow","stereoSurround","audioFormats"],
   },
 ];
 
@@ -3841,6 +3844,178 @@ function ModuleSyncTimecode() {
 }
 
 // ─────────────────────────────────────────────
+// MODULE: Post Audio & the D/M/E Mix
+// ─────────────────────────────────────────────
+const DME_FADERS=[
+  {id:"d",name:"Dialogue",col:"#f472b6",sub:"production sound · ADR · loop group"},
+  {id:"m",name:"Music",col:"#a78bfa",sub:"score · source music"},
+  {id:"e",name:"Effects",col:"#60a5fa",sub:"Foley · hard SFX · ambience/atmos"},
+];
+function ModulePostFlow() {
+  const [lv,setLv]=useState({d:-6,m:-15,e:-12});
+  const [me,setMe]=useState(false);
+  const bedLin=Math.pow(10,lv.m/20)+Math.pow(10,lv.e/20); const bedDB=20*Math.log10(Math.max(1e-4,bedLin));
+  const snr = me? -99 : (lv.d - bedDB);
+  const clarity = me?0:Math.max(0,Math.min(1,(snr+8)/20));
+  const cLabel = me?["M&E only — no dialogue","#a78bfa"]: clarity>0.7?["clear","#34d399"]: clarity>0.4?["intelligible","#f59e0b"]:["buried","#f87171"];
+  return (
+    <div>
+      <InfoBox>
+        A finished soundtrack is built from three families of sound, the <strong>stems</strong>: <strong style={{color:"#f472b6"}}>Dialogue</strong> (production sound, plus <em>ADR</em> re-recorded in a booth and loop-group crowd), <strong style={{color:"#a78bfa"}}>Music</strong> (score and source), and <strong style={{color:"#60a5fa"}}>Effects</strong> (<em>Foley</em> footsteps and cloth, hard SFX, and ambience/atmos beds). The re-recording mixer balances them so the <strong>dialogue always stays intelligible</strong> — the golden rule of the mix: music and effects duck under the words. Keeping the stems separate has a second payoff: mute the dialogue and you have the <strong>M&amp;E</strong> (Music &amp; Effects) stem that lets the film be <em>dubbed</em> into any language without losing the score or the world. Push music and effects up and watch the dialogue get buried; hit <em>M&amp;E</em> to hear what the dubbing house receives. <strong>Bus routing like this is exactly what your AudioPatchR does.</strong>
+      </InfoBox>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <div style={{flex:"1 1 320px",minWidth:300,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:16}}>
+          {DME_FADERS.map(f=>{ const dim=me&&f.id==="d"; const val=lv[f.id];
+            return (
+            <div key={f.id} style={{marginBottom:14,opacity:dim?0.35:1}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                <span style={{color:f.col,fontWeight:"bold",fontSize:13}}>{f.name} <span style={{color:"#6b7280",fontWeight:"normal",fontSize:10,fontFamily:"monospace"}}>{f.sub}</span></span>
+                <strong style={{color:f.col,fontFamily:"monospace",fontSize:12}}>{val>0?"+":""}{val} dB</strong>
+              </div>
+              <div style={{height:10,background:"#161c26",borderRadius:5,overflow:"hidden",margin:"4px 0"}}>
+                <div style={{width:`${Math.max(0,Math.min(100,(val+40)/46*100))}%`,height:"100%",background:f.col,transition:"width 0.1s"}}/>
+              </div>
+              <input type="range" min={-40} max={6} step={1} value={val} onChange={ev=>setLv(s=>({...s,[f.id]:+ev.target.value}))} style={{...styles.slider,width:"100%"}}/>
+            </div>
+          );})}
+          <button onClick={()=>setMe(v=>!v)} style={{...(me?styles.btnActive:styles.btnChip),marginTop:4}}>{me?"M&E stem: ON (dialogue muted)":"Solo M&E (mute dialogue)"}</button>
+        </div>
+        <div style={{flex:"1 1 220px",minWidth:200,background:"#111",borderRadius:8,padding:16}}>
+          <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>DIALOGUE INTELLIGIBILITY</div>
+          <div style={{color:cLabel[1],fontSize:22,fontWeight:"bold",marginBottom:8}}>{cLabel[0]}</div>
+          <div style={{height:12,background:"#1f2937",borderRadius:6,overflow:"hidden",marginBottom:6}}>
+            <div style={{width:`${clarity*100}%`,height:"100%",background:cLabel[1],transition:"width 0.15s"}}/>
+          </div>
+          {!me && <div style={{color:"#9ca3af",fontSize:12,fontFamily:"monospace"}}>dialogue − bed = {snr>0?"+":""}{snr.toFixed(0)} dB</div>}
+          <div style={{marginTop:12,color:"#6b7280",fontSize:12,lineHeight:1.6}}>{me?"This is the M&E: music + effects, no dialogue — ready to dub into any language.":"Keep dialogue clearly above the music+effects bed. If it reads 'buried', the audience loses the words."}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Stereo & Surround
+// ─────────────────────────────────────────────
+const SPK_FORMATS={
+  mono:{name:"Mono",spk:[[0,1,"C"]]},
+  stereo:{name:"Stereo (L/R)",spk:[[-30,1,"L"],[30,1,"R"]]},
+  lcr:{name:"LCR",spk:[[-30,1,"L"],[0,1,"C"],[30,1,"R"]]},
+  fivepointone:{name:"5.1 surround",spk:[[-30,1,"L"],[0,1,"C"],[30,1,"R"],[-110,1,"Ls"],[110,1,"Rs"],[0,0.35,"LFE"]]},
+  atmos:{name:"Atmos (7.1.4 +objects)",spk:[[-30,1,"L"],[0,1,"C"],[30,1,"R"],[-90,1,"Lss"],[90,1,"Rss"],[-150,1,"Lsr"],[150,1,"Rsr"],[-45,0.6,"Ltf"],[45,0.6,"Rtf"],[-135,0.6,"Ltr"],[135,0.6,"Rtr"]]},
+};
+function ModuleStereoSurround() {
+  const [fmt,setFmt]=useState("stereo");
+  const [pan,setPan]=useState(0);     // -1 L .. +1 R
+  const [width,setWidth]=useState(1); // 1 mono-correlated .. 0 wide .. -1 inverted
+  const ref=useRef();
+  const corr=width;   // simplified correlation
+  const monoOk = corr> -0.2;
+  useEffect(()=>{
+    const c=ref.current; if(!c)return; const S=Math.min(c.parentElement?.clientWidth-24||360,360); c.width=S;c.height=S;
+    const ctx=c.getContext("2d"); ctx.clearRect(0,0,S,S); const cx=S/2, cy=S*0.54, R=S*0.36;
+    // listener
+    ctx.strokeStyle="#1f2937"; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+    ctx.fillStyle="#374151"; ctx.beginPath(); ctx.arc(cx,cy,10,0,7); ctx.fill();
+    ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="center"; ctx.fillText("listener",cx,cy+22);
+    // speakers
+    SPK_FORMATS[fmt].spk.forEach(([ang,sz,lbl])=>{ const a=ang*Math.PI/180; const x=cx+Math.sin(a)*R, y=cy-Math.cos(a)*R;
+      ctx.fillStyle=lbl==="LFE"?"#3a2a5a":"#f472b6"; ctx.fillRect(x-9*sz,y-7*sz,18*sz,14*sz);
+      ctx.fillStyle="#0b0b0e"; ctx.font=`bold ${9*sz}px monospace`; ctx.fillText(lbl,x,y+3*sz); });
+    // phantom source position (pan across front L..R)
+    const sx=cx+pan*R*0.8, sy=cy-R*0.8;
+    const g=ctx.createRadialGradient(sx,sy,1,sx,sy,18); g.addColorStop(0,"rgba(96,165,250,0.9)"); g.addColorStop(1,"rgba(96,165,250,0)");
+    ctx.fillStyle=g; ctx.beginPath();ctx.arc(sx,sy,18,0,7);ctx.fill();
+    ctx.fillStyle="#60a5fa"; ctx.beginPath();ctx.arc(sx,sy,6,0,7);ctx.fill();
+    ctx.fillStyle="#0b0b0e"; ctx.font="10px monospace"; ctx.fillText("♪",sx,sy+4);
+  },[fmt,pan,width]);
+  // L/R levels from pan (equal-power)
+  const th=(pan+1)/2*Math.PI/2; const Lg=Math.cos(th), Rg=Math.sin(th);
+  return (
+    <div>
+      <InfoBox>
+        A mix must work on <em>every</em> system, from a phone speaker to a cinema. <strong>Mono</strong> is one channel — still vital, because phones, laptops and many TVs fold your mix to mono. <strong>Stereo</strong> places sound between L and R; <strong>LCR</strong> adds a hard <em>centre</em> (where dialogue lives, anchored to the screen). <strong>5.1</strong> wraps the audience with surrounds and an <strong>LFE</strong> (.1) sub channel; <strong>Atmos</strong> adds height and treats sounds as <em>objects</em> placed in 3D, rendered to whatever speakers exist. The trap is <strong>phase</strong>: if L and R carry the same sound out of polarity, they <em>cancel</em> when summed to mono — the sound vanishes on half the world's devices. The <strong>correlation meter</strong> warns you: +1 is mono-safe, 0 is wide, negative means trouble. Move the pan and width and watch mono compatibility. <em>(For the physics of stereo and the Haas effect, play in SoundLab.)</em>
+      </InfoBox>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+        {Object.entries(SPK_FORMATS).map(([k,v])=>(<button key={k} onClick={()=>setFmt(k)} style={fmt===k?styles.btnActive:styles.btnChip}>{v.name}</button>))}
+      </div>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,textAlign:"center"}}>
+          <canvas ref={ref} style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto"}}/>
+        </div>
+        <div style={{flex:"1 1 240px",minWidth:220}}>
+          <label style={{...styles.label,marginBottom:10}}>Pan: <strong style={{color:"#f59e0b"}}>{pan===0?"centre":pan<0?`L ${Math.round(-pan*100)}%`:`R ${Math.round(pan*100)}%`}</strong>
+            <input type="range" min={-1} max={1} step={0.02} value={pan} onChange={e=>setPan(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
+          <label style={{...styles.label,marginBottom:14}}>Stereo width: <strong style={{color:"#f59e0b"}}>{width>0.6?"narrow/mono":width>-0.2?"wide":"inverted!"}</strong>
+            <input type="range" min={-1} max={1} step={0.02} value={width} onChange={e=>setWidth(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
+          <div style={{background:"#111",borderRadius:8,padding:12}}>
+            <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>PHASE CORRELATION</div>
+            <div style={{position:"relative",height:10,background:"linear-gradient(90deg,#ef4444,#eab308,#22c55e)",borderRadius:5,marginBottom:4}}>
+              <div style={{position:"absolute",left:`${(corr+1)/2*100}%`,top:-3,width:3,height:16,background:"#fff",transform:"translateX(-50%)"}}/>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",color:"#6b7280",fontSize:9,fontFamily:"monospace"}}><span>−1</span><span>0</span><span>+1</span></div>
+            <div style={{marginTop:8,color:monoOk?"#86efac":"#f87171",fontSize:12,fontFamily:"monospace"}}>{monoOk?"✓ mono-compatible":"✗ cancels in mono!"}</div>
+            <div style={{marginTop:8,color:"#9ca3af",fontSize:11,fontFamily:"monospace"}}>L {(Lg*100).toFixed(0)}%  ·  R {(Rg*100).toFixed(0)}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Formats & Sampling
+// ─────────────────────────────────────────────
+const AUDIO_FORMATS=[
+  {name:"WAV / BWF",lossy:false,use:"Production & post master",note:"Uncompressed PCM. BWF (Broadcast WAVE) adds a timecode/metadata chunk + iXML — the on-set and post standard."},
+  {name:"Poly WAV",lossy:false,use:"Multitrack field recording",note:"One BWF file holding all iso tracks (boom + radios) in sync, with track names in the metadata."},
+  {name:"AIFF",lossy:false,use:"Uncompressed (Apple)",note:"PCM like WAV, Mac-native. Fine as a master; less common than WAV for interchange."},
+  {name:"FLAC / ALAC",lossy:false,use:"Lossless archive",note:"Compressed but bit-perfect — smaller files, no quality loss. Good for archive, not the post interchange norm."},
+  {name:"AAC / MP3",lossy:true,use:"Delivery only",note:"Lossy — never a working/master format. Fine as a final deliverable for streaming/web after the mix."},
+];
+function ModuleAudioFormats() {
+  const [sr,setSr]=useState(48000);
+  const [bd,setBd]=useState(24);
+  const mbPerMin = (sr*bd*2)/8*60/1e6;   // stereo PCM
+  const dr = (bd*6.02+1.76).toFixed(0);
+  return (
+    <div>
+      <InfoBox>
+        Production audio has its own house standard: <strong>48 kHz, 24-bit</strong>. Why 48 and not the 44.1 kHz of CDs? Because <strong>48 kHz is the video world's number</strong> — it divides cleanly against frame rates and is what cameras, recorders and NLEs expect, so everything stays in step. Why 24-bit? <strong>Headroom and a low noise floor</strong>: ~144 dB of dynamic range means you can record conservatively (well below 0 dBFS) and still have clean quiet detail — you record safe and normalise later. The working format is always <strong>uncompressed PCM in a WAV/BWF</strong> (Broadcast WAVE, which carries timecode + iXML); lossy AAC/MP3 is <em>delivery only</em>, never a master. One gotcha unique to film: <strong>pull-up / pull-down</strong> — the 0.1% speed change between 24 and 23.976 fps drifts sound out of sync over a reel if you ignore it. <em>(For the physics of sampling and the Nyquist limit, play in SoundLab.)</em>
+      </InfoBox>
+      <div style={{display:"flex",gap:18,flexWrap:"wrap",marginBottom:16}}>
+        <label style={styles.label}>Sample rate: <strong style={{color:"#f59e0b"}}>{(sr/1000).toFixed(sr%1000?1:0)} kHz</strong>
+          <input type="range" min={0} max={4} step={1} value={[32000,44100,48000,96000,192000].indexOf(sr)} onChange={e=>setSr([32000,44100,48000,96000,192000][+e.target.value])} style={{...styles.slider,width:180}}/></label>
+        <label style={styles.label}>Bit depth: <strong style={{color:"#f59e0b"}}>{bd}-bit</strong>
+          <input type="range" min={0} max={3} step={1} value={[8,16,24,32].indexOf(bd)} onChange={e=>setBd([8,16,24,32][+e.target.value])} style={{...styles.slider,width:150}}/></label>
+        <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
+          <StatBadge label="Dynamic range" value={`~${dr} dB`}/>
+          <StatBadge label="Size (stereo)" value={`${mbPerMin.toFixed(1)} MB/min`}/>
+          <StatBadge label="A/V standard" value={sr===48000&&bd===24?"✓ 48k/24":"— (48k/24)"}/>
+        </div>
+      </div>
+      <div style={{overflowX:"auto",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8}}>
+        <table style={{borderCollapse:"collapse",width:"100%",fontSize:12.5,minWidth:560}}>
+          <thead><tr style={{color:"#9ca3af",textAlign:"left"}}>
+            {["Format","Type","Typical use","Notes"].map(h=>(<th key={h} style={{padding:"8px 12px",borderBottom:"1px solid #1f2937",whiteSpace:"nowrap"}}>{h}</th>))}
+          </tr></thead>
+          <tbody>
+            {AUDIO_FORMATS.map((f,i)=>(
+              <tr key={i} style={{background:i%2?"#0f1520":"transparent"}}>
+                <td style={{padding:"8px 12px",color:"#f3f4f6",fontWeight:"bold",fontFamily:"monospace",whiteSpace:"nowrap"}}>{f.name}</td>
+                <td style={{padding:"8px 12px",color:f.lossy?"#f87171":"#34d399",fontFamily:"monospace"}}>{f.lossy?"lossy":"lossless"}</td>
+                <td style={{padding:"8px 12px",color:"#d1d5db",whiteSpace:"nowrap"}}>{f.use}</td>
+                <td style={{padding:"8px 12px",color:"#9ca3af"}}>{f.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
 const MODULE_COMPONENTS = {
@@ -3853,6 +4028,9 @@ const MODULE_COMPONENTS = {
   loudness: ModuleLoudness,
   prodSound: ModuleProdSound,
   syncTimecode: ModuleSyncTimecode,
+  postFlow: ModulePostFlow,
+  stereoSurround: ModuleStereoSurround,
+  audioFormats: ModuleAudioFormats,
   exposureTriangle: ModuleExposureTriangle,
   falseColor: ModuleFalseColor,
   lut: ModuleLUT,
