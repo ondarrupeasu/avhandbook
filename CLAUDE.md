@@ -90,6 +90,15 @@ imprescindible (ver más abajo). Orden acordado con el usuario:
 
 Total: ~33 módulos, 8 categorías. Fixes helper: ExpRow hoisted (no remontar sliders).
 
+**HECHO — Audio Fase A (9 ago 2026), categoría nueva "Audio" (rosa):**
+- The Audio Chain (flujo source→…→delivery, gain-staging), Microphone Polar Patterns
+  (fuente arrastrable + polar por patrón), Levels & Metering (dBFS/headroom/peak-RMS/
+  clipping), Loudness — EBU R128 (LUFS/LRA/true peak + target, puente a LoudnessFixR).
+- Frontera con SoundLab respetada (física allí; producción aquí). Brief completo en
+  `AUDIO_MODULES_BRIEF.md`. PENDIENTE Fase B (set: micros/directo/sync-iXML→QRClappeR),
+  Fase C (post: D/M/E→AudioPatchR, surround, 48k/BWF) y decidir lo transversal
+  (conectores XLR audio: extender módulo "Signals" vs módulo nuevo).
+
 **Ideas originales del Grupo 4 (referencia, ya implementadas):**
 - LUT; False Color; Exposure Triangle (shutter/apertura/ISO sobre imagen real).
 - Separar RAW → **Compresión/Codecs** (macrobloques + comparativa: intra/inter,
