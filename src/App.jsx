@@ -60,6 +60,10 @@ const STRINGS = {
       polarPatterns: { title: "Microphone Polar Patterns", desc: "Omni, cardioid, shotgun, figure-8 — what a mic hears off-axis" },
       levels: { title: "Levels & Metering", desc: "dBFS, headroom, peak vs RMS, and clipping" },
       loudness: { title: "Loudness — EBU R128", desc: "LUFS, LRA, true peak and the delivery target" },
+      micTypes: { title: "Mic Types & Placement", desc: "Dynamic vs condenser, boom vs lav, the proximity effect" },
+      balancedAudio: { title: "Balanced Audio", desc: "Why XLR rejects noise — differential signalling & phantom" },
+      prodSound: { title: "Production Sound", desc: "Room tone, wind, handling, reflections, hum — and the fix" },
+      syncTimecode: { title: "Sync & Timecode", desc: "Sync sound, 48 kHz, jam sync, slate, iXML/BWF" },
     },
   },
 };
@@ -104,7 +108,7 @@ const CATEGORIES = [
   },
   {
     id: "audio", label: T.categories.audio,
-    modules: ["audioChain","polarPatterns","levels","loudness"],
+    modules: ["audioChain","polarPatterns","micTypes","balancedAudio","levels","loudness","prodSound","syncTimecode"],
   },
 ];
 
@@ -2778,7 +2782,7 @@ const SIGNALS=[
   {id:"usbc",cat:"physical",name:"USB-C",conn:"USB-C",carries:["video","audio","data","power"],dist:"~1–2 m passive",bw:"up to 40 Gb/s (USB4/TB)",lic:"Open · USB-IF",open:true,
    note:"UVC webcams and capture devices, short runs. Handy, not a professional distribution cable."},
   {id:"xlr",cat:"physical",name:"XLR-3 (audio)",conn:"XLR 3-pin",carries:["audio"],dist:"~100 m balanced",bw:"—",lic:"Open",open:true,
-   note:"⚠ Balanced analogue audio (mic/line). Looks identical to 3-pin DMX but carries a completely different signal — never cross the two."},
+   note:"⚠ Balanced analogue audio (mic/line): hot (pin 2) + cold (pin 3) + shield (pin 1), so induced noise cancels — and it carries +48V phantom for condensers. Looks identical to 3-pin DMX but is a completely different signal; never cross the two. See the Audio → Balanced Audio module."},
   {id:"dmx",cat:"physical",name:"DMX512",conn:"XLR 5-pin (std) / 3-pin (common)",carries:["data","control"],dist:"~300 m · 32 devices per run",bw:"512 channels / universe",lic:"Open · ANSI E1.11",open:true,
    note:"⚠ Digital lighting-control DATA over RS-485 — not audio, despite the XLR shell. Daisy-chain fixtures and terminate the last one. Detailed in the Lighting module."},
   {id:"ndi",cat:"ip",name:"NDI",conn:"rides on Ethernet / IP",carries:["video","audio","tally","control"],dist:"LAN (network-limited)",bw:"~100–250 Mb/s Full · HX low-bitrate",lic:"Proprietary · SDK free",open:false,
@@ -3596,14 +3600,259 @@ function ModuleLoudness() {
 }
 
 // ─────────────────────────────────────────────
+// MODULE: Mic Types & Placement
+// ─────────────────────────────────────────────
+const MIC_TYPES=[
+  {id:"dynamic",name:"Dynamic",phantom:false,noise:2,spl:"Very high",
+   detail:"A moving coil in a magnetic field. Rugged, handles very high SPL, needs no power — but less sensitive and detailed. Great for loud sources, handheld and run-and-gun; not ideal for quiet dialogue at a distance."},
+  {id:"condenser",name:"Condenser (+48V)",phantom:true,noise:0.6,spl:"High",
+   detail:"A charged capsule that needs +48 V phantom power. Sensitive, detailed, wide response — the default for boom dialogue and studio work. More fragile and power-hungry than a dynamic."},
+  {id:"ribbon",name:"Ribbon",phantom:false,noise:1,spl:"Moderate",
+   detail:"A thin metal ribbon in a magnetic field — naturally figure-8, smooth and warm. Delicate: never send phantom power to a vintage ribbon, and shield it from wind blasts."},
+];
+function ModuleMicTypes() {
+  const [type,setType]=useState("condenser");
+  const [place,setPlace]=useState("boom");   // boom | lav
+  const [dist,setDist]=useState(0.5);         // metres
+  const curveRef=useRef();
+  const mt=MIC_TYPES.find(m=>m.id===type)||MIC_TYPES[1];
+  const refD=0.4;
+  const level=20*Math.log10(refD/Math.max(0.12,dist));   // inverse-square, dB rel. to refD
+  const prox = place==="boom" ? Math.max(0, (0.6-dist)/0.6) : 0;   // proximity bass boost when close & directional
+  useEffect(()=>{
+    const c=curveRef.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||460,460),H=130; c.width=W;c.height=H;
+    const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+    const x0=30, mid=H*0.52;
+    ctx.strokeStyle="#1f2937"; ctx.beginPath();ctx.moveTo(x0,mid);ctx.lineTo(W,mid);ctx.stroke();
+    ctx.fillStyle="#4b5563"; ctx.font="9px monospace";
+    [20,100,1000,10000,20000].forEach(f=>{ const x=x0+(Math.log10(f)-Math.log10(20))/(Math.log10(20000)-Math.log10(20))*(W-x0); ctx.fillText(f>=1000?(f/1000)+"k":f,x-6,H-2); });
+    ctx.fillText("+6",2,mid-30); ctx.fillText("0",6,mid+3); ctx.fillText("−6",2,mid+34);
+    ctx.strokeStyle="#f472b6"; ctx.lineWidth=2; ctx.beginPath();
+    for(let px=x0;px<=W;px++){ const fr=(px-x0)/(W-x0); const f=Math.pow(10, Math.log10(20)+fr*(Math.log10(20000)-Math.log10(20)));
+      let dB=0;
+      dB += prox*7*Math.exp(-Math.pow(Math.log10(f/90),2)/0.5);            // proximity low-shelf bump ~<200Hz
+      if(place==="lav") dB -= 4*(1/(1+Math.exp(-(Math.log10(f)-Math.log10(6000))*3)));  // chest lav loses highs
+      if(type==="ribbon") dB -= 2*(1/(1+Math.exp(-(Math.log10(f)-Math.log10(9000))*3)));// ribbon gentle HF roll-off
+      const y=mid-dB*5; if(px===x0)ctx.moveTo(px,y); else ctx.lineTo(px,y);
+    }
+    ctx.stroke();
+  },[type,place,dist,prox]);
+  return (
+    <div>
+      <InfoBox>
+        Two decisions shape a recording before any knob: <strong>which mic</strong> and <strong>where you put it</strong>. <strong>Dynamic</strong> mics are rugged and take huge levels with no power; <strong>condensers</strong> are sensitive and detailed but need <strong>+48 V phantom</strong> — the film-sound default on a boom; <strong>ribbons</strong> are warm and delicate. Placement matters just as much: a <strong>boom</strong> overhead gets the cleanest, most natural dialogue but must stay out of frame; a <strong>lav</strong> on the chest is hidden and consistent but loses some highs (clothing, off-axis) and risks rustle. And the <strong>proximity effect</strong>: bring a <em>directional</em> mic close and the bass rises — flattering on a voiceover, boomy if you're not careful. Move the distance and watch the response curve and level change.
+      </InfoBox>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+        {MIC_TYPES.map(m=>(<button key={m.id} onClick={()=>setType(m.id)} style={type===m.id?styles.btnActive:styles.btnChip}>{m.name}</button>))}
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+        {[["Boom","boom"],["Lav","lav"]].map(([l,v])=>(<button key={v} onClick={()=>setPlace(v)} style={place===v?styles.btnActive:styles.btnChip}>{l}</button>))}
+        <label style={styles.label}>Distance: <strong style={{color:"#f59e0b"}}>{dist.toFixed(2)} m</strong>
+          <input type="range" min={0.15} max={2} step={0.01} value={dist} onChange={e=>setDist(+e.target.value)} style={{...styles.slider,width:200}}/></label>
+      </div>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#111",borderRadius:8,padding:12}}>
+          <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>FREQUENCY RESPONSE ({place}, {dist.toFixed(2)} m)</div>
+          <canvas ref={curveRef} style={{display:"block",width:"100%"}}/>
+          <div style={{marginTop:8,display:"flex",gap:10,flexWrap:"wrap"}}>
+            <StatBadge label="Level" value={`${level>0?"+":""}${level.toFixed(1)} dB`}/>
+            <StatBadge label="Proximity" value={prox>0.05?`+${(prox*7).toFixed(1)} dB bass`:"none"}/>
+            <StatBadge label="Phantom" value={mt.phantom?"+48V required":"not needed"}/>
+          </div>
+        </div>
+        <div style={{flex:"1 1 240px",minWidth:220,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:14,color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
+          <div style={{color:"#f472b6",fontWeight:"bold",marginBottom:6}}>{mt.name}</div>
+          {mt.detail}
+          <div style={{marginTop:8,color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>max SPL: {mt.spl}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Balanced Audio (connectors)
+// ─────────────────────────────────────────────
+function ModuleBalancedAudio() {
+  const [balanced,setBalanced]=useState(true);
+  const [noise,setNoise]=useState(0.5);
+  const ref=useRef();
+  useEffect(()=>{
+    const c=ref.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||560,560),H=230; c.width=W;c.height=H;
+    const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+    const N=W, sig=i=>Math.sin(i/N*Math.PI*6)*0.6, nz=i=>Math.sin(i/N*Math.PI*54+0.7)*noise*0.5;
+    const rows=[H*0.22,H*0.5,H*0.8];
+    ctx.font="11px monospace"; ctx.textAlign="left";
+    const drawWave=(y,fn,col,amp)=>{ ctx.strokeStyle=col; ctx.lineWidth=1.4; ctx.beginPath();
+      for(let i=0;i<N;i++){ const v=fn(i)*amp; const yy=y-v*36; if(i===0)ctx.moveTo(i,yy); else ctx.lineTo(i,yy);} ctx.stroke(); };
+    if(balanced){
+      // hot = +sig+noise, cold = -sig+noise, out = hot-cold = 2*sig (noise cancels)
+      ctx.fillStyle="#93c5fd"; ctx.fillText("HOT  (pin 2):  +signal + noise",8,rows[0]-46);
+      drawWave(rows[0],i=>sig(i)+nz(i),"#60a5fa",1);
+      ctx.fillStyle="#fca5a5"; ctx.fillText("COLD (pin 3):  −signal + noise  (same noise!)",8,rows[1]-46);
+      drawWave(rows[1],i=>-sig(i)+nz(i),"#f87171",1);
+      ctx.fillStyle="#86efac"; ctx.fillText("OUT = HOT − COLD:  2×signal, noise CANCELS ✓",8,rows[2]-46);
+      drawWave(rows[2],i=>2*sig(i),"#34d399",1);
+    } else {
+      ctx.fillStyle="#93c5fd"; ctx.fillText("SIGNAL (single conductor)",8,rows[0]-46);
+      drawWave(rows[0],i=>sig(i),"#60a5fa",1);
+      ctx.fillStyle="#fca5a5"; ctx.fillText("+ INDUCED NOISE (long cable, mains, RF)",8,rows[1]-46);
+      drawWave(rows[1],i=>nz(i),"#f87171",1);
+      ctx.fillStyle="#fbbf24"; ctx.fillText("OUT = signal + noise:  noise RIDES ALONG ✗",8,rows[2]-46);
+      drawWave(rows[2],i=>sig(i)+nz(i),"#f59e0b",1);
+    }
+  },[balanced,noise]);
+  return (
+    <div>
+      <InfoBox>
+        Long audio cables act like antennas — they pick up hum from mains and buzz from RF. <strong>Balanced</strong> connections (XLR, TRS) beat this with <strong>differential signalling</strong>: the signal travels on <em>two</em> conductors, one normal (<strong>hot</strong>, pin 2) and one inverted (<strong>cold</strong>, pin 3), inside a shield (pin 1). Interference hits both wires <em>equally</em>. At the far end the receiver <em>subtracts</em> cold from hot: the wanted signal doubles, while the identical noise on both wires <strong>cancels</strong> (common-mode rejection). An <strong>unbalanced</strong> cable (a single conductor, like a guitar or RCA lead) has no such trick — whatever it picks up rides straight into the mix, which is why unbalanced runs must stay short. <strong>+48 V phantom power</strong> also travels down a balanced XLR to feed condenser mics. This is the audio side of the XLR you met in <em>Signals &amp; Connectivity</em> — same connector, and never to be confused with DMX.
+      </InfoBox>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+        {[["Balanced (XLR/TRS)",true],["Unbalanced (TS/RCA)",false]].map(([l,v])=>(
+          <button key={l} onClick={()=>setBalanced(v)} style={balanced===v?styles.btnActive:styles.btnChip}>{l}</button>
+        ))}
+        <label style={styles.label}>Interference: <strong style={{color:"#f59e0b"}}>{Math.round(noise*100)}%</strong>
+          <input type="range" min={0} max={1} step={0.01} value={noise} onChange={e=>setNoise(+e.target.value)} style={{...styles.slider,width:180}}/></label>
+      </div>
+      <div style={{background:"#111",borderRadius:8,padding:12}}>
+        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+      </div>
+      <div style={{marginTop:12,padding:"10px 14px",background:balanced?"#0f1a10":"#1a1410",border:`1px solid ${balanced?"#1f3a24":"#3a2410"}`,borderRadius:8,color:balanced?"#86efac":"#fbbf24",fontSize:13}}>
+        {balanced?"✓ Balanced: the same noise on hot and cold cancels on subtraction — long runs stay clean.":"✗ Unbalanced: nothing cancels the induced noise — keep these cables short (< a few metres)."}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Production Sound (set problems)
+// ─────────────────────────────────────────────
+const PROD_PROBLEMS=[
+  {id:"wind",name:"Wind",col:"#60a5fa",fix:"Use a foam windscreen, and a furry 'deadcat' / blimp (zeppelin) outdoors. Add a low-cut (high-pass) filter. Wind is low-frequency rumble that overloads the capsule."},
+  {id:"handling",name:"Handling noise",col:"#f59e0b",fix:"Don't touch the mic or cable during takes. Use a shock mount and strain-relief; dress cables so they don't tug. Handling noise is low-frequency thumps transmitted through the body/cable."},
+  {id:"reflection",name:"Room reflection / echo",col:"#a78bfa",fix:"Get the mic closer (inverse-square favours the direct sound), treat the room with blankets/absorption, avoid parallel hard walls. Reflections smear dialogue and add comb-filtering."},
+  {id:"hum",name:"Mains hum (50/60 Hz)",col:"#f87171",fix:"Use balanced cables, break ground loops, keep audio away from power/dimmers, check phantom and connectors. Hum is a constant tone at the mains frequency and its harmonics."},
+];
+function ModuleProdSound() {
+  const [on,setOn]=useState({wind:false,handling:false,reflection:false,hum:true});
+  const [roomTone,setRoomTone]=useState(true);
+  const ref=useRef();
+  useEffect(()=>{
+    const c=ref.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||560,560),H=170; c.width=W;c.height=H;
+    const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H); const mid=H/2;
+    ctx.strokeStyle="#1f2937"; ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();
+    const N=W;
+    ctx.strokeStyle="#e5e7eb"; ctx.lineWidth=1.2; ctx.beginPath();
+    for(let i=0;i<N;i++){ const x=i/N;
+      // dialogue-ish base
+      const env=Math.max(0,0.5+0.5*Math.sin(x*Math.PI*5-1))*Math.max(0,0.5+0.5*Math.sin(x*Math.PI*19));
+      let v=Math.sin(x*Math.PI*80)*env*0.45;
+      if(roomTone) v+=(Math.sin(i*12.9)*0.5+Math.sin(i*7.1)*0.5)*0.02;   // low hiss
+      if(on.hum) v+=Math.sin(x*Math.PI*100)*0.10;                          // 50Hz-ish tone
+      if(on.wind) v+=Math.sin(x*Math.PI*4+0.5)*0.28*Math.max(0,Math.sin(x*Math.PI*3)); // LF gusts
+      if(on.handling){ const k=(x*7)%1; if(k<0.04) v+=0.5*(1-k/0.04); }     // thumps
+      if(on.reflection) v+=Math.sin((x-0.02)*Math.PI*80)*env*0.22;         // delayed copy → comb
+      const y=mid-v*(mid-6); if(i===0)ctx.moveTo(i,y); else ctx.lineTo(i,y);
+    }
+    ctx.stroke();
+    ctx.fillStyle="#6b7280"; ctx.font="10px monospace"; ctx.fillText(roomTone?"room tone: present":"room tone: OFF (record 30s of it!)",8,14);
+  },[on,roomTone]);
+  const active=PROD_PROBLEMS.filter(p=>on[p.id]);
+  return (
+    <div>
+      <InfoBox>
+        Location sound is a fight against everything that isn't the dialogue. The usual suspects: <strong>wind</strong> (low-frequency rumble — kill it with a deadcat and a high-pass), <strong>handling noise</strong> (thumps through the mic and cable — shock mounts, don't touch), <strong>room reflections</strong> (echo and comb-filtering — get closer, treat the space), and <strong>mains hum</strong> (a constant 50/60 Hz tone — balanced cables, no ground loops). And the one everyone forgets: <strong>room tone</strong> — 30 seconds of the room's "silence" that the editor needs to patch gaps and smooth cuts. Toggle problems onto the dialogue waveform and read the fix. The rule stands: solve it at the source on set — post can only do so much.
+      </InfoBox>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+        {PROD_PROBLEMS.map(p=>(
+          <button key={p.id} onClick={()=>setOn(o=>({...o,[p.id]:!o[p.id]}))}
+            style={on[p.id]?{...styles.btnActive,borderColor:p.col,color:p.col,background:p.col+"22"}:styles.btnChip}>{p.name}</button>
+        ))}
+        <button onClick={()=>setRoomTone(r=>!r)} style={roomTone?styles.btnActive:styles.btnChip}>Room tone</button>
+      </div>
+      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+      </div>
+      {active.length>0 ? active.map(p=>(
+        <div key={p.id} style={{padding:"10px 14px",background:"#0d1117",border:`1px solid ${p.col}44`,borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6,marginBottom:8}}>
+          <strong style={{color:p.col}}>{p.name}:</strong> {p.fix}
+        </div>
+      )) : <div style={{color:"#6b7280",fontSize:13,fontStyle:"italic"}}>Toggle a problem to see what it does to the waveform and how to fix it on set.</div>}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Sync & Timecode
+// ─────────────────────────────────────────────
+function ModuleSyncTimecode() {
+  const [offset,setOffset]=useState(9);   // audio offset in frames
+  const ref=useRef();
+  const fps=25, clapFrame=6;
+  useEffect(()=>{
+    const c=ref.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||560,560),H=200; c.width=W;c.height=H;
+    const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+    const nF=16, fw=(W-40)/nF, x0=40, pictureY=24, picH=42, audioY=110, audioH=60;
+    // picture strip
+    ctx.fillStyle="#6b7280"; ctx.font="10px monospace"; ctx.textAlign="left"; ctx.fillText("PICTURE",x0,pictureY-6);
+    for(let f=0;f<nF;f++){ const x=x0+f*fw;
+      ctx.fillStyle=f===clapFrame?"#1e3a5f":"#141b26"; ctx.fillRect(x+1,pictureY,fw-2,picH);
+      ctx.strokeStyle="#0a0d12"; ctx.strokeRect(x+1,pictureY,fw-2,picH);
+      if(f===clapFrame){ // slate closes → hands meet
+        ctx.strokeStyle="#93c5fd"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x+fw*0.5-6,pictureY+8);ctx.lineTo(x+fw*0.5+6,pictureY+8); ctx.moveTo(x+fw*0.5-6,pictureY+13);ctx.lineTo(x+fw*0.5+6,pictureY+13); ctx.stroke();
+        ctx.fillStyle="#93c5fd"; ctx.font="8px monospace"; ctx.textAlign="center"; ctx.fillText("clap",x+fw*0.5,pictureY+picH-4); ctx.textAlign="left"; }
+    }
+    // audio track (waveform w/ clap spike), shifted by offset frames
+    ctx.fillStyle="#6b7280"; ctx.font="10px monospace"; ctx.fillText("SOUND",x0,audioY-6);
+    const spikeF=clapFrame+ (offset-9);   // aligned when offset=9 → spike at clapFrame
+    ctx.strokeStyle="#f472b6"; ctx.lineWidth=1.2; ctx.beginPath();
+    for(let px=x0;px<W;px++){ const f=(px-x0)/fw; let v=Math.sin(f*8)*0.1*(0.5+0.5*Math.sin(f*1.3));
+      const d=Math.abs(f-spikeF); if(d<0.5) v+=(0.5-d)*2.2;   // clap transient
+      const y=audioY+audioH/2-v*(audioH/2); if(px===x0)ctx.moveTo(px,y); else ctx.lineTo(px,y);
+    } ctx.stroke();
+    // clap alignment lines
+    const clapX=x0+(clapFrame+0.5)*fw, spikeX=x0+(spikeF+0.5)*fw;
+    ctx.strokeStyle="rgba(147,197,253,0.6)"; ctx.setLineDash([3,3]); ctx.beginPath();ctx.moveTo(clapX,pictureY);ctx.lineTo(clapX,pictureY+picH);ctx.stroke();
+    ctx.strokeStyle="rgba(244,114,182,0.6)"; ctx.beginPath();ctx.moveTo(spikeX,audioY);ctx.lineTo(spikeX,audioY+audioH);ctx.stroke(); ctx.setLineDash([]);
+    const inSync=Math.abs(spikeF-clapFrame)<0.25;
+    ctx.fillStyle=inSync?"#34d399":"#f59e0b"; ctx.font="bold 12px monospace"; ctx.textAlign="right";
+    ctx.fillText(inSync?"IN SYNC ✓":`${offset-9>0?"+":""}${offset-9} frames`,W-6,H-8);
+  },[offset]);
+  const off=offset-9, ms=Math.round(off/fps*1000);
+  const inSync=off===0;
+  return (
+    <div>
+      <InfoBox>
+        In <strong>double-system</strong> sound, picture and audio are recorded on <em>separate</em> devices, so they must be brought back together. The oldest, most reliable sync point is the <strong>slate</strong> (clapperboard): the instant the clap closes gives one frame in picture and one sharp spike in the sound — line them up and the take is synced. Professionally, both camera and recorder run <strong>timecode</strong>: at the start of the day they're <strong>jam-synced</strong> to the same clock so every file is stamped with matching time and the NLE aligns them automatically. Production audio is <strong>48 kHz</strong> (the A/V standard) and carries metadata inside the file — <strong>BWF/iXML</strong> holds scene/take, timecode and track names. Slide the sound until the clap spike meets the clap frame. <strong>Your QRClappeR/ClapTag works exactly this metadata — QR slate, timecode and iXML.</strong>
+      </InfoBox>
+      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+      </div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+        <label style={styles.label}>Sound offset: <strong style={{color:inSync?"#34d399":"#f59e0b"}}>{off>0?"+":""}{off} frames ({ms>0?"+":""}{ms} ms)</strong>
+          <input type="range" min={0} max={18} step={1} value={offset} onChange={e=>setOffset(+e.target.value)} style={{...styles.slider,width:240}}/></label>
+        <button onClick={()=>setOffset(9)} style={styles.btnChip}>Auto-sync (jam)</button>
+      </div>
+      <div style={{padding:"10px 14px",background:inSync?"#0f1a10":"#0d1117",border:`1px solid ${inSync?"#1f3a24":"#1f2937"}`,borderRadius:8,color:inSync?"#86efac":"#9ca3af",fontSize:13}}>
+        {inSync?"✓ Clap frame and audio spike aligned — the take is in sync. Timecode does this automatically for every file.":"Out of sync: the mouths won't match the voices. Drag until the pink spike meets the blue clap frame — or let jam-synced timecode do it."}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
 const MODULE_COMPONENTS = {
   aspectRatio: ModuleAspectRatio,
   audioChain: ModuleAudioChain,
   polarPatterns: ModulePolarPatterns,
+  micTypes: ModuleMicTypes,
+  balancedAudio: ModuleBalancedAudio,
   levels: ModuleLevels,
   loudness: ModuleLoudness,
+  prodSound: ModuleProdSound,
+  syncTimecode: ModuleSyncTimecode,
   exposureTriangle: ModuleExposureTriangle,
   falseColor: ModuleFalseColor,
   lut: ModuleLUT,
