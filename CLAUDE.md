@@ -90,14 +90,17 @@ imprescindible (ver más abajo). Orden acordado con el usuario:
 
 Total: ~33 módulos, 8 categorías. Fixes helper: ExpRow hoisted (no remontar sliders).
 
-**HECHO — Audio Fase A (9 ago 2026), categoría nueva "Audio" (rosa):**
-- The Audio Chain (flujo source→…→delivery, gain-staging), Microphone Polar Patterns
-  (fuente arrastrable + polar por patrón), Levels & Metering (dBFS/headroom/peak-RMS/
-  clipping), Loudness — EBU R128 (LUFS/LRA/true peak + target, puente a LoudnessFixR).
-- Frontera con SoundLab respetada (física allí; producción aquí). Brief completo en
-  `AUDIO_MODULES_BRIEF.md`. PENDIENTE Fase B (set: micros/directo/sync-iXML→QRClappeR),
-  Fase C (post: D/M/E→AudioPatchR, surround, 48k/BWF) y decidir lo transversal
-  (conectores XLR audio: extender módulo "Signals" vs módulo nuevo).
+**HECHO — categoría "Audio" COMPLETA (9 ago 2026, rosa) — 11 módulos, A+B+C:**
+- Fase A: The Audio Chain, Microphone Polar Patterns (arrastrable), Levels & Metering
+  (dBFS/clipping), Loudness — EBU R128 (→LoudnessFixR).
+- Fase B: Mic Types & Placement (proximidad), Balanced Audio (rechazo diferencial de
+  ruido — resuelve lo transversal SIN duplicar Signals, cross-link), Production Sound
+  (viento/handling/reflexión/hum/room tone), Sync & Timecode (claqueta+iXML →QRClappeR).
+- Fase C: Post & D/M/E Mix (inteligibilidad + M&E →AudioPatchR), Stereo & Surround
+  (correlación de fase, mono compat, →SoundLab física), Formats & Sampling (48k/24,
+  BWF, pull-up/down, →SoundLab Nyquist).
+- Frontera con SoundLab respetada; puentes a las apps como texto (son escritorio).
+  Brief original en `AUDIO_MODULES_BRIEF.md`. Total AVHandbook ahora ~44 módulos, 9 cat.
 
 **Ideas originales del Grupo 4 (referencia, ya implementadas):**
 - LUT; False Color; Exposure Triangle (shutter/apertura/ISO sobre imagen real).
