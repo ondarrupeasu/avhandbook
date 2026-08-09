@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "avhandbook",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "/Users/ondarru/Proyectos/avhandbook"],
+      "port": 5173
+    }
+  ]
+}

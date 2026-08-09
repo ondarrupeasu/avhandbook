@@ -20,6 +20,7 @@ const STRINGS = {
       scopes: "Monitoring & Scopes",
       signals: "Signals & Connectivity",
       lighting: "Lighting",
+      audio: "Audio",
     },
     modules: {
       aspectRatio: { title: "Aspect Ratio", desc: "Explore how different ratios frame the world" },
@@ -55,6 +56,10 @@ const STRINGS = {
       halation: { title: "Halation & Bloom", desc: "Highlight glow — the red halo of film" },
       flicker: { title: "Flicker & Rolling Bands", desc: "50/60 Hz and PWM LED — banding and flicker" },
       focusBreathing: { title: "Focus Breathing", desc: "Field of view shifting as you rack focus" },
+      audioChain: { title: "The Audio Chain", desc: "Signal flow from source to delivery — and where you set gain" },
+      polarPatterns: { title: "Microphone Polar Patterns", desc: "Omni, cardioid, shotgun, figure-8 — what a mic hears off-axis" },
+      levels: { title: "Levels & Metering", desc: "dBFS, headroom, peak vs RMS, and clipping" },
+      loudness: { title: "Loudness — EBU R128", desc: "LUFS, LRA, true peak and the delivery target" },
     },
   },
 };
@@ -96,6 +101,10 @@ const CATEGORIES = [
   {
     id: "lighting", label: T.categories.lighting,
     modules: ["portraitLight","dmx"],
+  },
+  {
+    id: "audio", label: T.categories.audio,
+    modules: ["audioChain","polarPatterns","levels","loudness"],
   },
 ];
 
@@ -3311,10 +3320,290 @@ function ModuleDMX() {
 }
 
 // ─────────────────────────────────────────────
+// MODULE: The Audio Chain (signal flow)
+// ─────────────────────────────────────────────
+const AUDIO_STAGES=[
+  {id:"source",icon:"🗣",name:"Source",sub:"voice · instrument · room",gain:false,
+   detail:"The real sound in the air — acoustic energy. Its level, the distance to it and the room's acoustics are decided here, before any electronics touch it. The golden rule of production sound: the best fix is always at the source. Get the mic close and control the room; nothing downstream recovers a bad acoustic."},
+  {id:"mic",icon:"🎤",name:"Microphone",sub:"transducer · mic level",gain:false,
+   detail:"Converts acoustic pressure into a tiny electrical signal — mic level, roughly −60 to −40 dBu. The polar pattern and placement decide what it captures and what it rejects. Condenser mics need +48 V phantom power; dynamics don't."},
+  {id:"pre",icon:"🎚",name:"Preamp / Gain",sub:"the critical stage",gain:true,
+   detail:"Amplifies mic level up toward line level. THIS is where you set gain staging: enough gain to sit the signal well above the noise floor, but with headroom so peaks never reach 0 dBFS. Too little gain = a noisy, thin recording; too much = clipping you can't undo. The single most important knob on set."},
+  {id:"rec",icon:"🎛",name:"Recorder / Mixer",sub:"capture · monitor · meter",gain:true,
+   detail:"Records to file (48 kHz / 24-bit for A/V) and/or mixes several sources. The meters live here — dBFS, peak and RMS. Multi-track keeps every mic separate for post; a mixdown bakes them together. Set record level with headroom, monitor on headphones."},
+  {id:"post",icon:"💻",name:"Post",sub:"edit · mix",gain:true,
+   detail:"Editing and cleanup, ADR and Foley, then the D/M/E mix (dialogue-music-effects). Levels are balanced for intelligibility and shaped for the delivery format. → see the Post Audio Flow module; bus routing is what your AudioPatchR handles."},
+  {id:"deliver",icon:"📤",name:"Delivery",sub:"the target spec",gain:false,
+   detail:"The final file must hit a loudness target (−23 LUFS broadcast, −14 LUFS streaming) and a true-peak ceiling. → see Loudness — EBU R128; your LoudnessFixR automates exactly this last step."},
+];
+function ModuleAudioChain() {
+  const [sel,setSel]=useState("pre");
+  const s=AUDIO_STAGES.find(x=>x.id===sel)||AUDIO_STAGES[0];
+  return (
+    <div>
+      <InfoBox>
+        Every piece of recorded sound travels the same road: <strong>source → microphone → preamp → recorder → post → delivery</strong>. Understanding the chain tells you <em>where</em> to fix a problem — and the answer is almost always <em>as early as possible</em>. The most important idea is <strong>gain staging</strong>: at each amplifying stage you want a healthy signal, comfortably above the noise floor but with <em>headroom</em> below 0 dBFS. Set it right at the preamp and everything downstream is easy; get it wrong there and no plug-in fully rescues it. Click each stage to see what it does and where the level is set.
+      </InfoBox>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"stretch",marginBottom:16}}>
+        {AUDIO_STAGES.map((st,i)=>(
+          <div key={st.id} style={{display:"flex",alignItems:"center",gap:6}}>
+            <button onClick={()=>setSel(st.id)} style={{
+              display:"flex",flexDirection:"column",alignItems:"center",gap:2,minWidth:92,padding:"10px 8px",borderRadius:8,cursor:"pointer",
+              border:`1px solid ${sel===st.id?"#f472b6":"#1f2937"}`, background:sel===st.id?"#f472b622":"#0d1117", transition:"all 0.15s"}}>
+              <span style={{fontSize:20}}>{st.icon}</span>
+              <span style={{color:"#f3f4f6",fontSize:12,fontWeight:"bold"}}>{st.name}</span>
+              <span style={{color:"#6b7280",fontSize:9.5,fontFamily:"monospace",textAlign:"center"}}>{st.sub}</span>
+              {st.gain && <span style={{color:"#f472b6",fontSize:9,fontFamily:"monospace"}}>◈ gain</span>}
+            </button>
+            {i<AUDIO_STAGES.length-1 && <span style={{color:"#4b5563",fontSize:16}}>→</span>}
+          </div>
+        ))}
+      </div>
+      <div style={{background:"#0d1117",border:`1px solid ${s.gain?"#f472b644":"#1f2937"}`,borderRadius:10,padding:"14px 18px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
+          <span style={{fontSize:22}}>{s.icon}</span>
+          <span style={{color:"#f3f4f6",fontSize:17,fontWeight:"bold"}}>{s.name}</span>
+          {s.gain && <span style={{fontSize:11,fontFamily:"monospace",padding:"2px 8px",borderRadius:4,background:"#f472b622",color:"#f472b6"}}>gain-staging point</span>}
+        </div>
+        <div style={{color:"#d1d5db",fontSize:13.5,lineHeight:1.7}}>{s.detail}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Microphone Polar Patterns
+// ─────────────────────────────────────────────
+const POLAR_PATTERNS=[
+  {id:"omni",name:"Omnidirectional",resp:t=>1,note:"Equal pickup from every direction. Natural, full low end, no proximity effect — but no rejection at all: it hears the room and every off-axis noise. Lavaliers, ambience, choirs."},
+  {id:"cardioid",name:"Cardioid",resp:t=>0.5+0.5*Math.cos(t),note:"Heart-shaped: full pickup on-axis, maximum rejection directly behind (180°). The workhorse pattern — vocals, dialogue, most situations where you point at the subject and reject the back of the room."},
+  {id:"supercardioid",name:"Supercardioid",resp:t=>0.37+0.63*Math.cos(t),note:"Tighter front lobe than cardioid, with a small rear lobe. Deepest rejection at ~127°. More reach and isolation; watch the rear lobe when placing monitors/noise."},
+  {id:"hypercardioid",name:"Hypercardioid",resp:t=>0.25+0.75*Math.cos(t),note:"Even tighter and more directional, larger rear lobe (nulls at ~110°). Great isolation on a noisy set — but you must aim it precisely or the subject drifts off-axis."},
+  {id:"shotgun",name:"Shotgun (lobar)",resp:t=>0.78*Math.pow(Math.max(0,0.5+0.5*Math.cos(t)),3)+0.10*Math.pow(Math.max(0,-Math.cos(t)),4),note:"A very narrow forward lobe from an interference tube. The boom mic for exteriors and reach — but indoors the tube can colour reflections. Aim is critical."},
+  {id:"fig8",name:"Figure-8 (bidirectional)",resp:t=>Math.abs(Math.cos(t)),note:"Equal pickup front and back, total rejection at the sides (90°). Ribbon mics, and the basis of M/S and Blumlein stereo. Strong proximity effect."},
+];
+function drawPolar(canvas, pat, srcDeg, srcDist){
+  const S=Math.min(canvas.parentElement?.clientWidth-24||360,360); canvas.width=S; canvas.height=S;
+  const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,S,S);
+  const cx=S/2, cy=S/2, R=S*0.36;
+  // rings + labels
+  ctx.strokeStyle="#1b2230"; ctx.lineWidth=1; ctx.fillStyle="#4b5563"; ctx.font="9px monospace"; ctx.textAlign="center";
+  for(let k=1;k<=4;k++){ ctx.beginPath(); ctx.arc(cx,cy,R*k/4,0,7); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(cx,cy-R-8); ctx.lineTo(cx,cy+R+8); ctx.moveTo(cx-R-8,cy); ctx.lineTo(cx+R+8,cy); ctx.strokeStyle="#141b26"; ctx.stroke();
+  ctx.fillText("front 0°",cx,cy-R-12); ctx.fillText("rear 180°",cx,cy+R+18); ctx.fillText("90°",cx+R+16,cy+3); ctx.fillText("270°",cx-R-16,cy+3);
+  // pattern curve
+  ctx.beginPath();
+  for(let a=0;a<=360;a+=2){ const t=a*Math.PI/180; const r=Math.min(1,Math.abs(pat.resp(t)))*R;
+    const x=cx+Math.sin(t)*r, y=cy-Math.cos(t)*r; if(a===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+  ctx.closePath(); ctx.fillStyle="rgba(244,114,182,0.16)"; ctx.fill(); ctx.strokeStyle="#f472b6"; ctx.lineWidth=2; ctx.stroke();
+  // mic body at centre (points up = front)
+  ctx.fillStyle="#374151"; ctx.beginPath(); ctx.arc(cx,cy,7,0,7); ctx.fill();
+  ctx.strokeStyle="#6b7280"; ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,cy-14); ctx.stroke();
+  // source position
+  const t=srcDeg*Math.PI/180, rr=R*0.25+srcDist*(R*0.9);
+  const sx=cx+Math.sin(t)*rr, sy=cy-Math.cos(t)*rr;
+  const resp=Math.min(1,Math.abs(pat.resp(t)));
+  const distF=Math.min(1, 0.5/Math.max(0.25,srcDist)); const level=resp*distF;
+  ctx.strokeStyle="rgba(255,255,255,0.25)"; ctx.setLineDash([3,3]); ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(sx,sy); ctx.stroke(); ctx.setLineDash([]);
+  const g=ctx.createRadialGradient(sx,sy,1,sx,sy,16); g.addColorStop(0,`rgba(96,165,250,${0.4+level*0.5})`); g.addColorStop(1,"rgba(96,165,250,0)");
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(sx,sy,16,0,7); ctx.fill();
+  ctx.fillStyle="#60a5fa"; ctx.beginPath(); ctx.arc(sx,sy,7,0,7); ctx.fill();
+  ctx.fillStyle="#0b0b0e"; ctx.font="11px monospace"; ctx.fillText("♪",sx,sy+4);
+  return {cx,cy,resp,level,angle:srcDeg};
+}
+function ModulePolarPatterns() {
+  const [pat,setPat]=useState("cardioid");
+  const [deg,setDeg]=useState(35),[dist,setDist]=useState(0.5);
+  const ref=useRef(), dragRef=useRef(false);
+  const P=POLAR_PATTERNS.find(p=>p.id===pat)||POLAR_PATTERNS[1];
+  const t=deg*Math.PI/180; const resp=Math.min(1,Math.abs(P.resp(t)));
+  const dB=20*Math.log10(Math.max(0.001,resp));
+  useEffect(()=>{ if(ref.current) drawPolar(ref.current,P,deg,dist); },[P,deg,dist]);
+  const onMove=e=>{ if(!dragRef.current)return; const c=ref.current,r=c.getBoundingClientRect();
+    const x=(e.clientX-r.left)*(c.width/r.width)-c.width/2, y=(e.clientY-r.top)*(c.height/r.height)-c.height/2;
+    let a=Math.atan2(x,-y)*180/Math.PI; if(a<0)a+=360; setDeg(a);
+    const R=Math.min(c.width,c.height)*0.36; const rr=Math.hypot(x,y); setDist(Math.max(0,Math.min(1,(rr-R*0.25)/(R*0.9)))); };
+  const zone= resp>0.7?["on-axis","#34d399"]: resp>0.3?["off-axis","#f59e0b"]: resp>0.08?["strong rejection","#f87171"]:["near null","#6b7280"];
+  return (
+    <div>
+      <InfoBox>
+        A microphone's <strong>polar pattern</strong> is its map of sensitivity by direction — how much it picks up from the front, sides and back. It is the mic's most important property after the capsule itself, because it decides what you <em>reject</em>: an <strong>omni</strong> hears everything equally (no rejection), a <strong>cardioid</strong> favours the front and kills the rear, a <strong>shotgun</strong> reaches far down a narrow lobe, a <strong>figure-8</strong> hears front and back but nothing at the sides. On a noisy set you choose the pattern — and aim it — so the subject sits on-axis while the noise falls into a null. Drag the sound source around the mic and watch how much it captures; the tighter the pattern, the more precisely you must point it.
+      </InfoBox>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
+        {POLAR_PATTERNS.map(p=>(<button key={p.id} onClick={()=>setPat(p.id)} style={pat===p.id?styles.btnActive:styles.btnChip}>{p.name}</button>))}
+      </div>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,textAlign:"center"}}>
+          <canvas ref={ref}
+            onPointerDown={e=>{dragRef.current=true; e.currentTarget.setPointerCapture(e.pointerId); onMove(e);}}
+            onPointerMove={onMove} onPointerUp={()=>{dragRef.current=false;}}
+            style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto",cursor:"grab",touchAction:"none"}}/>
+        </div>
+        <div style={{flex:"1 1 240px",minWidth:220}}>
+          <div style={{background:"#111",borderRadius:8,padding:14,marginBottom:12}}>
+            <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>PICKUP AT {Math.round(deg)}°</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
+              <span style={{color:zone[1],fontSize:24,fontWeight:"bold",fontFamily:"monospace"}}>{Math.round(resp*100)}%</span>
+              <span style={{color:"#9ca3af",fontFamily:"monospace",fontSize:13}}>{dB<=-60?"−∞":dB.toFixed(1)} dB</span>
+            </div>
+            <div style={{height:8,background:"#1f2937",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+              <div style={{width:`${resp*100}%`,height:"100%",background:zone[1],transition:"width 0.1s"}}/>
+            </div>
+            <div style={{color:zone[1],fontSize:12,fontFamily:"monospace"}}>{zone[0]}</div>
+          </div>
+          <label style={styles.label}>Source angle: <strong style={{color:"#f59e0b"}}>{Math.round(deg)}°</strong>
+            <input type="range" min={0} max={360} step={1} value={deg} onChange={e=>setDeg(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
+        </div>
+      </div>
+      <div style={{marginTop:12,padding:"10px 14px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6}}>
+        <strong style={{color:"#f472b6"}}>{P.name}:</strong> {P.note}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Levels & Metering (dBFS)
+// ─────────────────────────────────────────────
+function ModuleLevels() {
+  const [gain,setGain]=useState(0);   // dB applied
+  const wfRef=useRef(), meterRef=useRef();
+  // representative dialogue-like envelope (deterministic)
+  const N=480;
+  const sig=(()=>{ const a=[]; for(let i=0;i<N;i++){ const x=i/N;
+    const env=Math.max(0, 0.5+0.5*Math.sin(x*Math.PI*6-1))*Math.max(0,0.6+0.5*Math.sin(x*Math.PI*23))*(0.7+0.3*Math.sin(x*40));
+    a.push(Math.sin(x*Math.PI*90)*env); } return a; })();
+  const peakN=Math.max(...sig.map(Math.abs));
+  const lin=Math.pow(10,gain/20);
+  let clipped=false; const out=sig.map(v=>{ let o=v/peakN*0.5*lin; if(o>1){o=1;clipped=true;} if(o<-1){o=-1;clipped=true;} return o; });
+  const peak=Math.max(...out.map(Math.abs));
+  const rms=Math.sqrt(out.reduce((s,v)=>s+v*v,0)/out.length);
+  const peakDB=20*Math.log10(Math.max(1e-4,peak)), rmsDB=20*Math.log10(Math.max(1e-4,rms));
+  useEffect(()=>{
+    const c=wfRef.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||520,520), H=150; c.width=W;c.height=H;
+    const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H); const mid=H/2;
+    ctx.strokeStyle="#1f2937"; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
+    // clip lines at ±1
+    ctx.strokeStyle="rgba(248,113,113,0.4)"; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(0,2);ctx.lineTo(W,2);ctx.moveTo(0,H-2);ctx.lineTo(W,H-2);ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle=clipped?"#f87171":"#34d399"; ctx.lineWidth=1.4; ctx.beginPath();
+    out.forEach((v,i)=>{ const x=i/out.length*W, y=mid-v*(mid-3); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+    if(clipped){ ctx.fillStyle="#f87171"; ctx.font="bold 12px monospace"; ctx.fillText("CLIP",W-46,16); }
+  },[gain]);
+  useEffect(()=>{
+    const c=meterRef.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||520,520), H=64; c.width=W;c.height=H;
+    const ctx=c.getContext("2d"); ctx.clearRect(0,0,W,H);
+    const dbToX=db=>((db+60)/60)*W;    // -60..0 → 0..W
+    // headroom zone (-18..0)
+    ctx.fillStyle="rgba(245,158,11,0.10)"; ctx.fillRect(dbToX(-18),0,W-dbToX(-18),H);
+    // scale
+    ctx.fillStyle="#4b5563"; ctx.font="9px monospace"; ctx.textAlign="center";
+    [-60,-48,-36,-24,-18,-12,-6,0].forEach(db=>{ const x=dbToX(db); ctx.strokeStyle="#1f2937"; ctx.beginPath();ctx.moveTo(x,14);ctx.lineTo(x,H);ctx.stroke(); ctx.fillText(db,x,10); });
+    // RMS bar
+    const rG=ctx.createLinearGradient(0,0,W,0); rG.addColorStop(0,"#166534"); rG.addColorStop(0.7,"#22c55e"); rG.addColorStop(0.85,"#eab308"); rG.addColorStop(1,"#ef4444");
+    ctx.fillStyle=rG; ctx.fillRect(0,20,Math.max(0,dbToX(rmsDB)),18);
+    // peak marker
+    ctx.fillStyle=peakDB> -0.1?"#ef4444":"#e5e7eb"; ctx.fillRect(Math.max(0,dbToX(peakDB))-1.5,18,3,22);
+    ctx.fillStyle="#9ca3af"; ctx.font="10px monospace"; ctx.textAlign="left"; ctx.fillText("RMS",4,32); ctx.textAlign="right"; ctx.fillText("peak ▲",W-4,52);
+  },[gain]);
+  return (
+    <div>
+      <InfoBox>
+        Digital audio is measured in <strong>dBFS</strong> — decibels relative to <em>full scale</em>. <strong>0 dBFS is the absolute ceiling</strong>: the loudest a sample can be. Go above it and the waveform's peaks are chopped flat — <strong>clipping</strong>, a harsh distortion you cannot undo. So you record with <strong>headroom</strong>: aim the signal comfortably below 0 (dialogue often sits around −18 to −12 dBFS on peaks) so unexpected louds still fit. Two meters matter: <strong>peak</strong> catches the instantaneous maximum (what clips), while <strong>RMS</strong> tracks the average energy (what you perceive as loudness). A signal can have modest RMS but a spiky peak — always leave room for the peak. Push the gain and watch the peak hit 0 dBFS and the waveform flatten into clipping.
+      </InfoBox>
+      <label style={{...styles.label,marginBottom:12}}>Input gain: <strong style={{color:clipped?"#f87171":"#f59e0b"}}>{gain>0?"+":""}{gain} dB</strong> {clipped && <span style={{color:"#f87171",fontFamily:"monospace"}}> · CLIPPING</span>}
+        <input type="range" min={-12} max={24} step={0.5} value={gain} onChange={e=>setGain(+e.target.value)} style={{...styles.slider,width:280}}/></label>
+      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+        <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>WAVEFORM</div>
+        <canvas ref={wfRef} style={{display:"block",width:"100%"}}/>
+      </div>
+      <div style={{background:"#111",borderRadius:8,padding:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+          <span style={{color:"#6b7280",fontSize:10,fontFamily:"monospace"}}>METER (dBFS) · amber = headroom zone</span>
+          <span style={{fontFamily:"monospace",fontSize:11}}><span style={{color:"#9ca3af"}}>peak </span><strong style={{color:peakDB>-0.1?"#f87171":"#e5e7eb"}}>{peakDB<=-0.05?peakDB.toFixed(1):"0.0"} </strong><span style={{color:"#9ca3af"}}> RMS </span><strong style={{color:"#22c55e"}}>{rmsDB.toFixed(1)}</strong></span>
+        </div>
+        <canvas ref={meterRef} style={{display:"block",width:"100%"}}/>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Loudness — EBU R128
+// ─────────────────────────────────────────────
+const LOUD_TARGETS=[{id:"ebu",name:"EBU R128 broadcast",lufs:-23,tp:-1},{id:"stream",name:"Streaming",lufs:-14,tp:-1},{id:"cinema",name:"Cinema (dial-norm)",lufs:-27,tp:-2}];
+function ModuleLoudness() {
+  const [target,setTarget]=useState("ebu");
+  const [offset,setOffset]=useState(0);
+  const ref=useRef();
+  const tgt=LOUD_TARGETS.find(t=>t.id===target)||LOUD_TARGETS[0];
+  // representative momentary-loudness profile over time (LUFS), deterministic
+  const N=200;
+  const prof=(()=>{ const a=[]; for(let i=0;i<N;i++){ const x=i/N;
+    let v=-24 + 8*Math.sin(x*Math.PI*3) + 4*Math.sin(x*Math.PI*11+1) - (x<0.12?18*(0.12-x)/0.12:0) - (x>0.85?10*(x-0.85)/0.15:0);
+    a.push(v); } return a; })();
+  const shifted=prof.map(v=>v+offset);
+  // integrated ≈ mean of gated (above -34) values, in the loudness domain (approx via mean of 10^(v/10))
+  const gated=shifted.filter(v=>v>-45);
+  const integrated=10*Math.log10(gated.reduce((s,v)=>s+Math.pow(10,v/10),0)/gated.length);
+  const sorted=[...shifted].sort((a,b)=>a-b); const LRA=(sorted[Math.floor(N*0.95)]-sorted[Math.floor(N*0.10)]);
+  const truePeak=Math.max(...shifted)+9;   // rough TP proxy above momentary max
+  const toTarget=tgt.lufs-integrated;
+  useEffect(()=>{
+    const c=ref.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||560,560), H=200; c.width=W;c.height=H;
+    const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+    const top=-6,bot=-40, yOf=v=>((top-v)/(top-bot))*(H-24)+6;
+    // grid
+    ctx.fillStyle="#4b5563"; ctx.font="9px monospace"; ctx.textAlign="left";
+    for(let v=-10;v>=-40;v-=10){ const y=yOf(v); ctx.strokeStyle="#141b26"; ctx.beginPath();ctx.moveTo(28,y);ctx.lineTo(W,y);ctx.stroke(); ctx.fillText(v+"",2,y+3); }
+    // target line
+    const ty=yOf(tgt.lufs); ctx.strokeStyle="#f472b6"; ctx.setLineDash([6,4]); ctx.lineWidth=1.5; ctx.beginPath();ctx.moveTo(28,ty);ctx.lineTo(W,ty);ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="#f472b6"; ctx.textAlign="right"; ctx.fillText(`target ${tgt.lufs}`,W-4,ty-4);
+    // momentary curve
+    ctx.strokeStyle="#60a5fa"; ctx.lineWidth=1.4; ctx.beginPath();
+    shifted.forEach((v,i)=>{ const x=28+i/N*(W-28), y=yOf(Math.max(bot,Math.min(top,v))); if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+    // integrated line
+    const iy=yOf(integrated); ctx.strokeStyle="#34d399"; ctx.lineWidth=2; ctx.beginPath();ctx.moveTo(28,iy);ctx.lineTo(W,iy);ctx.stroke();
+    ctx.fillStyle="#34d399"; ctx.textAlign="left"; ctx.fillText(`integrated ${integrated.toFixed(1)} LUFS`,32,iy-4);
+  },[target,offset]);
+  const ok=Math.abs(toTarget)<0.5;
+  return (
+    <div>
+      <InfoBox>
+        Peak meters tell you what <em>clips</em>, but not what sounds <em>loud</em> — two clips at −1 dBFS can differ wildly in perceived volume. <strong>Loudness (EBU R128 / ITU BS.1770)</strong> measures perceived loudness in <strong>LUFS</strong> (loudness units, full scale), K-weighted to match the ear. Three windows: <strong>momentary</strong> (400 ms), <strong>short-term</strong> (3 s) and the all-important <strong>integrated</strong> value over the whole programme. Broadcast delivers at <strong>−23 LUFS</strong> (EBU R128), streaming around <strong>−14</strong>. <strong>LRA</strong> (loudness range) describes how much it varies; <strong>true peak</strong> catches inter-sample peaks that a normal peak meter misses, kept below −1 dBTP. This is why loudness is normalised, not just peak-limited — so every programme feels equally loud. Nudge the gain to land the <span style={{color:"#34d399"}}>integrated</span> line on the <span style={{color:"#f472b6"}}>target</span>. <strong>Your LoudnessFixR does exactly this automatically.</strong>
+      </InfoBox>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+        {LOUD_TARGETS.map(t=>(<button key={t.id} onClick={()=>setTarget(t.id)} style={target===t.id?styles.btnActive:styles.btnChip}>{t.name} ({t.lufs})</button>))}
+      </div>
+      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+        <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>LOUDNESS OVER TIME (LUFS)</div>
+        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+      </div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
+        <label style={styles.label}>Gain offset: <strong style={{color:"#f59e0b"}}>{offset>0?"+":""}{offset.toFixed(1)} LU</strong>
+          <input type="range" min={-12} max={12} step={0.1} value={offset} onChange={e=>setOffset(+e.target.value)} style={{...styles.slider,width:220}}/></label>
+        <div style={{padding:"6px 12px",borderRadius:6,background:ok?"#134e2a":"#0d1117",border:`1px solid ${ok?"#166534":"#1f2937"}`,color:ok?"#86efac":"#f59e0b",fontFamily:"monospace",fontSize:12}}>
+          {ok?"✓ on target":`${toTarget>0?"+":""}${toTarget.toFixed(1)} LU to target`}
+        </div>
+      </div>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+        <StatBadge label="Integrated" value={`${integrated.toFixed(1)} LUFS`}/>
+        <StatBadge label="LRA" value={`${LRA.toFixed(1)} LU`}/>
+        <StatBadge label="True peak" value={`${truePeak.toFixed(1)} dBTP`}/>
+        <StatBadge label="Target" value={`${tgt.lufs} LUFS`}/>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
 const MODULE_COMPONENTS = {
   aspectRatio: ModuleAspectRatio,
+  audioChain: ModuleAudioChain,
+  polarPatterns: ModulePolarPatterns,
+  levels: ModuleLevels,
+  loudness: ModuleLoudness,
   exposureTriangle: ModuleExposureTriangle,
   falseColor: ModuleFalseColor,
   lut: ModuleLUT,
@@ -3351,7 +3640,7 @@ const MODULE_COMPONENTS = {
 
 const CATEGORY_COLORS = {
   image:"#60a5fa", color:"#f59e0b", defects:"#f87171",
-  optics:"#34d399", narrative:"#a78bfa", scopes:"#22d3ee", signals:"#2dd4bf", lighting:"#facc15",
+  optics:"#34d399", narrative:"#a78bfa", scopes:"#22d3ee", signals:"#2dd4bf", lighting:"#facc15", audio:"#f472b6",
 };
 
 // ─────────────────────────────────────────────
