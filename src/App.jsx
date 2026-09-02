@@ -49,7 +49,7 @@ const STRINGS = {
       codecs: { title: "Compression & Codecs", desc: "Intra vs inter, DCT blocking, I/P/B frames, the codec table" },
       containers: { title: "Containers & Wrappers", desc: "MOV, MP4, MXF, MKV — codec ≠ container" },
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
-      portraitLight: { title: "Portrait Lighting", desc: "Key position & patterns — Rembrandt, butterfly, loop, split" },
+      portraitLight: { title: "Portrait Lighting", desc: "Three-point (key/fill/back) & patterns — Rembrandt, butterfly, split" },
       dmx: { title: "DMX Lighting Control", desc: "Universe, addressing, fixture personalities, Art-Net/sACN" },
       lensDistortion: { title: "Lens Distortion", desc: "Barrel & pincushion — when straight lines bend" },
       interlacing: { title: "Interlacing & Combing", desc: "Fields, comb teeth on motion, deinterlacing" },
@@ -3111,113 +3111,129 @@ function ModuleFocusBreathing({ image }) {
 // ─────────────────────────────────────────────
 // MODULE: Portrait Lighting (2.5D shaded bust)
 // ─────────────────────────────────────────────
-const LIGHT_PATTERNS=[
-  {id:"butterfly",name:"Butterfly / Paramount",az:0,el:52,note:"Key straight in front and high — a small symmetrical shadow under the nose (the 'butterfly'). Glamour and beauty lighting."},
-  {id:"loop",name:"Loop",az:33,el:40,note:"Key slightly off-axis and above — the nose casts a short shadow 'loop' down and to the side. The everyday, flattering key position."},
-  {id:"rembrandt",name:"Rembrandt",az:52,el:48,note:"Further round — the nose shadow meets the cheek shadow, leaving a lit triangle under the far eye. Dramatic and classic."},
-  {id:"split",name:"Split",az:90,el:6,note:"Key straight to one side — half the face lit, half in shadow. Tense, mysterious, high-contrast."},
-  {id:"rim",name:"Rim / Back",az:150,el:26,note:"Key behind the subject — only the edge of the face and hair glow, separating them from the background. A separation light, not a key."},
+const LIGHT_ROLES=[{name:"Key",col:"#f59e0b"},{name:"Fill",col:"#22d3ee"},{name:"Back",col:"#a78bfa"}];
+// each light: {on, az, el, intensity, soft, kelvin}
+const LIGHT_PRESETS=[
+  {id:"threepoint",name:"Three-point (classic)",note:"The workhorse setup: a KEY off to one side to model the face, a soft FILL from the opposite side to control how deep the shadows go (the key-to-fill ratio), and a BACK/rim light behind to separate the subject from the background. Adjust the fill down for drama, up for a flat, even look.",
+   lights:[{on:true,az:35,el:42,intensity:1.0,soft:0.3,kelvin:5200},{on:true,az:-55,el:16,intensity:0.4,soft:0.92,kelvin:6200},{on:true,az:155,el:40,intensity:0.95,soft:0.2,kelvin:5600}]},
+  {id:"butterfly",name:"Butterfly",note:"Key straight in front and high (a small symmetrical shadow under the nose), lifted by a soft frontal fill. Glamour and beauty lighting.",
+   lights:[{on:true,az:0,el:55,intensity:1.0,soft:0.4,kelvin:5200},{on:true,az:0,el:8,intensity:0.3,soft:0.95,kelvin:5200},{on:false,az:155,el:40,intensity:0.9,soft:0.2,kelvin:5600}]},
+  {id:"rembrandt",name:"Rembrandt",note:"Key well round to the side and high — the nose shadow meets the cheek shadow, leaving a lit triangle under the far eye. A little fill keeps the shadows from going pure black. Dramatic and classic.",
+   lights:[{on:true,az:52,el:48,intensity:1.0,soft:0.25,kelvin:5000},{on:true,az:-45,el:14,intensity:0.22,soft:0.9,kelvin:6000},{on:false,az:155,el:40,intensity:0.9,soft:0.2,kelvin:5600}]},
+  {id:"split",name:"Split",note:"Key straight to one side, no fill — half the face lit, half in shadow. Tense, mysterious, high-contrast.",
+   lights:[{on:true,az:90,el:8,intensity:1.05,soft:0.2,kelvin:5200},{on:false,az:-45,el:14,intensity:0.25,soft:0.9,kelvin:6000},{on:false,az:155,el:40,intensity:0.9,soft:0.2,kelvin:5600}]},
+  {id:"silhouette",name:"Silhouette / rim only",note:"Only the BACK light on: the face falls into shadow and just the edge and hair glow, separating the subject from the background. A separation light doing all the work.",
+   lights:[{on:false,az:35,el:42,intensity:1.0,soft:0.3,kelvin:5200},{on:false,az:-55,el:16,intensity:0.4,soft:0.9,kelvin:6200},{on:true,az:170,el:30,intensity:1.3,soft:0.2,kelvin:6000}]},
+  {id:"keyonly",name:"Key only",note:"A single hard key and nothing else — the harshest, most sculptural look, with the shadow side going fully black. Everything else is built by adding fill and back to this.",
+   lights:[{on:true,az:35,el:42,intensity:1.0,soft:0.3,kelvin:5200},{on:false,az:-55,el:16,intensity:0.4,soft:0.9,kelvin:6200},{on:false,az:155,el:40,intensity:0.9,soft:0.2,kelvin:5600}]},
 ];
-function shadeBust(canvas, {az,el,intensity,softness,kelvin,fill}){
+function shadeBust(canvas, lights){
   const S=Math.min(canvas.parentElement?.clientWidth-24||360,360); canvas.width=S; canvas.height=S;
   const ctx=canvas.getContext("2d"); const img=ctx.createImageData(S,S), d=img.data;
-  const azr=az*Math.PI/180, elr=el*Math.PI/180;
-  const L=[Math.sin(azr)*Math.cos(elr), -Math.sin(elr), Math.cos(azr)*Math.cos(elr)]; // to-light
-  const kt=kelvinToRGB(kelvin), lc=[kt[0]/255,kt[1]/255,kt[2]/255];
+  const Ls=lights.filter(l=>l.on).map(l=>{ const azr=l.az*Math.PI/180, elr=l.el*Math.PI/180, kt=kelvinToRGB(l.kelvin);
+    return { L:[Math.sin(azr)*Math.cos(elr), -Math.sin(elr), Math.cos(azr)*Math.cos(elr)], lc:[kt[0]/255,kt[1]/255,kt[2]/255],
+      inten:l.intensity, term:0.04+l.soft*0.5, spec:l.soft<0.5?40:14 }; });
   const hcx=S*0.5, hcy=S*0.46, R=S*0.32;
-  const specSharp= softness<0.5? 40:14; const term=0.04+softness*0.5; // terminator softness
   const skin=[232,188,150];
-  // face relief height field (nose ridge, brow, eye sockets, mouth)
   const dfn=(X,Y)=>{ let h=0;
     h += 0.34*Math.exp(-X*X*40)*Math.exp(-Math.pow((Y-0.14)/0.24,2));                    // nose ridge → tip
     h += 0.07*Math.exp(-Math.pow((Y+0.30)/0.09,2))*Math.exp(-X*X*3);                      // brow ridge
     h -= 0.11*(Math.exp(-((X-0.33)**2*40+(Y+0.02)**2*52))+Math.exp(-((X+0.33)**2*40+(Y+0.02)**2*52))); // eye sockets
     h -= 0.05*Math.exp(-((Y-0.56)**2*70+X*X*9));                                          // mouth line
     return h; };
-  const eps=0.012;
+  const eps=0.012, amb=0.05;
   for(let y=0;y<S;y++) for(let x=0;x<S;x++){
     const i=(y*S+x)*4; d[i+3]=255;
-    const nx=(x-hcx)/R, ny=(y-hcy)/(R*1.12); let r2=nx*nx+ny*ny;   // slightly oval head
+    const nx=(x-hcx)/R, ny=(y-hcy)/(R*1.12); let r2=nx*nx+ny*ny;
     if(r2<=1){
       const nz=Math.sqrt(1-r2);
       const hx=(dfn(nx+eps,ny)-dfn(nx-eps,ny))/(2*eps), hy=(dfn(nx,ny+eps)-dfn(nx,ny-eps))/(2*eps);
       let NX=nx-hx, NY=ny-hy, NZ=nz; const ln=Math.hypot(NX,NY,NZ); NX/=ln;NY/=ln;NZ/=ln;
-      const nd=NX*L[0]+NY*L[1]+NZ*L[2];
-      const diff=Math.max(0,(nd+term)/(1+term)); const dsm=diff*diff*(3-2*diff);
-      const rf2=2*nd; let sp=Math.max(0, rf2*NZ-L[2]); sp=Math.pow(sp,specSharp)*(nd>0?1:0);
-      const amb=0.10+fill*0.16;
-      // base colour: skin, darker in eye sockets / mouth, hair on top & sides
+      let dr=amb,dg=amb,db=amb, sr=0,sg=0,sb=0;
+      for(const g of Ls){ const nd=NX*g.L[0]+NY*g.L[1]+NZ*g.L[2];
+        const diff=Math.max(0,(nd+g.term)/(1+g.term)); const dsm=diff*diff*(3-2*diff);
+        dr+=g.inten*dsm*g.lc[0]; dg+=g.inten*dsm*g.lc[1]; db+=g.inten*dsm*g.lc[2];
+        let sp=Math.max(0,2*nd*NZ-g.L[2]); sp=Math.pow(sp,g.spec)*(nd>0?1:0);
+        sr+=sp*g.inten*g.lc[0]; sg+=sp*g.inten*g.lc[1]; sb+=sp*g.inten*g.lc[2];
+      }
       let base=skin;
-      const inHair = ny < -0.42 || (r2>0.72 && ny<0.15);           // hairline cap + temples
+      const inHair = ny < -0.42 || (r2>0.72 && ny<0.15);
       const inEye = (Math.hypot((nx-0.33)*1.1,(ny+0.02))<0.12)||(Math.hypot((nx+0.33)*1.1,(ny+0.02))<0.12);
-      if(inHair) base=[60,44,32];
-      else if(inEye) base=[70,58,52];
-      for(let ch=0;ch<3;ch++){ let v=base[ch]*(amb+intensity*dsm*lc[ch]); if(!inHair&&!inEye) v+=255*sp*intensity*0.5*lc[ch]; d[i+ch]=Math.max(0,Math.min(255,v)); }
-      // pupils
+      if(inHair) base=[60,44,32]; else if(inEye) base=[70,58,52];
+      const dd=[dr,dg,db], ss=[sr,sg,sb];
+      for(let ch=0;ch<3;ch++){ let v=base[ch]*dd[ch]; if(!inHair&&!inEye) v+=255*ss[ch]*0.5; d[i+ch]=Math.max(0,Math.min(255,v)); }
       if((Math.hypot(nx-0.33,ny+0.02)<0.045)||(Math.hypot(nx+0.33,ny+0.02)<0.045)){ d[i]*=0.4;d[i+1]*=0.4;d[i+2]*=0.45; }
       continue;
     }
-    // shoulders (torso) — a wide rounded form below
     const tx=(x-hcx)/(S*0.42), ty=(y-(S*0.98))/(S*0.34);
     if(ty> -1 && ty<0 && Math.abs(tx)<1){
       const tnz=Math.sqrt(Math.max(0,1-tx*tx*0.9)); const tnorm=[tx*0.9,-0.2,tnz]; const tl=Math.hypot(...tnorm);
-      const nd=(tnorm[0]*L[0]+tnorm[1]*L[1]+tnorm[2]*L[2])/tl; const diff=Math.max(0,(nd+term)/(1+term));
-      const cloth=[70,84,110], amb=0.14+fill*0.14;
-      for(let ch=0;ch<3;ch++){ d[i+ch]=Math.max(0,Math.min(255,cloth[ch]*(amb+intensity*diff*diff*lc[ch]))); }
+      const Nx=tnorm[0]/tl,Ny=tnorm[1]/tl,Nz=tnorm[2]/tl; const cloth=[70,84,110];
+      let dr=0.12,dg=0.12,db=0.12;
+      for(const g of Ls){ const nd=Math.max(0,(Nx*g.L[0]+Ny*g.L[1]+Nz*g.L[2]+g.term)/(1+g.term)); dr+=g.inten*nd*nd*g.lc[0]; dg+=g.inten*nd*nd*g.lc[1]; db+=g.inten*nd*nd*g.lc[2]; }
+      const dd=[dr,dg,db]; for(let ch=0;ch<3;ch++){ d[i+ch]=Math.max(0,Math.min(255,cloth[ch]*dd[ch])); }
       continue;
     }
-    // background gradient
     const bg=18+ (1-y/S)*10; d[i]=bg*0.7;d[i+1]=bg*0.75;d[i+2]=bg;
   }
   ctx.putImageData(img,0,0);
   ctx.fillStyle="rgba(0,0,0,0.55)";ctx.fillRect(0,0,S,20);ctx.font="11px monospace";ctx.fillStyle="#facc15";
-  ctx.textAlign="left"; ctx.fillText("FRONT — shaded by key (N·L + specular)",8,14);
+  ctx.textAlign="left";
+  const names=lights.map((l,i)=>l.on?LIGHT_ROLES[i].name:null).filter(Boolean);
+  ctx.fillText("FRONT — "+(names.length?names.join(" + "):"no lights"),8,14);
 }
-function drawTopDown(canvas, az, dist){
+function drawTopDown(canvas, lights, sel){
   const W=Math.min(canvas.parentElement?.clientWidth-24||300,300), H=W; canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,W,H);
-  const cx=W/2, cy=H*0.54, R=W*0.13;
-  // camera at bottom
-  ctx.fillStyle="#374151"; ctx.beginPath(); ctx.moveTo(cx-12,H-8); ctx.lineTo(cx+12,H-8); ctx.lineTo(cx+7,H-24); ctx.lineTo(cx-7,H-24); ctx.closePath(); ctx.fill();
-  ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="center"; ctx.fillText("camera",cx,H-2);
-  // head from above (nose toward camera = down)
-  ctx.fillStyle="#5b4636"; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
-  ctx.fillStyle="#7a5c44"; ctx.beginPath(); ctx.moveTo(cx-4,cy+R-2); ctx.lineTo(cx+4,cy+R-2); ctx.lineTo(cx,cy+R+7); ctx.closePath(); ctx.fill(); // nose
-  // azimuth ring
+  const cx=W/2, cy=H*0.52, R=W*0.12, dist=W*0.26;
   ctx.strokeStyle="#1f2937"; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.arc(cx,cy,R+dist,0,7); ctx.stroke(); ctx.setLineDash([]);
-  // light marker: az measured from camera axis (front=down toward camera)
-  const a=(az)*Math.PI/180; const lx=cx+Math.sin(a)*(R+dist), ly=cy+Math.cos(a)*(R+dist);
-  // beam
-  const g=ctx.createRadialGradient(lx,ly,2,lx,ly,dist*1.1); g.addColorStop(0,"rgba(250,204,21,0.5)"); g.addColorStop(1,"rgba(250,204,21,0)");
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(lx,ly,dist*1.1,0,7); ctx.fill();
-  ctx.strokeStyle="rgba(250,204,21,0.5)"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(cx,cy); ctx.stroke();
-  ctx.fillStyle="#facc15"; ctx.beginPath(); ctx.arc(lx,ly,7,0,7); ctx.fill();
-  ctx.fillStyle="#0b0b0e"; ctx.font="bold 9px monospace"; ctx.fillText("KEY",lx,ly+3);
-  ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="left"; ctx.fillText("drag the key light →  azimuth "+Math.round(az)+"°",8,14);
-  return {cx,cy,lx,ly};
+  // camera
+  ctx.fillStyle="#374151"; ctx.beginPath(); ctx.moveTo(cx-11,H-8); ctx.lineTo(cx+11,H-8); ctx.lineTo(cx+6,H-22); ctx.lineTo(cx-6,H-22); ctx.closePath(); ctx.fill();
+  ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="center"; ctx.fillText("camera",cx,H-1);
+  // head (nose toward camera = down)
+  ctx.fillStyle="#5b4636"; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fill();
+  ctx.fillStyle="#7a5c44"; ctx.beginPath(); ctx.moveTo(cx-4,cy+R-2); ctx.lineTo(cx+4,cy+R-2); ctx.lineTo(cx,cy+R+7); ctx.closePath(); ctx.fill();
+  // lights
+  lights.forEach((l,idx)=>{ if(!l.on) return; const col=LIGHT_ROLES[idx].col;
+    const a=l.az*Math.PI/180; const lx=cx+Math.sin(a)*(R+dist), ly=cy+Math.cos(a)*(R+dist);
+    const rgb=col; const g=ctx.createRadialGradient(lx,ly,2,lx,ly,dist*0.9);
+    g.addColorStop(0,rgb+"88"); g.addColorStop(1,rgb+"00"); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(lx,ly,dist*0.9,0,7); ctx.fill();
+    ctx.strokeStyle=rgb+"99"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(cx,cy); ctx.stroke();
+    if(idx===sel){ ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(lx,ly,11,0,7); ctx.stroke(); }
+    ctx.fillStyle=rgb; ctx.beginPath(); ctx.arc(lx,ly,8,0,7); ctx.fill();
+    ctx.fillStyle="#0b0b0e"; ctx.font="bold 9px monospace"; ctx.textAlign="center"; ctx.fillText(LIGHT_ROLES[idx].name[0],lx,ly+3);
+  });
+  ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="left"; ctx.fillText("drag a light to move it around →",8,14);
 }
 function ModulePortraitLight() {
-  const [az,setAz]=useState(33),[el,setEl]=useState(40),[intensity,setInt]=useState(0.95),[soft,setSoft]=useState(0.4),[kelvin,setKelvin]=useState(5500),[fill,setFill]=useState(0.4),[pattern,setPattern]=useState("loop");
-  const [dist]=useState(70);
-  const frontRef=useRef(), topRef=useRef(), dragRef=useRef(false);
-  useEffect(()=>{ if(frontRef.current) shadeBust(frontRef.current,{az,el,intensity,softness:soft,kelvin,fill}); },[az,el,intensity,soft,kelvin,fill]);
-  useEffect(()=>{ if(topRef.current) drawTopDown(topRef.current,az,dist); },[az,dist]);
-  const applyPattern=p=>{ const pt=LIGHT_PATTERNS.find(x=>x.id===p); if(pt){ setPattern(p); setAz(pt.az); setEl(pt.el); } };
-  const onTop=(e)=>{
-    if(!dragRef.current) return; const c=topRef.current, r=c.getBoundingClientRect();
+  const [lights,setLights]=useState(LIGHT_PRESETS[0].lights.map(l=>({...l})));
+  const [sel,setSel]=useState(0);
+  const [preset,setPreset]=useState("threepoint");
+  const frontRef=useRef(), topRef=useRef(), dragRef=useRef(-1);
+  useEffect(()=>{ if(frontRef.current) shadeBust(frontRef.current,lights); },[lights]);
+  useEffect(()=>{ if(topRef.current) drawTopDown(topRef.current,lights,sel); },[lights,sel]);
+  const applyPreset=id=>{ const p=LIGHT_PRESETS.find(x=>x.id===id); if(p){ setPreset(id); setLights(p.lights.map(l=>({...l}))); const first=p.lights.findIndex(l=>l.on); if(first>=0)setSel(first); } };
+  const upd=patch=>{ setLights(ls=>ls.map((l,i)=>i===sel?{...l,...patch}:l)); setPreset(""); };
+  const pos=(l,c)=>{ const cx=c.width/2, cy=c.height*0.52, R=c.width*0.12, dist=c.width*0.26; const a=l.az*Math.PI/180; return [cx+Math.sin(a)*(R+dist), cy+Math.cos(a)*(R+dist)]; };
+  const onTop=(e,down)=>{
+    const c=topRef.current; if(!c)return; const r=c.getBoundingClientRect();
     const x=(e.clientX-r.left)*(c.width/r.width), y=(e.clientY-r.top)*(c.height/r.height);
-    const cx=c.width/2, cy=c.height*0.54; let a=Math.atan2(x-cx,y-cy)*180/Math.PI; // 0=down(front)
-    a=Math.max(-170,Math.min(170,a)); setAz(a); setPattern("");
+    if(down){ let best=-1,bd=1e9; lights.forEach((l,i)=>{ if(!l.on)return; const [lx,ly]=pos(l,c); const dd=Math.hypot(x-lx,y-ly); if(dd<bd){bd=dd;best=i;} });
+      if(best>=0&&bd<26){ setSel(best); dragRef.current=best; } else dragRef.current = lights[sel]?.on? sel : -1; }
+    const di=dragRef.current; if(di<0) return;
+    const cx=c.width/2, cy=c.height*0.52; let a=Math.atan2(x-cx,y-cy)*180/Math.PI; a=Math.max(-179,Math.min(179,a));
+    setLights(ls=>ls.map((l,i)=>i===di?{...l,az:a}:l)); setPreset("");
   };
-  const curNote=LIGHT_PATTERNS.find(x=>x.id===pattern)?.note;
+  const cur=lights[sel]; const rc=LIGHT_ROLES[sel].col;
+  const presetNote=LIGHT_PRESETS.find(p=>p.id===preset)?.note;
   return (
     <div>
       <InfoBox>
-        The <strong>key light</strong> is the main light that models the face — and <em>where you put it</em> is the single biggest creative choice in portraiture. Swing it around the subject (azimuth) and raise it (elevation) and the shadow of the nose and brow carves out the classic <strong>patterns</strong>: <em>butterfly</em>, <em>loop</em>, <em>Rembrandt</em>, <em>split</em>. Raise the light for a natural top-down key; drop it for an eerie under-light. <strong>Soft</strong> sources (big, close — softbox, bounce) give gentle, wide shadow edges; <strong>hard</strong> sources (small, far — bare bulb, sun) give crisp terminators and bright speculars. <strong>Fill</strong> lifts the shadow side to set the contrast ratio; <strong>colour temperature</strong> sets the mood. This is a 2.5D model — the face is shaded live by the light direction (N·L + specular). Drag the key around the top-down diagram, or pick a pattern.
+        <strong>Three-point lighting</strong> is the foundation of portrait and interview lighting, built from three roles. The <strong style={{color:"#f59e0b"}}>Key</strong> is the main light — put it off to one side and above, and the shadow of the nose and brow carves out the classic patterns (<em>butterfly, loop, Rembrandt, split</em>). The <strong style={{color:"#22d3ee"}}>Fill</strong> sits on the <em>opposite</em> side, softer and dimmer, and lifts the shadows — the <strong>key-to-fill ratio</strong> sets how dramatic (low fill) or flat (high fill) the face looks. The <strong style={{color:"#a78bfa"}}>Back</strong> (or rim/hair) light sits <em>behind</em> the subject and rims the edge of the head, separating them from the background. Each light has its own position (azimuth + elevation), <strong>intensity</strong>, <strong>softness</strong> (big soft source vs small hard one) and <strong>colour temperature</strong> — mixing warm and cool lights is a classic look. Pick a preset, then select a light and drag it around the top-down diagram or tune it below. The face is shaded live by all three (N·L + specular).
       </InfoBox>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-        {LIGHT_PATTERNS.map(p=>(
-          <button key={p.id} onClick={()=>applyPattern(p.id)} style={pattern===p.id?styles.btnActive:styles.btnChip}>{p.name}</button>
+        {LIGHT_PRESETS.map(p=>(
+          <button key={p.id} onClick={()=>applyPreset(p.id)} style={preset===p.id?styles.btnActive:styles.btnChip}>{p.name}</button>
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
@@ -3226,25 +3242,41 @@ function ModulePortraitLight() {
         </div>
         <div style={{flex:"1 1 260px",minWidth:240,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,textAlign:"center"}}>
           <canvas ref={topRef}
-            onPointerDown={e=>{dragRef.current=true; e.currentTarget.setPointerCapture(e.pointerId); onTop(e);}}
-            onPointerMove={onTop}
-            onPointerUp={e=>{dragRef.current=false;}}
+            onPointerDown={e=>{ e.currentTarget.setPointerCapture(e.pointerId); onTop(e,true); }}
+            onPointerMove={e=>{ if(dragRef.current>=0) onTop(e,false); }}
+            onPointerUp={()=>{dragRef.current=-1;}}
             style={{display:"block",width:"100%",maxWidth:300,margin:"0 auto",cursor:"grab",touchAction:"none"}}/>
         </div>
       </div>
-      <div style={{display:"flex",gap:18,flexWrap:"wrap",marginTop:14}}>
-        <label style={styles.label}>Azimuth: <strong style={{color:"#f59e0b"}}>{Math.round(az)}°</strong>
-          <input type="range" min={-170} max={170} step={1} value={az} onChange={e=>{setAz(+e.target.value);setPattern("");}} style={{...styles.slider,width:170}}/></label>
-        <label style={styles.label}>Elevation: <strong style={{color:"#f59e0b"}}>{Math.round(el)}°</strong>
-          <input type="range" min={-30} max={80} step={1} value={el} onChange={e=>{setEl(+e.target.value);setPattern("");}} style={{...styles.slider,width:150}}/></label>
-        <label style={styles.label}>Softness: <strong style={{color:"#f59e0b"}}>{Math.round(soft*100)}%</strong>
-          <input type="range" min={0} max={1} step={0.01} value={soft} onChange={e=>setSoft(+e.target.value)} style={{...styles.slider,width:130}}/></label>
-        <label style={styles.label}>Fill: <strong style={{color:"#f59e0b"}}>{Math.round(fill*100)}%</strong>
-          <input type="range" min={0} max={1} step={0.01} value={fill} onChange={e=>setFill(+e.target.value)} style={{...styles.slider,width:120}}/></label>
-        <label style={styles.label}>Key colour: <strong style={{color:"#f59e0b"}}>{kelvin}K</strong>
-          <input type="range" min={2800} max={8000} step={100} value={kelvin} onChange={e=>setKelvin(+e.target.value)} style={{...styles.slider,width:140}}/></label>
+      {/* light selector */}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:14,alignItems:"center"}}>
+        {LIGHT_ROLES.map((role,i)=>(
+          <button key={i} onClick={()=>setSel(i)}
+            style={sel===i?{...styles.btnActive,borderColor:role.col,color:role.col,background:role.col+"22"}:{...styles.btnChip,opacity:lights[i].on?1:0.5}}>
+            <span style={{color:role.col}}>●</span> {role.name}{lights[i].on?"":" (off)"}
+          </button>
+        ))}
+        <button onClick={()=>upd({on:!cur.on})} style={cur.on?{...styles.btnChip,borderColor:rc,color:rc}:styles.btnChip}>
+          {cur.on?`◉ ${LIGHT_ROLES[sel].name} is ON`:`○ ${LIGHT_ROLES[sel].name} is OFF`}
+        </button>
       </div>
-      {curNote && <div style={{marginTop:12,padding:"10px 14px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6}}><strong style={{color:"#facc15"}}>{LIGHT_PATTERNS.find(x=>x.id===pattern)?.name}:</strong> {curNote}</div>}
+      {/* selected light controls */}
+      <div style={{marginTop:12,padding:"12px 14px",background:"#0d1117",border:`1px solid ${rc}44`,borderRadius:8,opacity:cur.on?1:0.5}}>
+        <div style={{color:rc,fontSize:12,fontFamily:"monospace",fontWeight:"bold",marginBottom:8}}>editing: {LIGHT_ROLES[sel].name} light</div>
+        <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
+          <label style={styles.label}>Azimuth: <strong style={{color:rc}}>{Math.round(cur.az)}°</strong>
+            <input type="range" min={-179} max={179} step={1} value={cur.az} onChange={e=>upd({az:+e.target.value})} style={{...styles.slider,width:160,accentColor:rc}}/></label>
+          <label style={styles.label}>Elevation: <strong style={{color:rc}}>{Math.round(cur.el)}°</strong>
+            <input type="range" min={-30} max={80} step={1} value={cur.el} onChange={e=>upd({el:+e.target.value})} style={{...styles.slider,width:140,accentColor:rc}}/></label>
+          <label style={styles.label}>Intensity: <strong style={{color:rc}}>{Math.round(cur.intensity*100)}%</strong>
+            <input type="range" min={0} max={1.5} step={0.05} value={cur.intensity} onChange={e=>upd({intensity:+e.target.value})} style={{...styles.slider,width:130,accentColor:rc}}/></label>
+          <label style={styles.label}>Softness: <strong style={{color:rc}}>{Math.round(cur.soft*100)}%</strong>
+            <input type="range" min={0} max={1} step={0.01} value={cur.soft} onChange={e=>upd({soft:+e.target.value})} style={{...styles.slider,width:120,accentColor:rc}}/></label>
+          <label style={styles.label}>Colour: <strong style={{color:rc}}>{cur.kelvin}K</strong>
+            <input type="range" min={2800} max={8000} step={100} value={cur.kelvin} onChange={e=>upd({kelvin:+e.target.value})} style={{...styles.slider,width:140,accentColor:rc}}/></label>
+        </div>
+      </div>
+      {presetNote && <div style={{marginTop:12,padding:"10px 14px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6}}><strong style={{color:"#facc15"}}>{LIGHT_PRESETS.find(p=>p.id===preset)?.name}:</strong> {presetNote}</div>}
     </div>
   );
 }
