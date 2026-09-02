@@ -3630,129 +3630,94 @@ function ModuleMicTypes() {
 // ─────────────────────────────────────────────
 // MODULE: Balanced Audio (connectors)
 // ─────────────────────────────────────────────
-function drawBalScope(canvas, waves){
-  const W=Math.min(canvas.parentElement?.clientWidth||320,760), H=56; canvas.width=W; canvas.height=H;
+function drawMultiScope(canvas, waves, ph){
+  const W=Math.min(canvas.parentElement?.clientWidth||320,760), H=66; canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
-  const mid=H/2, amp=H/2-7, N=W;
+  const mid=H/2, amp=H/2-9, N=W;
   ctx.strokeStyle="#161c26"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
-  waves.forEach(w=>{ ctx.strokeStyle=w.col; ctx.lineWidth=w.width||1.6; ctx.beginPath();
-    for(let i=0;i<N;i++){ const v=w.fn(i/N); const y=mid-v*amp; if(i===0)ctx.moveTo(i,y); else ctx.lineTo(i,y); } ctx.stroke(); });
-}
-function drawCable(canvas, {balanced,noise,ph}){
-  const W=Math.min(canvas.parentElement?.clientWidth-24||660,700), H=210; canvas.width=W; canvas.height=H;
-  const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
-  const x0=64, x1=W-104, A=24, yMid=118, yHot=94, yCold=142;
-  const sig=u=>0.42*Math.sin(u*6.28318*3 - ph*6);
-  const nz =u=>noise*(0.42*Math.sin(u*6.28318*22 - ph*9)+0.18*Math.sin(u*6.28318*40 - ph*13));
-  const xi=x0+(x1-x0)*0.40, ramp=x=>Math.max(0,Math.min(1,(x-xi)/46));
-  // cable jacket / shield
-  ctx.fillStyle="#0f151d"; ctx.fillRect(x0-6, yHot-30, (x1+6)-(x0-6), (yCold+30)-(yHot-30));
-  ctx.strokeStyle="#1b2430"; ctx.lineWidth=1; ctx.strokeRect(x0-6, yHot-30, (x1+6)-(x0-6), (yCold+30)-(yHot-30));
-  ctx.fillStyle="#4b5563"; ctx.font="9px monospace"; ctx.textAlign="left"; ctx.fillText("shielded cable (shield = pin 1)", x0-4, yCold+42);
-  // mic
-  const mx=x0-32, my=yMid; ctx.fillStyle="#374151"; ctx.beginPath(); ctx.arc(mx,my,11,0,7); ctx.fill();
-  ctx.strokeStyle="#0a0d12"; ctx.lineWidth=1.5; for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(mx-6,my+k*4); ctx.lineTo(mx+6,my+k*4); ctx.stroke(); }
-  ctx.fillStyle="#374151"; ctx.fillRect(mx-2,my+11,4,16); ctx.fillRect(mx-8,my+27,16,4);
-  ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="center"; ctx.fillText("MIC",mx,my-16);
-  // mixer
-  const bx=x1+10, bw=W-8-bx; ctx.fillStyle="#131a24"; ctx.fillRect(bx,80,bw,80); ctx.strokeStyle="#2b3646"; ctx.strokeRect(bx,80,bw,80);
-  ctx.strokeStyle="#3b4656"; ctx.lineWidth=1; for(let k=0;k<3;k++){ const fy=96+k*20; ctx.beginPath(); ctx.moveTo(bx+8,fy); ctx.lineTo(bx+bw-8,fy); ctx.stroke(); ctx.fillStyle="#6b7280"; ctx.fillRect(bx+8+(k*11)%(bw-20),fy-3,6,6); }
-  ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="center"; ctx.fillText("MIXER",bx+bw/2,74);
-  ctx.fillStyle=balanced?"#34d399":"#6b7280"; ctx.font="bold 10px monospace"; ctx.fillText(balanced?"HOT−COLD":"in",bx+bw/2,168);
-  // interference source
-  const ix=xi+(x1-xi)*0.30, iy=34, pulse=0.5+0.5*Math.sin(ph*5);
-  for(let a=0;a<3;a++){ ctx.strokeStyle=`rgba(245,158,11,${0.4-a*0.12+pulse*0.15})`; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(ix,iy,12+a*9+pulse*5,Math.PI*0.15,Math.PI*0.85); ctx.stroke(); ctx.beginPath(); ctx.arc(ix,iy,12+a*9+pulse*5,Math.PI*1.15,Math.PI*1.85); ctx.stroke(); }
-  ctx.strokeStyle="#f59e0b"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ix-4,iy-6); ctx.lineTo(ix+2,iy-1); ctx.lineTo(ix-3,iy+2); ctx.lineTo(ix+4,iy+7); ctx.stroke();
-  ctx.fillStyle="#f59e0b"; ctx.font="9px monospace"; ctx.textAlign="left"; ctx.fillText("⚡ EM interference (mains hum · RF)",ix+16,iy-2);
-  // interference arrows down to wire(s)
-  const arrow=(tx,ty)=>{ ctx.strokeStyle="rgba(245,158,11,0.5)"; ctx.setLineDash([3,3]); ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(ix,iy+14); ctx.lineTo(tx,ty-8); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle="rgba(245,158,11,0.6)"; ctx.beginPath(); ctx.moveTo(tx,ty-3); ctx.lineTo(tx-3,ty-9); ctx.lineTo(tx+3,ty-9); ctx.closePath(); ctx.fill(); };
-  const wire=(yBase,col,fn,label)=>{ ctx.strokeStyle="#1f2937"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x0,yBase); ctx.lineTo(x1,yBase); ctx.stroke();
-    ctx.strokeStyle=col; ctx.lineWidth=1.8; ctx.beginPath(); for(let x=x0;x<=x1;x++){ const u=(x-x0)/(x1-x0); const v=fn(u,x); const y=yBase - v*A; if(x===x0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke();
-    ctx.fillStyle=col; ctx.font="9px monospace"; ctx.textAlign="left"; ctx.fillText(label,x0+2,yBase-A-4); };
-  if(balanced){
-    arrow(ix,yHot); arrow(ix,yCold);
-    wire(yHot,"#60a5fa",(u,x)=> sig(u)+nz(u)*ramp(x),"HOT  (+signal, pin 2)");
-    wire(yCold,"#f87171",(u,x)=> -sig(u)+nz(u)*ramp(x),"COLD (−signal, pin 3)");
-  } else {
-    arrow(ix,yMid);
-    wire(yMid,"#60a5fa",(u,x)=> sig(u)+nz(u)*ramp(x),"SIGNAL (single wire)");
-  }
-}
-function drawOut(canvas, {balanced,noise,ph}){
-  const W=Math.min(canvas.parentElement?.clientWidth-24||660,700), H=78; canvas.width=W; canvas.height=H;
-  const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
-  const mid=H/2, A=H/2-10, N=W;
-  ctx.strokeStyle="#161c26"; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
-  const sig=u=>0.42*Math.sin(u*6.28318*3 - ph*6);
-  const nz =u=>noise*(0.42*Math.sin(u*6.28318*22 - ph*9)+0.18*Math.sin(u*6.28318*40 - ph*13));
-  const col=balanced?"#34d399":"#f59e0b";
-  ctx.strokeStyle=col; ctx.lineWidth=2.4; ctx.beginPath();
-  for(let x=0;x<N;x++){ const u=x/N; const v=balanced? 2*sig(u) : sig(u)+nz(u); const y=mid-Math.max(-1,Math.min(1,v))*A; if(x===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke();
-  ctx.fillStyle=col; ctx.font="bold 11px monospace"; ctx.textAlign="left";
-  ctx.fillText(balanced?"OUTPUT — clean, 2× signal (noise cancelled)":"OUTPUT — signal + noise (hum rides along)",8,16);
+  waves.forEach(w=>{ ctx.strokeStyle=w.col; ctx.lineWidth=w.width||1.8; if(w.dash)ctx.setLineDash(w.dash); else ctx.setLineDash([]);
+    ctx.beginPath(); for(let x=0;x<N;x++){ const u=x/N; const v=w.fn(u,ph); const y=mid-Math.max(-1.25,Math.min(1.25,v))*amp; if(x===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke(); });
+  ctx.setLineDash([]);
 }
 function ModuleBalancedAudio() {
   const [balanced,setBalanced]=useState(true);
-  const [noise,setNoise]=useState(0.6);
+  const [noise,setNoise]=useState(0.55);
   const [animate,setAnimate]=useState(true);
-  const cableRef=useRef(), outRef=useRef(), sigCompRef=useRef(), noiseCompRef=useRef();
+  const refs=useRef([]);
+  const SIG="#60a5fa", NZC="#f97316";
+  const sig=(u,ph)=>0.42*Math.sin(u*6.28318*3 - ph*6);
+  const nz =(u,ph)=>noise*(0.42*Math.sin(u*6.28318*21 - ph*9)+0.18*Math.sin(u*6.28318*39 - ph*13));
+  const gate=u=> u<0.42?0:Math.min(1,(u-0.42)/0.05);
+  const stages = balanced ? [
+    {n:"1",title:"Two wires, opposite polarity — clean",sub:"The source sends the signal twice: Hot (+) and its mirror Cold (−). Both perfectly clean.",
+     legend:[["Hot — signal",SIG],["Cold — signal, opposite",SIG]],
+     waves:[{fn:sig,col:SIG,width:2},{fn:(u,ph)=>-sig(u,ph),col:SIG,width:2,dash:[5,4]}]},
+    {n:"2",title:"The cable adds interference to BOTH — same polarity",sub:"Hum / RF is induced identically on both wires (orange), pointing the same way on Hot and Cold.",
+     legend:[["Signal (Hot / Cold)",SIG],["Interference — identical on both",NZC]],
+     waves:[{fn:sig,col:SIG,width:1.2},{fn:(u,ph)=>-sig(u,ph),col:SIG,width:1.2,dash:[5,4]},{fn:nz,col:NZC,width:2.6}]},
+    {n:"3",title:"At the destination, flip the Cold wire",sub:"Flipping Cold inverts BOTH of its parts: its signal now lines up with Hot (+), while its interference now points the opposite way (−).",flip:true,
+     legend:[["Signals now aligned",SIG],["Hot interference +",NZC],["Cold interference flipped −",NZC]],
+     waves:[{fn:sig,col:SIG,width:2},{fn:nz,col:NZC,width:1.8},{fn:(u,ph)=>-nz(u,ph),col:NZC,width:1.8,dash:[5,4]}]},
+    {n:"4",title:"Add the two wires together",sub:"The aligned signal reinforces to 2× (louder, +6 dB); the opposite interference cancels to zero.",good:true,
+     legend:[["Signal reinforced — ×2",SIG],["Interference cancelled — 0",NZC]],
+     waves:[{fn:(u,ph)=>2*sig(u,ph),col:SIG,width:2.8},{fn:()=>0,col:NZC,width:2.6}]},
+  ] : [
+    {n:"1",title:"One wire carries the clean signal",sub:"An unbalanced lead (guitar, RCA) has a single conductor — no mirror copy.",
+     legend:[["Signal — clean",SIG]],
+     waves:[{fn:sig,col:SIG,width:2.2}]},
+    {n:"2",title:"Where the interference attacks, it sums on top — and stays",sub:"From the attack point the orange interference adds onto the blue signal. With no opposite wire, nothing cancels it — the output stays dirty.",bad:true,
+     legend:[["Signal — was clean",SIG],["Signal + interference — dirty",NZC]],
+     waves:[{fn:sig,col:SIG,width:1.3},{fn:(u,ph)=>sig(u,ph)+nz(u,ph)*gate(u),col:NZC,width:2.4}]},
+  ];
   useEffect(()=>{
     let raf=0,t0=null,alive=true;
     const loop=(time)=>{ if(!alive)return; if(t0==null)t0=time; const ph=animate?(time-t0)/1000:0;
-      if(cableRef.current) drawCable(cableRef.current,{balanced,noise,ph});
-      if(outRef.current) drawOut(outRef.current,{balanced,noise,ph});
+      stages.forEach((st,i)=>{ const c=refs.current[i]; if(c) drawMultiScope(c,st.waves,ph); });
       if(animate) raf=requestAnimationFrame(loop);
     };
     raf=requestAnimationFrame(loop);
     return ()=>{ alive=false; cancelAnimationFrame(raf); };
-  },[balanced,noise,animate]);
-  useEffect(()=>{
-    if(!balanced) return;
-    const sig=t=>0.42*Math.sin(t*6.28318*3);
-    const nz =t=>noise*(0.42*Math.sin(t*6.28318*22+0.6)+0.18*Math.sin(t*6.28318*40+1.3));
-    if(sigCompRef.current) drawBalScope(sigCompRef.current,[{fn:sig,col:"#60a5fa"},{fn:sig,col:"#f87171"},{fn:t=>2*sig(t),col:"#34d399",width:2.4}]);
-    if(noiseCompRef.current) drawBalScope(noiseCompRef.current,[{fn:nz,col:"#60a5fa"},{fn:t=>-nz(t),col:"#f87171"},{fn:()=>0,col:"#34d399",width:2.4}]);
-  },[balanced,noise]);
+  },[balanced,noise,animate,stages]);
   return (
     <div>
       <InfoBox>
-        Long audio cables act like antennas — they pick up mains <strong>hum</strong> and RF <strong>buzz</strong>. The <strong>balanced</strong> trick (XLR, TRS): the source sends the signal on <em>two</em> wires in <strong>opposite polarity</strong> — <span style={{color:"#60a5fa"}}>hot</span> (+signal) and <span style={{color:"#f87171"}}>cold</span> (−signal, a mirror). Because the two wires run together, interference is induced <em>identically</em> on both (that's <strong>common-mode</strong>). At the mixer a <strong>differential</strong> receiver takes <span style={{color:"#f472b6"}}>hot − cold</span>: the signal, which was opposite on the two wires, adds up and <strong>doubles (+6 dB)</strong>; the noise, which was the same on both, <strong>cancels</strong>. An <strong>unbalanced</strong> lead (a single wire — guitar, RCA) has no second wire to compare against, so the noise rides straight into the mix — which is why those runs must stay short. The same balanced XLR also carries <strong>+48 V phantom</strong> to condenser mics. (Audio side of the XLR from <em>Signals &amp; Connectivity</em> — same plug, never DMX.) Turn <strong>Balancing</strong> on and off and watch the output.
+        The <strong>balanced</strong> trick, in one line: the source sends the signal on <em>two</em> wires in <strong>opposite polarity</strong> — <span style={{color:"#60a5fa"}}>Hot</span> (+) and <span style={{color:"#60a5fa"}}>Cold</span> (−). Along the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is induced <em>identically</em> on both. At the destination the receiver <strong>flips the Cold wire over</strong> and adds the two: because the <span style={{color:"#60a5fa"}}>signal</span> was opposite, flipping lines it up and it <strong>reinforces (2×)</strong>; because the <span style={{color:"#f97316"}}>interference</span> was the same on both, flipping makes it opposite and it <strong>cancels</strong>. That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just adds on and stays — keep those runs short. (The same balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.) Flip <strong>Balancing</strong> on and off, and drag the interference up.
       </InfoBox>
-      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:16}}>
         <button onClick={()=>setBalanced(b=>!b)} style={{padding:"10px 18px",borderRadius:8,border:`2px solid ${balanced?"#34d399":"#6b7280"}`,background:balanced?"#34d39922":"#161c26",color:balanced?"#34d399":"#9ca3af",cursor:"pointer",fontFamily:"monospace",fontWeight:"bold",fontSize:13}}>
           {balanced?"◉ Balancing: ON":"○ Balancing: OFF — click to activate"}
         </button>
-        <label style={styles.label}>Interference (hum / RF): <strong style={{color:"#f59e0b"}}>{Math.round(noise*100)}%</strong>
-          <input type="range" min={0} max={1} step={0.01} value={noise} onChange={e=>setNoise(+e.target.value)} style={{...styles.slider,width:180}}/></label>
+        <label style={styles.label}>Interference (hum / RF): <strong style={{color:"#f97316"}}>{Math.round(noise*100)}%</strong>
+          <input type="range" min={0} max={1} step={0.01} value={noise} onChange={e=>setNoise(+e.target.value)} style={{...styles.slider,width:180,accentColor:"#f97316"}}/></label>
         <button onClick={()=>setAnimate(a=>!a)} style={animate?styles.btnActive:styles.btnChip}>{animate?"Live: ON":"Live: OFF"}</button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:10}}>
-        <canvas ref={cableRef} style={{display:"block",width:"100%",borderRadius:4}}/>
-      </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}>
-        <canvas ref={outRef} style={{display:"block",width:"100%",borderRadius:4}}/>
-      </div>
-      {balanced ? (
-        <div style={{marginTop:12}}>
-          <div style={{color:"#6b7280",fontSize:11,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.06em"}}>WHY IT WORKS — at the mixer, flip Cold back and add the two wires:</div>
-          <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-            <div style={{flex:"1 1 240px",minWidth:220,background:"#0d1117",border:"1px solid #1f3a24",borderRadius:8,padding:10}}>
-              <div style={{color:"#86efac",fontSize:12,fontWeight:"bold",marginBottom:4}}>Signal → doubles ✓</div>
-              <div style={{color:"#9ca3af",fontSize:11,marginBottom:6}}>Was opposite on the two wires → now lines up → adds to <strong>2×</strong>.</div>
-              <canvas ref={sigCompRef} style={{display:"block",width:"100%",borderRadius:3}}/>
+      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:10,padding:"6px 14px"}}>
+        {stages.map((st,i)=>{
+          const accent=st.good?"#34d399":st.bad?"#f97316":"#6b7280";
+          return (
+            <div key={i}>
+              {st.flip && <div style={{textAlign:"center",color:"#f472b6",fontSize:12,fontFamily:"monospace",fontWeight:"bold",padding:"4px 0"}}>↺ the destination flips the Cold wire's polarity</div>}
+              <div style={{display:"flex",gap:14,alignItems:"center",padding:"12px 0",flexWrap:"wrap"}}>
+                <div style={{width:26,height:26,borderRadius:"50%",flexShrink:0,background:accent+"22",border:`1.5px solid ${accent}`,color:accent,fontFamily:"monospace",fontWeight:"bold",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>{st.n}</div>
+                <div style={{flex:"1 1 250px",minWidth:210}}>
+                  <div style={{color:st.good?"#86efac":st.bad?"#fdba74":"#e5e7eb",fontSize:13.5,fontWeight:"bold"}}>{st.title}</div>
+                  <div style={{color:"#9ca3af",fontSize:12,lineHeight:1.5,marginTop:2}}>{st.sub}</div>
+                  <div style={{display:"flex",gap:12,marginTop:5,flexWrap:"wrap"}}>
+                    {st.legend.map(([lab,c],k)=>(<span key={k} style={{display:"inline-flex",alignItems:"center",gap:5,color:"#9ca3af",fontSize:11,fontFamily:"monospace"}}><span style={{width:14,height:3,borderRadius:2,background:c,display:"inline-block"}}/>{lab}</span>))}
+                  </div>
+                </div>
+                <div style={{flex:"1 1 250px",minWidth:230}}>
+                  <canvas ref={el=>refs.current[i]=el} style={{display:"block",width:"100%",borderRadius:4}}/>
+                </div>
+              </div>
+              {i<stages.length-1 && !stages[i+1]?.flip && <div style={{textAlign:"center",color:"#374151",fontSize:14,lineHeight:0.6}}>↓</div>}
             </div>
-            <div style={{flex:"1 1 240px",minWidth:220,background:"#0d1117",border:"1px solid #1f3a24",borderRadius:8,padding:10}}>
-              <div style={{color:"#86efac",fontSize:12,fontWeight:"bold",marginBottom:4}}>Noise → cancels ✓</div>
-              <div style={{color:"#9ca3af",fontSize:11,marginBottom:6}}>Was identical on both → now opposite → sums to <strong>zero</strong> (flat).</div>
-              <canvas ref={noiseCompRef} style={{display:"block",width:"100%",borderRadius:3}}/>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div style={{marginTop:12,padding:"10px 14px",background:"#1a1410",border:"1px solid #3a2410",borderRadius:8,color:"#fbbf24",fontSize:13}}>
-          ✗ Balancing off (single-ended): there is no inverted second wire, so nothing cancels the induced noise — it goes straight to the output. Turn balancing on to see it vanish. Fine for short unbalanced runs only.
-        </div>
-      )}
+          );
+        })}
+      </div>
+      <div style={{marginTop:12,padding:"10px 14px",background:balanced?"#0f1a10":"#1a1410",border:`1px solid ${balanced?"#1f3a24":"#3a2410"}`,borderRadius:8,color:balanced?"#86efac":"#fdba74",fontSize:13}}>
+        {balanced?"✓ Balancing ON: the flip turns the shared interference into opposites (it cancels) and the opposite signals into matches (they reinforce). Long runs stay clean even at 100% interference.":"✗ Balancing OFF: with one wire there is no opposite copy, so the interference sums on and stays. Fine for short unbalanced runs only — click Balancing ON to see it vanish."}
+      </div>
     </div>
   );
 }
