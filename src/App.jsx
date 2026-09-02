@@ -50,7 +50,6 @@ const STRINGS = {
       containers: { title: "Containers & Wrappers", desc: "MOV, MP4, MXF, MKV — codec ≠ container" },
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
       portraitLight: { title: "Portrait Lighting", desc: "Three-point (key/fill/back) & patterns — Rembrandt, butterfly, split" },
-      dmx: { title: "DMX Lighting Control", desc: "Universe, addressing, fixture personalities, Art-Net/sACN" },
       lensDistortion: { title: "Lens Distortion", desc: "Barrel & pincushion — when straight lines bend" },
       interlacing: { title: "Interlacing & Combing", desc: "Fields, comb teeth on motion, deinterlacing" },
       halation: { title: "Halation & Bloom", desc: "Highlight glow — the red halo of film" },
@@ -107,7 +106,7 @@ const CATEGORIES = [
   },
   {
     id: "lighting", label: T.categories.lighting,
-    modules: ["portraitLight","dmx"],
+    modules: ["portraitLight"],
   },
   {
     id: "audio", label: T.categories.audio,
@@ -2787,7 +2786,7 @@ const SIGNALS=[
   {id:"xlr",cat:"physical",name:"XLR-3 (audio)",conn:"XLR 3-pin",carries:["audio"],dist:"~100 m balanced",bw:"—",lic:"Open",open:true,
    note:"⚠ Balanced analogue audio (mic/line): hot (pin 2) + cold (pin 3) + shield (pin 1), so induced noise cancels — and it carries +48V phantom for condensers. Looks identical to 3-pin DMX but is a completely different signal; never cross the two. See the Audio → Balanced Audio module."},
   {id:"dmx",cat:"physical",name:"DMX512",conn:"XLR 5-pin (std) / 3-pin (common)",carries:["data","control"],dist:"~300 m · 32 devices per run",bw:"512 channels / universe",lic:"Open · ANSI E1.11",open:true,
-   note:"⚠ Digital lighting-control DATA over RS-485 — not audio, despite the XLR shell. Daisy-chain fixtures and terminate the last one. Detailed in the Lighting module."},
+   note:"⚠ Digital lighting-control DATA over RS-485 — not audio, despite the XLR shell. One controller addresses up to 512 channels per universe; daisy-chain the fixtures and terminate the last one."},
   {id:"ndi",cat:"ip",name:"NDI",conn:"rides on Ethernet / IP",carries:["video","audio","tally","control"],dist:"LAN (network-limited)",bw:"~100–250 Mb/s Full · HX low-bitrate",lic:"Proprietary · SDK free",open:false,
    note:"IP video over an ordinary LAN — NOT a cable. Full needs 1GbE+; HX is compressed for WiFi. Auto-discovery and tally are built in. See LiveMixR-style workflows."},
   {id:"srt",cat:"ip",name:"SRT",conn:"rides on IP / internet",carries:["video","audio"],dist:"Internet (WAN)",bw:"Adaptive",lic:"Open · royalty-free",open:true,
@@ -2797,7 +2796,7 @@ const SIGNALS=[
   {id:"dante",cat:"ip",name:"Dante",conn:"rides on Ethernet / IP",carries:["audio","data"],dist:"LAN",bw:"Hundreds of channels",lic:"Proprietary · Audinate",open:false,
    note:"Audio-over-IP, the install/live-sound standard. Not video. AES67 is the open layer that lets Dante interoperate with other AoIP systems."},
   {id:"artnet",cat:"ip",name:"Art-Net / sACN",conn:"rides on Ethernet / IP",carries:["control","data"],dist:"LAN",bw:"Many DMX universes",lic:"Open",open:true,
-   note:"DMX over the network: many universes down one Ethernet cable to nodes that break out to physical DMX runs. The backbone of larger lighting rigs. See Lighting."},
+   note:"DMX over the network: many universes down one Ethernet cable to nodes that break out to physical DMX runs. The backbone of larger lighting rigs."},
 ];
 function ModuleSignals() {
   const [sel,setSel]=useState("sdi");
@@ -3282,83 +3281,6 @@ function ModulePortraitLight() {
 }
 
 // ─────────────────────────────────────────────
-// MODULE: DMX Lighting Control
-// ─────────────────────────────────────────────
-const DMX_FIXTURES=[
-  {id:"dimmer",name:"Dimmer (1ch)",addr:1,chans:[{n:"Intensity",v:255}]},
-  {id:"par",name:"RGB PAR (4ch)",addr:11,chans:[{n:"Dimmer",v:255},{n:"Red",v:255},{n:"Green",v:40},{n:"Blue",v:120}]},
-  {id:"mover",name:"Moving head (8ch)",addr:21,chans:[{n:"Pan",v:128},{n:"Tilt",v:90},{n:"Dimmer",v:220},{n:"Red",v:80},{n:"Green",v:180},{n:"Blue",v:255},{n:"Strobe",v:0},{n:"Gobo",v:0}]},
-];
-function ModuleDMX() {
-  const [fixtures,setFixtures]=useState(()=>DMX_FIXTURES.map(f=>({...f,chans:f.chans.map(c=>({...c}))})));
-  const [sel,setSel]=useState("par");
-  const gridRef=useRef();
-  const f=fixtures.find(x=>x.id===sel)||fixtures[0];
-  // build the 512 universe from fixtures
-  const universe=(()=>{ const u=new Array(512).fill(0); fixtures.forEach(fx=>fx.chans.forEach((c,i)=>{ if(fx.addr+i-1<512) u[fx.addr+i-1]=c.v; })); return u; })();
-  useEffect(()=>{
-    const c=gridRef.current; if(!c)return;
-    const cols=32, rows=16, cell=Math.floor((Math.min(c.parentElement?.clientWidth-24||512,512))/cols);
-    const W=cols*cell, H=rows*cell; c.width=W;c.height=H; const ctx=c.getContext("2d"); ctx.clearRect(0,0,W,H);
-    // map which channels belong to which fixture
-    const owner=new Array(512).fill(-1); fixtures.forEach((fx,fi)=>fx.chans.forEach((_,i)=>{ if(fx.addr+i-1<512) owner[fx.addr+i-1]=fi; }));
-    const fcol=["#f59e0b","#34d399","#60a5fa"];
-    for(let idx=0;idx<512;idx++){ const x=(idx%cols)*cell, y=Math.floor(idx/cols)*cell, v=universe[idx];
-      ctx.fillStyle=`rgb(${v},${v},${v})`; ctx.fillRect(x+1,y+1,cell-2,cell-2);
-      const o=owner[idx]; if(o>=0){ ctx.strokeStyle=fcol[o%3]; ctx.lineWidth=1.5; ctx.strokeRect(x+1.5,y+1.5,cell-3,cell-3); }
-    }
-    ctx.strokeStyle="rgba(255,255,255,0.06)"; ctx.strokeRect(0.5,0.5,W-1,H-1);
-  },[fixtures,universe]);
-  const setChan=(ci,v)=>setFixtures(fs=>fs.map(fx=>fx.id===sel?{...fx,chans:fx.chans.map((c,i)=>i===ci?{...c,v}:c)}:fx));
-  const setAddr=(v)=>setFixtures(fs=>fs.map(fx=>fx.id===sel?{...fx,addr:Math.max(1,Math.min(512-fx.chans.length+1,v))}:fx));
-  // fixture visual output (colour + intensity)
-  const rgbOf=fx=>{ const get=n=>{const c=fx.chans.find(c=>c.n===n);return c?c.v:null;};
-    const dim=(get("Dimmer")??get("Intensity")??255)/255; let r=get("Red"),g=get("Green"),b=get("Blue");
-    if(r==null){r=g=b=255;} return [Math.round(r*dim),Math.round(g*dim),Math.round(b*dim)]; };
-  return (
-    <div>
-      <InfoBox>
-        <strong>DMX512</strong> is how one controller talks to many lights. A <strong>universe</strong> is <strong>512 channels</strong>, each a value <strong>0–255</strong>. A fixture is <em>patched</em> to a <strong>start address</strong> and then occupies a run of channels according to its <strong>personality</strong> (its channel map): a simple dimmer uses 1 channel, an RGB PAR 3–4, a moving head 8–32 (pan, tilt, colour, gobo, strobe…). Set a fixture to address 11 and its channels land on 11, 12, 13… — so you must leave room and never overlap two fixtures (unless you <em>want</em> them to move together). Physically it's a daisy-chain over XLR (RS-485); terminate the last fixture. When 512 channels aren't enough you add universes and send them over the network with <strong>Art-Net</strong> or <strong>sACN</strong> — the same DMX values, now riding on Ethernet to nodes that break out to the lamps. Change a channel below and watch it light up in the 512-channel grid.
-      </InfoBox>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-        {fixtures.map((fx,i)=>(
-          <button key={fx.id} onClick={()=>setSel(fx.id)} style={sel===fx.id?styles.btnActive:styles.btnChip}>
-            <span style={{color:["#f59e0b","#34d399","#60a5fa"][i%3]}}>●</span> {fx.name} @{fx.addr}
-          </button>
-        ))}
-      </div>
-      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 300px",minWidth:280,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <span style={{color:"#f3f4f6",fontWeight:"bold"}}>{f.name}</span>
-            <label style={{color:"#9ca3af",fontSize:12}}>start addr <input type="number" min={1} max={512} value={f.addr} onChange={e=>setAddr(+e.target.value)} style={{width:56,background:"#111",border:"1px solid #374151",color:"#f59e0b",borderRadius:4,padding:"2px 6px",fontFamily:"monospace"}}/></label>
-          </div>
-          <div style={{color:"#6b7280",fontSize:11,fontFamily:"monospace",marginBottom:10}}>occupies ch {f.addr}–{f.addr+f.chans.length-1}</div>
-          {f.chans.map((c,i)=>(
-            <div key={i} style={{marginBottom:8}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
-                <span style={{color:"#9ca3af"}}><span style={{color:"#6b7280",fontFamily:"monospace"}}>ch {f.addr+i}</span> · {c.n}</span>
-                <strong style={{color:"#f59e0b",fontFamily:"monospace"}}>{c.v}</strong>
-              </div>
-              <input type="range" min={0} max={255} step={1} value={c.v} onChange={e=>setChan(i,+e.target.value)} style={{...styles.slider,width:"100%"}}/>
-            </div>
-          ))}
-          <div style={{marginTop:12,display:"flex",alignItems:"center",gap:12}}>
-            <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>output</span>
-            <span style={{width:44,height:44,borderRadius:"50%",background:`rgb(${rgbOf(f).join(",")})`,boxShadow:`0 0 18px rgb(${rgbOf(f).join(",")})`,display:"inline-block",border:"1px solid #333"}}/>
-          </div>
-        </div>
-        <div style={{flex:"1 1 300px",minWidth:280,background:"#111",borderRadius:8,padding:14}}>
-          <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>UNIVERSE 1 — 512 CHANNELS (patched fixtures outlined)</div>
-          <canvas ref={gridRef} style={{display:"block",width:"100%"}}/>
-          <div style={{marginTop:10,color:"#6b7280",fontSize:11,lineHeight:1.6}}>Each square is one channel (0–255 → black→white). Coloured outlines are the three patched fixtures. Add universes + <strong style={{color:"#2dd4bf"}}>Art-Net / sACN</strong> when 512 isn't enough.</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
 // MODULE: The Audio Chain (signal flow)
 // ─────────────────────────────────────────────
 const AUDIO_STAGES=[
@@ -3708,52 +3630,81 @@ function ModuleMicTypes() {
 // ─────────────────────────────────────────────
 // MODULE: Balanced Audio (connectors)
 // ─────────────────────────────────────────────
+function drawBalScope(canvas, waves){
+  const W=Math.min(canvas.parentElement?.clientWidth||320,760), H=56; canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+  const mid=H/2, amp=H/2-7, N=W;
+  ctx.strokeStyle="#161c26"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
+  waves.forEach(w=>{ ctx.strokeStyle=w.col; ctx.lineWidth=w.width||1.6; ctx.beginPath();
+    for(let i=0;i<N;i++){ const v=w.fn(i/N); const y=mid-v*amp; if(i===0)ctx.moveTo(i,y); else ctx.lineTo(i,y); } ctx.stroke(); });
+}
+function balancedStages(balanced, noise){
+  const sig=t=>0.4*Math.sin(t*Math.PI*2*3);
+  const nz=t=>noise*(0.4*Math.sin(t*Math.PI*2*23+0.6)+0.18*Math.sin(t*Math.PI*2*41+1.3));
+  if(balanced) return [
+    {n:"1",title:"Split the signal in two",sub:"“Cold” is just the signal flipped upside-down — a mirror of “Hot”.",
+     waves:[{fn:sig,col:"#60a5fa"},{fn:t=>-sig(t),col:"#f87171"}],tags:[["Hot",'#60a5fa'],["Cold — inverted",'#f87171']]},
+    {n:"2",title:"Down the cable, noise hits BOTH wires the same",sub:"Hum and RF add an identical wobble to Hot and Cold.",
+     waves:[{fn:t=>sig(t)+nz(t),col:"#60a5fa"},{fn:t=>-sig(t)+nz(t),col:"#f87171"}],tags:[["Hot + noise",'#60a5fa'],["Cold + noise",'#f87171']]},
+    {n:"3",title:"At the far end, flip Cold back over",sub:"Now the two signals line up — but the noise ends up opposite.",
+     waves:[{fn:t=>sig(t)+nz(t),col:"#60a5fa"},{fn:t=>sig(t)-nz(t),col:"#f87171"}],tags:[["Hot",'#60a5fa'],["Cold flipped back",'#f87171']]},
+    {n:"4",title:"Add them together",sub:"Matching signal doubles; the opposite noise cancels out.",good:true,
+     waves:[{fn:t=>2*sig(t),col:"#34d399",width:2.2}],tags:[["Clean output — 2× signal",'#34d399']]},
+  ];
+  return [
+    {n:"1",title:"One wire carries the signal",sub:"An unbalanced lead (guitar, RCA) has a single conductor — no mirror copy.",
+     waves:[{fn:sig,col:"#60a5fa"}],tags:[["Signal",'#60a5fa']]},
+    {n:"2",title:"The cable picks up the same noise…",sub:"…but there is no second wire and no trick to remove it.",
+     waves:[{fn:nz,col:"#f87171"}],tags:[["Induced noise",'#f87171']]},
+    {n:"3",title:"…so it rides straight into the mix",sub:"Output = signal + noise. Nothing cancels — keep these cables short.",bad:true,
+     waves:[{fn:t=>sig(t)+nz(t),col:"#f59e0b",width:2.2}],tags:[["Noisy output",'#f59e0b']]},
+  ];
+}
 function ModuleBalancedAudio() {
   const [balanced,setBalanced]=useState(true);
-  const [noise,setNoise]=useState(0.5);
-  const ref=useRef();
+  const [noise,setNoise]=useState(0.6);
+  const refs=useRef([]);
+  const stages=balancedStages(balanced,noise);
   useEffect(()=>{
-    const c=ref.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||560,560),H=230; c.width=W;c.height=H;
-    const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
-    const N=W, sig=i=>Math.sin(i/N*Math.PI*6)*0.6, nz=i=>Math.sin(i/N*Math.PI*54+0.7)*noise*0.5;
-    const rows=[H*0.22,H*0.5,H*0.8];
-    ctx.font="11px monospace"; ctx.textAlign="left";
-    const drawWave=(y,fn,col,amp)=>{ ctx.strokeStyle=col; ctx.lineWidth=1.4; ctx.beginPath();
-      for(let i=0;i<N;i++){ const v=fn(i)*amp; const yy=y-v*36; if(i===0)ctx.moveTo(i,yy); else ctx.lineTo(i,yy);} ctx.stroke(); };
-    if(balanced){
-      // hot = +sig+noise, cold = -sig+noise, out = hot-cold = 2*sig (noise cancels)
-      ctx.fillStyle="#93c5fd"; ctx.fillText("HOT  (pin 2):  +signal + noise",8,rows[0]-46);
-      drawWave(rows[0],i=>sig(i)+nz(i),"#60a5fa",1);
-      ctx.fillStyle="#fca5a5"; ctx.fillText("COLD (pin 3):  −signal + noise  (same noise!)",8,rows[1]-46);
-      drawWave(rows[1],i=>-sig(i)+nz(i),"#f87171",1);
-      ctx.fillStyle="#86efac"; ctx.fillText("OUT = HOT − COLD:  2×signal, noise CANCELS ✓",8,rows[2]-46);
-      drawWave(rows[2],i=>2*sig(i),"#34d399",1);
-    } else {
-      ctx.fillStyle="#93c5fd"; ctx.fillText("SIGNAL (single conductor)",8,rows[0]-46);
-      drawWave(rows[0],i=>sig(i),"#60a5fa",1);
-      ctx.fillStyle="#fca5a5"; ctx.fillText("+ INDUCED NOISE (long cable, mains, RF)",8,rows[1]-46);
-      drawWave(rows[1],i=>nz(i),"#f87171",1);
-      ctx.fillStyle="#fbbf24"; ctx.fillText("OUT = signal + noise:  noise RIDES ALONG ✗",8,rows[2]-46);
-      drawWave(rows[2],i=>sig(i)+nz(i),"#f59e0b",1);
-    }
-  },[balanced,noise]);
+    stages.forEach((st,i)=>{ const c=refs.current[i]; if(c) drawBalScope(c,st.waves); });
+  },[balanced,noise,stages]);
   return (
     <div>
       <InfoBox>
-        Long audio cables act like antennas — they pick up hum from mains and buzz from RF. <strong>Balanced</strong> connections (XLR, TRS) beat this with <strong>differential signalling</strong>: the signal travels on <em>two</em> conductors, one normal (<strong>hot</strong>, pin 2) and one inverted (<strong>cold</strong>, pin 3), inside a shield (pin 1). Interference hits both wires <em>equally</em>. At the far end the receiver <em>subtracts</em> cold from hot: the wanted signal doubles, while the identical noise on both wires <strong>cancels</strong> (common-mode rejection). An <strong>unbalanced</strong> cable (a single conductor, like a guitar or RCA lead) has no such trick — whatever it picks up rides straight into the mix, which is why unbalanced runs must stay short. <strong>+48 V phantom power</strong> also travels down a balanced XLR to feed condenser mics. This is the audio side of the XLR you met in <em>Signals &amp; Connectivity</em> — same connector, and never to be confused with DMX.
+        Long audio cables act like antennas — they pick up mains <strong>hum</strong> and RF <strong>buzz</strong>. The <strong>balanced</strong> trick (XLR, TRS) is beautifully simple: <strong>send the signal twice — once normal (“hot”), once flipped upside-down (“cold”)</strong>, in the same cable. Noise hits both wires <em>identically</em>. At the far end the receiver <strong>flips the cold wire back</strong> and adds the two: the real signal, now lined up, <strong>doubles</strong>; the noise, now pointing opposite ways, <strong>cancels</strong>. That's <em>common-mode rejection</em>. An <strong>unbalanced</strong> lead (a single wire — guitar, RCA) has no mirror copy to compare against, so whatever it picks up rides straight into the mix — which is why those cables must stay short. The same balanced XLR also carries <strong>+48 V phantom</strong> to condenser mics. (It's the audio side of the XLR from <em>Signals &amp; Connectivity</em> — same plug, and never DMX.) Follow the four steps below, and drag <em>interference</em> up to see the noise appear — and still vanish at the end.
       </InfoBox>
-      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
-        {[["Balanced (XLR/TRS)",true],["Unbalanced (TS/RCA)",false]].map(([l,v])=>(
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:16}}>
+        {[["Balanced (XLR / TRS)",true],["Unbalanced (TS / RCA)",false]].map(([l,v])=>(
           <button key={l} onClick={()=>setBalanced(v)} style={balanced===v?styles.btnActive:styles.btnChip}>{l}</button>
         ))}
-        <label style={styles.label}>Interference: <strong style={{color:"#f59e0b"}}>{Math.round(noise*100)}%</strong>
-          <input type="range" min={0} max={1} step={0.01} value={noise} onChange={e=>setNoise(+e.target.value)} style={{...styles.slider,width:180}}/></label>
+        <label style={styles.label}>Interference (hum / RF): <strong style={{color:"#f59e0b"}}>{Math.round(noise*100)}%</strong>
+          <input type="range" min={0} max={1} step={0.01} value={noise} onChange={e=>setNoise(+e.target.value)} style={{...styles.slider,width:200}}/></label>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}>
-        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:10,padding:"6px 14px"}}>
+        {stages.map((st,i)=>{
+          const accent=st.good?"#34d399":st.bad?"#f59e0b":"#6b7280";
+          return (
+            <div key={i}>
+              <div style={{display:"flex",gap:14,alignItems:"center",padding:"12px 0",flexWrap:"wrap"}}>
+                <div style={{width:26,height:26,borderRadius:"50%",flexShrink:0,background:accent+"22",border:`1.5px solid ${accent}`,color:accent,fontFamily:"monospace",fontWeight:"bold",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>{st.n}</div>
+                <div style={{flex:"1 1 230px",minWidth:200}}>
+                  <div style={{color:st.good?"#86efac":st.bad?"#fbbf24":"#e5e7eb",fontSize:13.5,fontWeight:"bold"}}>{st.title}</div>
+                  <div style={{color:"#9ca3af",fontSize:12,lineHeight:1.5,marginTop:2}}>{st.sub}</div>
+                  <div style={{display:"flex",gap:12,marginTop:5,flexWrap:"wrap"}}>
+                    {st.tags.map(([lab,c],k)=>(<span key={k} style={{display:"inline-flex",alignItems:"center",gap:5,color:"#9ca3af",fontSize:11,fontFamily:"monospace"}}><span style={{width:9,height:9,borderRadius:2,background:c,display:"inline-block"}}/>{lab}</span>))}
+                  </div>
+                </div>
+                <div style={{flex:"1 1 240px",minWidth:220}}>
+                  <canvas ref={el=>refs.current[i]=el} style={{display:"block",width:"100%",borderRadius:4}}/>
+                </div>
+              </div>
+              {i<stages.length-1 && <div style={{textAlign:"center",color:"#374151",fontSize:14,lineHeight:0.6}}>↓</div>}
+            </div>
+          );
+        })}
       </div>
       <div style={{marginTop:12,padding:"10px 14px",background:balanced?"#0f1a10":"#1a1410",border:`1px solid ${balanced?"#1f3a24":"#3a2410"}`,borderRadius:8,color:balanced?"#86efac":"#fbbf24",fontSize:13}}>
-        {balanced?"✓ Balanced: the same noise on hot and cold cancels on subtraction — long runs stay clean.":"✗ Unbalanced: nothing cancels the induced noise — keep these cables short (< a few metres)."}
+        {balanced?"✓ Balanced: because the noise was identical on both wires, flipping one and adding makes it cancel — long runs stay clean even at 100% interference.":"✗ Unbalanced: with a single wire there is nothing to cancel against, so the noise stays. Fine for short runs only."}
       </div>
     </div>
   );
@@ -4070,7 +4021,6 @@ const MODULE_COMPONENTS = {
   containers: ModuleContainers,
   signals: ModuleSignals,
   portraitLight: ModulePortraitLight,
-  dmx: ModuleDMX,
   lensDistortion: ModuleLensDistortion,
   interlacing: ModuleInterlacing,
   halation: ModuleHalation,
