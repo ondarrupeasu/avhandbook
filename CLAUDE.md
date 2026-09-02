@@ -81,10 +81,11 @@ imprescindible (ver más abajo). Orden acordado con el usuario:
   flechas + tabla de 8 códecs. **Containers & Wrappers**: códec≠contenedor, matriz de pistas.
 - **Signals & Connectivity** (CATEGORÍA nueva, teal): 3 ejes (cable físico / transporte
   IP / qué transporta) + distancias + XLR-audio vs DMX.
-- **Lighting** (CATEGORÍA nueva, amarillo): **Portrait Lighting** 2.5D (cara por relieve
-  de normales, N·L+especular, key arrastrable cenital, patrones Rembrandt/butterfly/
-  loop/split/rim) + **DMX Control** (universo 512ch, patch por dirección, fixtures con
-  personalidad, Art-Net/sACN). Módulo educativo, distinto de la app DMXSimulatoR.
+- **Lighting** (CATEGORÍA nueva, amarillo): **Portrait Lighting** 2.5D con THREE-POINT —
+  3 luces independientes (key/fill/back), cada una arrastrable en el diagrama cenital con
+  su azimut/elevación/intensidad/softness/temperatura; presets three-point/butterfly/
+  Rembrandt/split/silhouette/key-only; cara por relieve de normales, N·L+especular acumulado.
+  (El módulo DMX se quitó — Alex no lo necesitaba; la app DMXSimulatoR va aparte.)
 - Artefactos: **Lens Distortion** (barrel/pincushion), **Interlacing & Combing**,
   **Halation & Bloom**, **Flicker & Rolling Bands** (animado), **Focus Breathing** (animado).
 
