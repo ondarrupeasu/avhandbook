@@ -3630,49 +3630,56 @@ function ModuleMicTypes() {
 // ─────────────────────────────────────────────
 // MODULE: Balanced Audio (connectors)
 // ─────────────────────────────────────────────
-function drawMultiScope(canvas, waves, ph){
-  const W=Math.min(canvas.parentElement?.clientWidth||320,760), H=66; canvas.width=W; canvas.height=H;
-  const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
-  const mid=H/2, amp=H/2-9, N=W;
-  ctx.strokeStyle="#161c26"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
-  waves.forEach(w=>{ ctx.strokeStyle=w.col; ctx.lineWidth=w.width||1.8; if(w.dash)ctx.setLineDash(w.dash); else ctx.setLineDash([]);
-    ctx.beginPath(); for(let x=0;x<N;x++){ const u=x/N; const v=w.fn(u,ph); const y=mid-Math.max(-1.25,Math.min(1.25,v))*amp; if(x===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke(); });
-  ctx.setLineDash([]);
+function drawLanes(canvas, lanes, ph){
+  const W=Math.min(canvas.parentElement?.clientWidth||320,760), two=lanes.length>1, H=two?120:70;
+  canvas.width=W; canvas.height=H; const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+  const lm=two?36:4;
+  lanes.forEach((lane,li)=>{
+    const cy = two? Math.round(H*(0.28+0.44*li)) : H/2;
+    const amp = two? H*0.19 : H/2-9;
+    ctx.strokeStyle="#161c26"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(lm,cy); ctx.lineTo(W,cy); ctx.stroke();
+    lane.waves.forEach(w=>{ ctx.strokeStyle=w.col; ctx.lineWidth=w.width||2; if(w.dash)ctx.setLineDash(w.dash); else ctx.setLineDash([]);
+      ctx.beginPath(); for(let x=lm;x<=W;x++){ const u=(x-lm)/(W-lm); const v=w.fn(u,ph); const y=cy-Math.max(-1.3,Math.min(1.3,v))*amp; if(x===lm)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke(); });
+    ctx.setLineDash([]);
+    if(lane.label){ ctx.fillStyle=lane.labelCol||"#6b7280"; ctx.font="bold 8.5px monospace"; ctx.textAlign="left"; ctx.fillText(lane.label,2,cy-amp+2); }
+  });
 }
 function ModuleBalancedAudio() {
   const [balanced,setBalanced]=useState(true);
   const [noise,setNoise]=useState(0.55);
   const [animate,setAnimate]=useState(true);
   const refs=useRef([]);
-  const SIG="#60a5fa", NZC="#f97316";
-  const sig=(u,ph)=>0.42*Math.sin(u*6.28318*3 - ph*6);
-  const nz =(u,ph)=>noise*(0.42*Math.sin(u*6.28318*21 - ph*9)+0.18*Math.sin(u*6.28318*39 - ph*13));
-  const gate=u=> u<0.42?0:Math.min(1,(u-0.42)/0.05);
+  const SIG="#2563eb", NZC="#f97316";
+  const sig =(u,ph)=>0.34*Math.sin((u*3 - ph*0.5)*6.28318);
+  const saw=t=>{ const s=t-Math.floor(t); return s*2-1; };
+  const intf=(u,ph)=> noise*0.62*saw(u*5 - ph*0.5);
+  const gate=u=> u<0.42?0:Math.min(1,(u-0.42)/0.04);
+  const nsig=(u,ph)=>-sig(u,ph), nintf=(u,ph)=>-intf(u,ph);
   const stages = balanced ? [
-    {n:"1",title:"Two wires, opposite polarity — clean",sub:"The source sends the signal twice: Hot (+) and its mirror Cold (−). Both perfectly clean.",
-     legend:[["Hot — signal",SIG],["Cold — signal, opposite",SIG]],
-     waves:[{fn:sig,col:SIG,width:2},{fn:(u,ph)=>-sig(u,ph),col:SIG,width:2,dash:[5,4]}]},
-    {n:"2",title:"The cable adds interference to BOTH — same polarity",sub:"Hum / RF is induced identically on both wires (orange), pointing the same way on Hot and Cold.",
-     legend:[["Signal (Hot / Cold)",SIG],["Interference — identical on both",NZC]],
-     waves:[{fn:sig,col:SIG,width:1.2},{fn:(u,ph)=>-sig(u,ph),col:SIG,width:1.2,dash:[5,4]},{fn:nz,col:NZC,width:2.6}]},
-    {n:"3",title:"At the destination, flip the Cold wire",sub:"Flipping Cold inverts BOTH of its parts: its signal now lines up with Hot (+), while its interference now points the opposite way (−).",flip:true,
-     legend:[["Signals now aligned",SIG],["Hot interference +",NZC],["Cold interference flipped −",NZC]],
-     waves:[{fn:sig,col:SIG,width:2},{fn:nz,col:NZC,width:1.8},{fn:(u,ph)=>-nz(u,ph),col:NZC,width:1.8,dash:[5,4]}]},
-    {n:"4",title:"Add the two wires together",sub:"The aligned signal reinforces to 2× (louder, +6 dB); the opposite interference cancels to zero.",good:true,
-     legend:[["Signal reinforced — ×2",SIG],["Interference cancelled — 0",NZC]],
-     waves:[{fn:(u,ph)=>2*sig(u,ph),col:SIG,width:2.8},{fn:()=>0,col:NZC,width:2.6}]},
+    {n:"1",title:"Two wires — the signal, and its inverted copy",sub:"The source sends the audio twice: Hot as-is, Cold with reversed polarity (a mirror). Both clean.",
+     legend:[["Signal (blue)",SIG]],
+     lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG}]},{label:"COLD (inverted)",labelCol:SIG,waves:[{fn:nsig,col:SIG}]}]},
+    {n:"2",title:"The cable induces the SAME interference on both",sub:"Watch the shape: the orange interference is identical on Hot and Cold — same form, same polarity — while the blue signal stays opposite between the two wires.",
+     legend:[["Signal (blue)",SIG],["Interference — same shape on both (orange)",NZC]],
+     lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4}]},{label:"COLD (inverted)",labelCol:SIG,waves:[{fn:nsig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4}]}]},
+    {n:"3",title:"At the destination, flip the Cold wire back",sub:"Inverting Cold makes its blue signal match Hot (same polarity now) — but its orange interference becomes the exact opposite of Hot's.",flip:true,
+     legend:[["Signal now aligned (blue)",SIG],["Interference now opposite (orange)",NZC]],
+     lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4}]},{label:"COLD (flipped back)",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:nintf,col:NZC,width:2.4}]}]},
+    {n:"4",title:"Add the two wires",sub:"The aligned signal reinforces to 2× (louder, +6 dB); the opposite interference sums to zero — clean.",good:true,
+     legend:[["Signal reinforced ×2 (blue)",SIG],["Interference cancelled = 0 (orange)",NZC]],
+     lanes:[{waves:[{fn:(u,ph)=>2*sig(u,ph),col:SIG,width:2.8},{fn:()=>0,col:NZC,width:2.6}]}]},
   ] : [
-    {n:"1",title:"One wire carries the clean signal",sub:"An unbalanced lead (guitar, RCA) has a single conductor — no mirror copy.",
-     legend:[["Signal — clean",SIG]],
-     waves:[{fn:sig,col:SIG,width:2.2}]},
-    {n:"2",title:"Where the interference attacks, it sums on top — and stays",sub:"From the attack point the orange interference adds onto the blue signal. With no opposite wire, nothing cancels it — the output stays dirty.",bad:true,
-     legend:[["Signal — was clean",SIG],["Signal + interference — dirty",NZC]],
-     waves:[{fn:sig,col:SIG,width:1.3},{fn:(u,ph)=>sig(u,ph)+nz(u,ph)*gate(u),col:NZC,width:2.4}]},
+    {n:"1",title:"One wire carries the clean signal",sub:"An unbalanced lead (guitar, RCA) has a single conductor — no inverted copy.",
+     legend:[["Signal — clean (blue)",SIG]],
+     lanes:[{waves:[{fn:sig,col:SIG,width:2.2}]}]},
+    {n:"2",title:"Where the interference attacks, it sits on the signal — and stays",sub:"From the attack point the orange interference (note its shape) rides on the blue signal. With no inverted wire, nothing can remove it.",bad:true,
+     legend:[["Signal (blue)",SIG],["Interference — its shape rides on (orange)",NZC]],
+     lanes:[{waves:[{fn:sig,col:SIG,width:1.8},{fn:(u,ph)=>intf(u,ph)*gate(u),col:NZC,width:2.4}]}]},
   ];
   useEffect(()=>{
     let raf=0,t0=null,alive=true;
     const loop=(time)=>{ if(!alive)return; if(t0==null)t0=time; const ph=animate?(time-t0)/1000:0;
-      stages.forEach((st,i)=>{ const c=refs.current[i]; if(c) drawMultiScope(c,st.waves,ph); });
+      stages.forEach((st,i)=>{ const c=refs.current[i]; if(c) drawLanes(c,st.lanes,ph); });
       if(animate) raf=requestAnimationFrame(loop);
     };
     raf=requestAnimationFrame(loop);
@@ -3681,7 +3688,7 @@ function ModuleBalancedAudio() {
   return (
     <div>
       <InfoBox>
-        The <strong>balanced</strong> trick, in one line: the source sends the signal on <em>two</em> wires in <strong>opposite polarity</strong> — <span style={{color:"#60a5fa"}}>Hot</span> (+) and <span style={{color:"#60a5fa"}}>Cold</span> (−). Along the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is induced <em>identically</em> on both. At the destination the receiver <strong>flips the Cold wire over</strong> and adds the two: because the <span style={{color:"#60a5fa"}}>signal</span> was opposite, flipping lines it up and it <strong>reinforces (2×)</strong>; because the <span style={{color:"#f97316"}}>interference</span> was the same on both, flipping makes it opposite and it <strong>cancels</strong>. That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just adds on and stays — keep those runs short. (The same balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.) Flip <strong>Balancing</strong> on and off, and drag the interference up.
+        The <strong>balanced</strong> trick: the source sends the audio on <em>two</em> wires — <span style={{color:"#2563eb"}}>Hot</span> normal and <span style={{color:"#2563eb"}}>Cold</span> with <strong>inverted polarity</strong>. As they run down the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is picked up <em>identically</em> on both — same shape, same polarity. At the destination the receiver <strong>flips the Cold wire back</strong>: now the <span style={{color:"#2563eb"}}>signal</span> lines up with Hot (so adding them <strong>reinforces it, 2×</strong>) while the <span style={{color:"#f97316"}}>interference</span> becomes the exact opposite (so adding them <strong>cancels it</strong>). That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just sits on the signal and stays — keep those runs short. (The balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.)
       </InfoBox>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:16}}>
         <button onClick={()=>setBalanced(b=>!b)} style={{padding:"10px 18px",borderRadius:8,border:`2px solid ${balanced?"#34d399":"#6b7280"}`,background:balanced?"#34d39922":"#161c26",color:balanced?"#34d399":"#9ca3af",cursor:"pointer",fontFamily:"monospace",fontWeight:"bold",fontSize:13}}>
@@ -3706,7 +3713,7 @@ function ModuleBalancedAudio() {
                     {st.legend.map(([lab,c],k)=>(<span key={k} style={{display:"inline-flex",alignItems:"center",gap:5,color:"#9ca3af",fontSize:11,fontFamily:"monospace"}}><span style={{width:14,height:3,borderRadius:2,background:c,display:"inline-block"}}/>{lab}</span>))}
                   </div>
                 </div>
-                <div style={{flex:"1 1 250px",minWidth:230}}>
+                <div style={{flex:"1 1 260px",minWidth:240}}>
                   <canvas ref={el=>refs.current[i]=el} style={{display:"block",width:"100%",borderRadius:4}}/>
                 </div>
               </div>
@@ -3716,7 +3723,7 @@ function ModuleBalancedAudio() {
         })}
       </div>
       <div style={{marginTop:12,padding:"10px 14px",background:balanced?"#0f1a10":"#1a1410",border:`1px solid ${balanced?"#1f3a24":"#3a2410"}`,borderRadius:8,color:balanced?"#86efac":"#fdba74",fontSize:13}}>
-        {balanced?"✓ Balancing ON: the flip turns the shared interference into opposites (it cancels) and the opposite signals into matches (they reinforce). Long runs stay clean even at 100% interference.":"✗ Balancing OFF: with one wire there is no opposite copy, so the interference sums on and stays. Fine for short unbalanced runs only — click Balancing ON to see it vanish."}
+        {balanced?"✓ Balancing ON: same interference on both wires + a flip at the end → the interference ends up opposite (cancels) and the signal ends up aligned (reinforces). Clean even at 100% interference.":"✗ Balancing OFF: one wire, no inverted copy — the interference sits on the signal and stays. Short runs only; click Balancing ON to see it cancel."}
       </div>
     </div>
   );
