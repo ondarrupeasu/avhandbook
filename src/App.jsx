@@ -3630,56 +3630,92 @@ function ModuleMicTypes() {
 // ─────────────────────────────────────────────
 // MODULE: Balanced Audio (connectors)
 // ─────────────────────────────────────────────
-function drawLanes(canvas, lanes, ph){
-  const W=Math.min(canvas.parentElement?.clientWidth||320,760), two=lanes.length>1, H=two?120:70;
-  canvas.width=W; canvas.height=H; const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
-  const lm=two?36:4;
+function drawAntenna(ctx,x,topY,H,ph){
+  ctx.strokeStyle="rgba(249,115,22,0.32)"; ctx.setLineDash([3,4]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x,topY+2); ctx.lineTo(x,H); ctx.stroke(); ctx.setLineDash([]);
+  const py=topY+2; ctx.strokeStyle="#f97316"; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(x,py); ctx.lineTo(x,py-9); ctx.stroke();
+  ctx.fillStyle="#f97316"; ctx.beginPath(); ctx.arc(x,py-9,2.2,0,7); ctx.fill();
+  const pulse=0.5+0.5*Math.sin(ph*5);
+  for(let a=0;a<3;a++){ ctx.strokeStyle=`rgba(249,115,22,${0.55-a*0.15+pulse*0.12})`; ctx.lineWidth=1.4; ctx.beginPath(); ctx.arc(x,py-9,4+a*4+pulse*2,-Math.PI*0.85,-Math.PI*0.15); ctx.stroke(); }
+  ctx.fillStyle="#f59e0b"; ctx.font="8px monospace"; ctx.textAlign="left"; ctx.fillText("interference",x+7,py-3);
+}
+function drawLanes(canvas, lanes, ph, antennaU){
+  const W=Math.min(canvas.parentElement?.clientWidth||320,760), two=lanes.length>1, pad=antennaU!=null?22:0;
+  const H=(two?120:70)+pad; canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+  const lm=two?36:4, span=W-lm, inner=H-pad;
+  if(antennaU!=null) drawAntenna(ctx, lm+span*antennaU, pad, H, ph);
   lanes.forEach((lane,li)=>{
-    const cy = two? Math.round(H*(0.28+0.44*li)) : H/2;
-    const amp = two? H*0.19 : H/2-9;
+    const cy = two? Math.round(pad+inner*(0.28+0.44*li)) : pad+inner/2;
+    const amp = two? inner*0.19 : inner/2-9;
     ctx.strokeStyle="#161c26"; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(lm,cy); ctx.lineTo(W,cy); ctx.stroke();
     lane.waves.forEach(w=>{ ctx.strokeStyle=w.col; ctx.lineWidth=w.width||2; if(w.dash)ctx.setLineDash(w.dash); else ctx.setLineDash([]);
-      ctx.beginPath(); for(let x=lm;x<=W;x++){ const u=(x-lm)/(W-lm); const v=w.fn(u,ph); const y=cy-Math.max(-1.3,Math.min(1.3,v))*amp; if(x===lm)ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke(); });
+      ctx.beginPath(); let started=false;
+      for(let x=lm;x<=W;x++){ const u=(x-lm)/span; if(w.from!=null && u<w.from){ started=false; continue; }
+        const v=w.fn(u,ph); const y=cy-Math.max(-1.3,Math.min(1.3,v))*amp; if(!started){ctx.moveTo(x,y); started=true;} else ctx.lineTo(x,y); }
+      ctx.stroke(); });
     ctx.setLineDash([]);
     if(lane.label){ ctx.fillStyle=lane.labelCol||"#6b7280"; ctx.font="bold 8.5px monospace"; ctx.textAlign="left"; ctx.fillText(lane.label,2,cy-amp+2); }
   });
+}
+function XLRConnector(){
+  const P1="#6b7280", P2="#2563eb", P3="#38bdf8";
+  return (
+    <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap",background:"#0d1117",border:"1px solid #1f2937",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
+      <svg viewBox="0 0 120 132" width="98" height="108" style={{flexShrink:0}}>
+        <circle cx="60" cy="62" r="54" fill="#161c26" stroke="#2b3646" strokeWidth="2"/>
+        <circle cx="60" cy="62" r="45" fill="#0b0e13" stroke="#232d3a" strokeWidth="1"/>
+        <rect x="52" y="112" width="16" height="12" rx="3" fill="#2b3646"/>
+        <g fontFamily="monospace" fontWeight="bold" fontSize="13" textAnchor="middle">
+          <circle cx="60" cy="42" r="12" fill={P2}/><text x="60" y="46" fill="#08111f">2</text>
+          <circle cx="42" cy="76" r="12" fill={P1}/><text x="42" y="80" fill="#0b0b0e">1</text>
+          <circle cx="78" cy="76" r="12" fill={P3}/><text x="78" y="80" fill="#08111f">3</text>
+        </g>
+      </svg>
+      <div style={{flex:"1 1 260px",minWidth:240,fontSize:12.5,lineHeight:1.55}}>
+        <div style={{color:"#9ca3af",fontFamily:"monospace",fontSize:10,letterSpacing:"0.08em",marginBottom:6}}>XLR-3 CONNECTOR — THE THREE PINS</div>
+        <div style={{display:"flex",gap:8,alignItems:"baseline",marginBottom:3}}><span style={{color:P1,fontWeight:"bold",fontFamily:"monospace"}}>1</span><span style={{color:"#d1d5db"}}><strong>Shield / ground</strong> — the cable screen and chassis. Drains interference and is the reference (0 V).</span></div>
+        <div style={{display:"flex",gap:8,alignItems:"baseline",marginBottom:3}}><span style={{color:P2,fontWeight:"bold",fontFamily:"monospace"}}>2</span><span style={{color:"#d1d5db"}}><strong>Hot (+)</strong> — the signal, normal polarity (“in phase”).</span></div>
+        <div style={{display:"flex",gap:8,alignItems:"baseline",marginBottom:6}}><span style={{color:P3,fontWeight:"bold",fontFamily:"monospace"}}>3</span><span style={{color:"#d1d5db"}}><strong>Cold (−)</strong> — the <em>same</em> signal, inverted polarity. Pins 2 &amp; 3 are the balanced pair.</span></div>
+        <div style={{color:"#6b7280",fontSize:11}}>+48 V phantom rides equally on pins 2 &amp; 3, returning on pin 1. (Pin numbers are moulded on the shell.)</div>
+      </div>
+    </div>
+  );
 }
 function ModuleBalancedAudio() {
   const [balanced,setBalanced]=useState(true);
   const [noise,setNoise]=useState(0.55);
   const [animate,setAnimate]=useState(true);
   const refs=useRef([]);
-  const SIG="#2563eb", NZC="#f97316";
+  const SIG="#2563eb", NZC="#f97316", ATTACK=0.40;
   const sig =(u,ph)=>0.34*Math.sin((u*3 - ph*0.5)*6.28318);
   const saw=t=>{ const s=t-Math.floor(t); return s*2-1; };
-  const intf=(u,ph)=> noise*0.62*saw(u*5 - ph*0.5);
-  const gate=u=> u<0.42?0:Math.min(1,(u-0.42)/0.04);
+  const intf=(u,ph)=> noise*0.62*saw((u-ATTACK)*5.6 - ph*0.5);
   const nsig=(u,ph)=>-sig(u,ph), nintf=(u,ph)=>-intf(u,ph);
   const stages = balanced ? [
     {n:"1",title:"Two wires — the signal, and its inverted copy",sub:"The source sends the audio twice: Hot as-is, Cold with reversed polarity (a mirror). Both clean.",
      legend:[["Signal (blue)",SIG]],
      lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG}]},{label:"COLD (inverted)",labelCol:SIG,waves:[{fn:nsig,col:SIG}]}]},
-    {n:"2",title:"The cable induces the SAME interference on both",sub:"Watch the shape: the orange interference is identical on Hot and Cold — same form, same polarity — while the blue signal stays opposite between the two wires.",
+    {n:"2",title:"An antenna's interference is induced on BOTH — same shape",sub:"From where the interference hits, the orange picks up on both wires with the exact same shape and polarity — while the blue signal stays opposite between the two.",antennaU:ATTACK,
      legend:[["Signal (blue)",SIG],["Interference — same shape on both (orange)",NZC]],
-     lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4}]},{label:"COLD (inverted)",labelCol:SIG,waves:[{fn:nsig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4}]}]},
-    {n:"3",title:"At the destination, flip the Cold wire back",sub:"Inverting Cold makes its blue signal match Hot (same polarity now) — but its orange interference becomes the exact opposite of Hot's.",flip:true,
+     lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4,from:ATTACK}]},{label:"COLD (inverted)",labelCol:SIG,waves:[{fn:nsig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4,from:ATTACK}]}]},
+    {n:"3",title:"At the destination, flip the Cold wire back",sub:"Inverting Cold makes its blue signal match Hot (aligned now) — but its orange interference becomes the exact opposite of Hot's.",flip:true,antennaU:ATTACK,
      legend:[["Signal now aligned (blue)",SIG],["Interference now opposite (orange)",NZC]],
-     lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4}]},{label:"COLD (flipped back)",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:nintf,col:NZC,width:2.4}]}]},
+     lanes:[{label:"HOT",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:intf,col:NZC,width:2.4,from:ATTACK}]},{label:"COLD (flipped back)",labelCol:SIG,waves:[{fn:sig,col:SIG,width:1.6},{fn:nintf,col:NZC,width:2.4,from:ATTACK}]}]},
     {n:"4",title:"Add the two wires",sub:"The aligned signal reinforces to 2× (louder, +6 dB); the opposite interference sums to zero — clean.",good:true,
      legend:[["Signal reinforced ×2 (blue)",SIG],["Interference cancelled = 0 (orange)",NZC]],
-     lanes:[{waves:[{fn:(u,ph)=>2*sig(u,ph),col:SIG,width:2.8},{fn:()=>0,col:NZC,width:2.6}]}]},
+     lanes:[{waves:[{fn:(u,ph)=>2*sig(u,ph),col:SIG,width:2.8},{fn:()=>0,col:NZC,width:2.6,from:ATTACK}]}]},
   ] : [
     {n:"1",title:"One wire carries the clean signal",sub:"An unbalanced lead (guitar, RCA) has a single conductor — no inverted copy.",
      legend:[["Signal — clean (blue)",SIG]],
      lanes:[{waves:[{fn:sig,col:SIG,width:2.2}]}]},
-    {n:"2",title:"Where the interference attacks, it sits on the signal — and stays",sub:"From the attack point the orange interference (note its shape) rides on the blue signal. With no inverted wire, nothing can remove it.",bad:true,
+    {n:"2",title:"An antenna's interference attacks — and stays",sub:"From where the interference hits, its orange shape sits on the blue signal. With no inverted wire, nothing can remove it.",bad:true,antennaU:ATTACK,
      legend:[["Signal (blue)",SIG],["Interference — its shape rides on (orange)",NZC]],
-     lanes:[{waves:[{fn:sig,col:SIG,width:1.8},{fn:(u,ph)=>intf(u,ph)*gate(u),col:NZC,width:2.4}]}]},
+     lanes:[{waves:[{fn:sig,col:SIG,width:1.8},{fn:intf,col:NZC,width:2.4,from:ATTACK}]}]},
   ];
   useEffect(()=>{
     let raf=0,t0=null,alive=true;
     const loop=(time)=>{ if(!alive)return; if(t0==null)t0=time; const ph=animate?(time-t0)/1000:0;
-      stages.forEach((st,i)=>{ const c=refs.current[i]; if(c) drawLanes(c,st.lanes,ph); });
+      stages.forEach((st,i)=>{ const c=refs.current[i]; if(c) drawLanes(c,st.lanes,ph,st.antennaU); });
       if(animate) raf=requestAnimationFrame(loop);
     };
     raf=requestAnimationFrame(loop);
@@ -3688,8 +3724,9 @@ function ModuleBalancedAudio() {
   return (
     <div>
       <InfoBox>
-        The <strong>balanced</strong> trick: the source sends the audio on <em>two</em> wires — <span style={{color:"#2563eb"}}>Hot</span> normal and <span style={{color:"#2563eb"}}>Cold</span> with <strong>inverted polarity</strong>. As they run down the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is picked up <em>identically</em> on both — same shape, same polarity. At the destination the receiver <strong>flips the Cold wire back</strong>: now the <span style={{color:"#2563eb"}}>signal</span> lines up with Hot (so adding them <strong>reinforces it, 2×</strong>) while the <span style={{color:"#f97316"}}>interference</span> becomes the exact opposite (so adding them <strong>cancels it</strong>). That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just sits on the signal and stays — keep those runs short. (The balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.)
+        The <strong>balanced</strong> trick: the source sends the audio on <em>two</em> wires — <span style={{color:"#2563eb"}}>Hot</span> normal and <span style={{color:"#2563eb"}}>Cold</span> with <strong>inverted polarity</strong>. As they run down the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is picked up <em>identically</em> on both — same shape, same polarity. At the destination the receiver <strong>flips the Cold wire back</strong>: now the <span style={{color:"#2563eb"}}>signal</span> lines up with Hot (adding them <strong>reinforces it, 2×</strong>) while the <span style={{color:"#f97316"}}>interference</span> becomes the exact opposite (adding them <strong>cancels it</strong>). That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just sits on the signal and stays — keep those runs short. (The balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.)
       </InfoBox>
+      <XLRConnector/>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:16}}>
         <button onClick={()=>setBalanced(b=>!b)} style={{padding:"10px 18px",borderRadius:8,border:`2px solid ${balanced?"#34d399":"#6b7280"}`,background:balanced?"#34d39922":"#161c26",color:balanced?"#34d399":"#9ca3af",cursor:"pointer",fontFamily:"monospace",fontWeight:"bold",fontSize:13}}>
           {balanced?"◉ Balancing: ON":"○ Balancing: OFF — click to activate"}
