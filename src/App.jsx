@@ -55,6 +55,7 @@ const STRINGS = {
       halation: { title: "Halation & Bloom", desc: "Highlight glow — the red halo of film" },
       flicker: { title: "Flicker & Rolling Bands", desc: "50/60 Hz and PWM LED — banding and flicker" },
       focusBreathing: { title: "Focus Breathing", desc: "Field of view shifting as you rack focus" },
+      creditJitter: { title: "Credit Roll Jitter", desc: "Why credit rolls 'boil' — sub-pixel scroll and temporal sampling" },
       audioChain: { title: "The Audio Chain", desc: "Signal flow from source to delivery — and where you set gain" },
       polarPatterns: { title: "Microphone Polar Patterns", desc: "Omni, cardioid, shotgun, figure-8 — what a mic hears off-axis" },
       levels: { title: "Levels & Metering", desc: "dBFS, headroom, peak vs RMS, and clipping" },
@@ -86,7 +87,7 @@ const CATEGORIES = [
   },
   {
     id: "defects", label: T.categories.defects,
-    modules: ["rollingShutter","moire","banding","noise","vignetting","chromaticAberration","lensDistortion","interlacing","halation","flicker","focusBreathing"],
+    modules: ["rollingShutter","moire","banding","noise","vignetting","chromaticAberration","lensDistortion","interlacing","halation","flicker","focusBreathing","creditJitter"],
   },
   {
     id: "optics", label: T.categories.optics,
@@ -4055,6 +4056,118 @@ function ModuleAudioFormats() {
 }
 
 // ─────────────────────────────────────────────
+// MODULE: Credit Roll Jitter
+// ─────────────────────────────────────────────
+const CREDIT_ENTRIES=[
+  ["Directed by","ANE ITURBE"],["Written by","MIKEL ARANA"],["Produced by","LAURA BENGOA"],
+  ["Director of Photography","JON ELORZA"],["Production Designer","CARMEN RUIZ DE ALEGRIA"],
+  ["Edited by","SARA MENDIOLA"],["Original Music by","IKER ZUBELDIA"],["Sound Design","NEREA GALARZA"],
+  ["Costume Design","PAULA ARRIETA"],["Makeup and Hair","LEIRE OTAEGUI"],
+  ["First Assistant Director","GORKA LARRAÑAGA"],["Casting by","MARTA VILLANUEVA"],
+  ["Colourist","DAVID SANTAMARIA"],["Line Producer","ITZIAR GOIKOETXEA"],
+];
+function creditCycleOf(v){ let frac=Math.round(v*100)%100; if(frac===0)return 0; let a=frac,b=100,t; while(b){t=b;b=a%b;a=t;} return 100/a; }
+function CreditPane({ name, frameRef, magRef, rd, idk }){
+  return (
+    <div style={{flex:"1 1 300px",minWidth:260,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6,gap:8}}>
+        <span style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.06em"}}>{name}</span>
+        <strong ref={el=>rd.current["badge"+idk]=el} style={{fontFamily:"monospace",fontSize:11,fontWeight:"bold",whiteSpace:"nowrap"}}/>
+      </div>
+      <canvas ref={frameRef} style={{display:"block",width:"100%",borderRadius:4,background:"#050506"}}/>
+      <div style={{color:"#6b7280",fontSize:9,fontFamily:"monospace",margin:"8px 0 4px"}}>LOUPE 8× — one letter, held still</div>
+      <canvas ref={magRef} style={{display:"block",width:"100%",borderRadius:4,imageRendering:"pixelated",background:"#050506"}}/>
+      <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+        <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>offset <strong ref={el=>rd.current["off"+idk]=el} style={{color:"#e5e7eb"}}/></span>
+        <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>phase <strong ref={el=>rd.current["ph"+idk]=el} style={{color:"#f59e0b"}}/></span>
+        <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>edge cycle <strong ref={el=>rd.current["cyc"+idk]=el} style={{color:"#e5e7eb"}}/></span>
+      </div>
+    </div>
+  );
+}
+function ModuleCreditJitter() {
+  const [speed,setSpeed]=useState(2.64);
+  const [playing,setPlaying]=useState(true);
+  const speedRef=useRef(2.64), playingRef=useRef(true);
+  const fA=useRef(),fB=useRef(),mA=useRef(),mB=useRef(), rd=useRef({});
+  useEffect(()=>{ speedRef.current=speed; },[speed]);
+  useEffect(()=>{ playingRef.current=playing; },[playing]);
+  useEffect(()=>{
+    const FPS=25, MAG=8; let frameCount=150, source=null, sourceH=0, magY=0, raf=0, last=0, acc=0, alive=true;
+    const panes=[
+      {fixed:3, frame:fA.current, mag:mA.current, off:rd.current.offA, ph:rd.current.phA, cyc:rd.current.cycA, badge:rd.current.badgeA},
+      {fixed:null, frame:fB.current, mag:mB.current, off:rd.current.offB, ph:rd.current.phB, cyc:rd.current.cycB, badge:rd.current.badgeB},
+    ];
+    function buildSource(w){
+      const lineGap=68, top=40, h=top+CREDIT_ENTRIES.length*lineGap+60;
+      const c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d");
+      x.fillStyle="#050506"; x.fillRect(0,0,w,h); x.textAlign="center";
+      for(let i=0;i<CREDIT_ENTRIES.length;i++){ const y=top+i*lineGap;
+        try{x.letterSpacing="1.6px";}catch(e){} x.font="400 12px system-ui, sans-serif"; x.fillStyle="#9AA3AE"; x.fillText(CREDIT_ENTRIES[i][0].toUpperCase(),w/2,y);
+        try{x.letterSpacing="0.5px";}catch(e){} x.font="600 19px system-ui, sans-serif"; x.fillStyle="#FFFFFF"; x.fillText(CREDIT_ENTRIES[i][1],w/2,y+25);
+      }
+      try{x.letterSpacing="0px";}catch(e){}
+      magY = top + 2*lineGap + 25 - 14;   // body of one name → the loupe always frames a real edge
+      return c;
+    }
+    function sizeAll(){
+      const w=Math.max(200, Math.round((fA.current?.getBoundingClientRect().width)||360));
+      const h=Math.round(w*9/16); source=buildSource(w); sourceH=source.height;
+      panes.forEach(p=>{ p.frame.width=w; p.frame.height=h; const sw=Math.floor(w/MAG);
+        p.mag.width=sw*MAG; p.mag.height=96; p.fctx=p.frame.getContext("2d"); p.mctx=p.mag.getContext("2d"); p.mctx.imageSmoothingEnabled=false;
+        p.tile=document.createElement("canvas"); p.tile.width=sw; p.tile.height=Math.round(p.mag.height/MAG); p.tctx=p.tile.getContext("2d"); });
+    }
+    function speedFor(p){ return p.fixed!==null ? p.fixed : speedRef.current; }
+    function drawPane(p){
+      const ctx=p.fctx, W=p.frame.width, H=p.frame.height, v=speedFor(p);
+      const total=sourceH+H, off=(frameCount*v)%total, y=H-off, y0=Math.floor(y), f=y-y0;
+      ctx.fillStyle="#050506"; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; ctx.drawImage(source,0,y0);
+      if(f>0){ ctx.globalAlpha=f; ctx.drawImage(source,0,y0+1); ctx.globalAlpha=1; }   // exact linear interp between neighbour rows = what the renderer does
+      // magnifier: hold one letter still, apply only the sub-pixel phase → the strip moves iff v is fractional
+      const sw=p.tile.width, sh=p.tile.height, fx=Math.round((source.width-sw)/2), tc=p.tctx;
+      tc.globalAlpha=1; tc.fillStyle="#050506"; tc.fillRect(0,0,sw,sh); tc.drawImage(source,fx,magY,sw,sh,0,0,sw,sh);
+      if(f>0){ tc.globalAlpha=f; tc.drawImage(source,fx,magY+1,sw,sh,0,0,sw,sh); tc.globalAlpha=1; }
+      p.mctx.imageSmoothingEnabled=false; p.mctx.drawImage(p.tile,0,0,sw,sh,0,0,sw*MAG,sh*MAG);
+      const k=creditCycleOf(v), boil=k!==0;
+      if(p.ph) p.ph.textContent=f.toFixed(2);
+      if(p.off) p.off.textContent=off.toFixed(1);
+      if(p.cyc) p.cyc.textContent = k===0?"none": k+" f";
+      if(p.badge){ p.badge.textContent=v.toFixed(2)+" px/f  "+(boil?"· boils":"· clean"); p.badge.style.color=boil?"#f87171":"#34d399"; }
+    }
+    function render(){ panes.forEach(drawPane); if(rd.current.frameNo) rd.current.frameNo.textContent=frameCount; }
+    function loop(t){ if(!alive)return; if(!last)last=t; const dt=Math.min(0.25,(t-last)/1000); last=t;
+      if(playingRef.current){ acc+=dt; const s=1/FPS; while(acc>=s){ acc-=s; frameCount++; } } render(); raf=requestAnimationFrame(loop); }
+    sizeAll(); render(); raf=requestAnimationFrame(loop);
+    let rt; const onResize=()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(alive){ sizeAll(); render(); } },150); };
+    window.addEventListener("resize",onResize);
+    rd.current.step=()=>{ frameCount++; render(); };   // exposed for the Step button
+    return ()=>{ alive=false; cancelAnimationFrame(raf); clearTimeout(rt); window.removeEventListener("resize",onResize); };
+  },[]);
+  return (
+    <div>
+      <InfoBox>
+        A <strong>credit roll “boils”</strong> — the letters shimmer, strobe and crawl at the edges — when the image scrolls a <strong>non-integer number of pixels per frame</strong>. The renderer has to place the artwork between two rows of pixels, so it <em>interpolates</em>: every glyph edge is re-sampled with a slightly different weight each frame. That weight follows a repeating pattern with a <strong>period</strong>, and the eye locks onto the pulse. Scroll by a <em>whole</em> pixel and there is no resampling — nothing to boil. It is a <strong>sampling artefact in time</strong> rather than space: the temporal cousin of <em>Moiré</em>, and it lives right next to <em>Frame Rate</em>. The maths the editor actually uses: the artwork travels <strong>D = H<sub>art</sub> + H<sub>frame</sub></strong> pixels over <strong>N = D / v</strong> frames in <strong>T = N / fps</strong> seconds. The fix is <em>not</em> to nudge the speed — that just trades one fraction for another — but to add margin to the PNG until D divides evenly by v: e.g. a 4000-px card in HD gives D = 5080, and 5080/3 = 1693.33 frames (impossible), so add 2 px of black top-and-bottom → D = 5082, which divides exactly. Two invisible pixels, no boil. Speed is a <em>parameter</em>, not a result. <strong>→ CreditRolleR</strong> is the desktop tool that computes these numbers for a real card.
+      </InfoBox>
+      <div style={{background:"#1a1410",border:"1px solid #3a2410",borderRadius:8,padding:"8px 12px",marginBottom:14,color:"#fdba74",fontSize:12}}>
+        ⚠ Judge this at desktop width, where the canvases are 1:1. On a narrow screen the browser rescales both panels by a non-integer factor and softens them equally — the loupe stays honest because its magnification is computed inside the canvas.
+      </div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+        <button onClick={()=>setPlaying(p=>!p)} style={playing?styles.btnActive:styles.btnChip}>{playing?"⏸ Pause":"▶ Play"}</button>
+        <button onClick={()=>{ setPlaying(false); rd.current.step&&rd.current.step(); }} style={styles.btnChip}>Step 1 frame ▸</button>
+        <button onClick={()=>setSpeed(Math.max(1,Math.round(speed)))} style={styles.btnChip}>Snap to whole pixel</button>
+        <label style={styles.label}>Right panel speed: <strong style={{color:"#f59e0b"}}>{speed.toFixed(2)} px/f</strong>
+          <input type="range" min={1} max={6} step={0.01} value={speed} onChange={e=>setSpeed(+e.target.value)} style={{...styles.slider,width:220}}/></label>
+        <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>frame <strong ref={el=>rd.current.frameNo=el} style={{color:"#9ca3af"}}/></span>
+      </div>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <CreditPane name="LEFT — 3.00 px/frame (whole pixel)" frameRef={fA} magRef={mA} rd={rd} idk="A"/>
+        <CreditPane name="RIGHT — your speed" frameRef={fB} magRef={mB} rd={rd} idk="B"/>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
 const MODULE_COMPONENTS = {
@@ -4082,6 +4195,7 @@ const MODULE_COMPONENTS = {
   halation: ModuleHalation,
   flicker: ModuleFlicker,
   focusBreathing: ModuleFocusBreathing,
+  creditJitter: ModuleCreditJitter,
   resolution: ModuleResolution,
   chromaSubsampling: ModuleChromaSubsampling,
   raw: ModuleRAW,
