@@ -2377,23 +2377,69 @@ const styles = {
 const SHUTTERS=[1,2,4,8,15,30,50,60,125,250,500,1000,2000];   // 1/x s
 const APERTURES=[1.4,2,2.8,4,5.6,8,11,16,22];
 const ISOS=[100,200,400,800,1600,3200,6400,12800];
-function ExpRow({name,arr,val,set,fmt,effect}){
-  return (
-    <div style={{marginBottom:10}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
-        <span style={styles.label}>{name}: <strong style={{color:"#f59e0b"}}>{fmt(arr[val])}</strong></span>
-        <span style={{color:"#6b7280",fontSize:11}}>{effect}</span>
-      </div>
-      <input type="range" min={0} max={arr.length-1} step={1} value={val} onChange={e=>set(+e.target.value)} style={{...styles.slider,width:"100%"}}/>
-    </div>
-  );
+const fmtShutter=v=>"1/"+v+"s", fmtAperture=v=>"f/"+v, fmtIso=v=>String(v);
+// DSLR/cine-style horizontal detented dial (canvas): drag/flick with momentum + snap, keyboard ◀▶.
+// index handled by remounting (key), so the effect sets up once per parameter.
+function ExposureDial({ values, index, format, onChange, accent="#f59e0b" }){
+  const cRef=useRef(); const st=useRef({fpos:index,vel:0,dragging:false,raf:0,lastX:0,samples:[],lastEmit:index,W:0,H:60,ctx:null});
+  useEffect(()=>{
+    const c=cRef.current; if(!c) return; const s=st.current; s.fpos=index; s.lastEmit=index;
+    const dpr=Math.min(2,window.devicePixelRatio||1);
+    let pps=54;
+    function size(){ const W=Math.min(c.parentElement?.clientWidth||520,560); s.W=W; c.width=W*dpr; c.height=s.H*dpr; c.style.width=W+"px"; c.style.height=s.H+"px"; s.ctx=c.getContext("2d"); s.ctx.setTransform(dpr,0,0,dpr,0,0); pps=Math.max(46,Math.min(70,W/6)); }
+    function clamp(){ s.fpos=Math.max(0,Math.min(values.length-1,s.fpos)); }
+    function emit(){ const ni=Math.round(s.fpos); if(ni!==s.lastEmit){ s.lastEmit=ni; onChange&&onChange(ni); } }
+    function draw(){
+      const ctx=s.ctx, W=s.W, H=s.H, cx=W/2; if(!ctx)return;
+      ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+      const g=ctx.createLinearGradient(0,0,W,0); g.addColorStop(0,"#0a0d12"); g.addColorStop(0.5,"rgba(10,13,18,0)"); g.addColorStop(1,"#0a0d12");
+      const yMid=H*0.60;
+      for(let i=0;i<values.length;i++){
+        const x=cx+(i-s.fpos)*pps; if(x<-50||x>W+50) continue;
+        const near=1-Math.min(1,Math.abs(x-cx)/(W*0.5)); const sel=Math.round(s.fpos)===i;
+        ctx.strokeStyle=`rgba(148,163,184,${0.18+near*0.55})`; ctx.lineWidth=sel?2:1;
+        ctx.beginPath(); ctx.moveTo(x,yMid); ctx.lineTo(x,yMid+(sel?11:7)); ctx.stroke();
+        ctx.fillStyle= sel? accent : `rgba(203,213,225,${0.28+near*0.55})`;
+        ctx.font=`${sel?"bold ":""}${Math.round(11+near*4)}px ui-monospace, monospace`; ctx.textAlign="center";
+        ctx.fillText(format(values[i]), x, yMid-9);
+      }
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);   // edge fade
+      ctx.strokeStyle=accent; ctx.globalAlpha=0.45; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx,H*0.28); ctx.lineTo(cx,H); ctx.stroke(); ctx.globalAlpha=1;
+      ctx.fillStyle=accent; ctx.beginPath(); ctx.moveTo(cx,H*0.28); ctx.lineTo(cx-6,H*0.28-9); ctx.lineTo(cx+6,H*0.28-9); ctx.closePath(); ctx.fill();
+    }
+    function anim(){
+      if(s.dragging){ s.raf=0; return; }
+      if(Math.abs(s.vel)>0.0008){ s.fpos+=s.vel; s.vel*=0.9; clamp(); }
+      else { const tg=Math.round(s.fpos); s.fpos+=(tg-s.fpos)*0.28; if(Math.abs(tg-s.fpos)<0.001) s.fpos=tg; }
+      emit(); draw();
+      s.raf = (Math.abs(s.vel)>0.0008 || Math.abs(Math.round(s.fpos)-s.fpos)>0.001) ? requestAnimationFrame(anim) : 0;
+    }
+    size(); draw();
+    const onDown=e=>{ s.dragging=true; s.vel=0; s.lastX=e.clientX; s.samples=[]; try{c.setPointerCapture(e.pointerId);}catch{} cancelAnimationFrame(s.raf); s.raf=0; c.style.cursor="grabbing"; };
+    const onMove=e=>{ if(!s.dragging)return; const dx=e.clientX-s.lastX; s.lastX=e.clientX; s.fpos-=dx/pps; clamp(); s.samples.push({t:performance.now(),dx}); if(s.samples.length>5)s.samples.shift(); emit(); draw(); };
+    const onUp=()=>{ if(!s.dragging)return; s.dragging=false; c.style.cursor="grab"; const now=performance.now(); const rec=s.samples.filter(o=>now-o.t<90); const sum=rec.reduce((a,o)=>a+o.dx,0); s.vel=-(sum/(pps*Math.max(1,rec.length)))*1.1; if(!s.raf)s.raf=requestAnimationFrame(anim); };
+    const onKey=e=>{ let d=0; if(e.key==="ArrowLeft"||e.key==="ArrowDown")d=-1; else if(e.key==="ArrowRight"||e.key==="ArrowUp")d=1; else return; e.preventDefault(); s.fpos=Math.round(s.fpos)+d; clamp(); emit(); draw(); };
+    const onResize=()=>{ size(); draw(); };
+    c.addEventListener("pointerdown",onDown); c.addEventListener("pointermove",onMove); c.addEventListener("pointerup",onUp); c.addEventListener("pointercancel",onUp); c.addEventListener("keydown",onKey); window.addEventListener("resize",onResize);
+    return ()=>{ cancelAnimationFrame(s.raf); c.removeEventListener("pointerdown",onDown); c.removeEventListener("pointermove",onMove); c.removeEventListener("pointerup",onUp); c.removeEventListener("pointercancel",onUp); c.removeEventListener("keydown",onKey); window.removeEventListener("resize",onResize); };
+  },[values,format,accent]);
+  return <canvas ref={cRef} tabIndex={0} role="slider" aria-label="exposure dial"
+    style={{display:"block",width:"100%",height:60,borderRadius:8,cursor:"grab",touchAction:"none",outline:"none",border:`1px solid ${accent}44`,background:"#0a0d12"}}/>;
 }
 function ModuleExposureTriangle({ image }) {
   const [sh,setSh]=useState(6);   // index → 1/50
   const [ap,setAp]=useState(3);   // index → f/4
   const [iso,setIso]=useState(3); // index → 800
+  const [active,setActive]=useState("sh");
   const ref=useRef();
   const stops = Math.log2(50/SHUTTERS[sh]) + Math.log2(16/(APERTURES[ap]**2)) + Math.log2(ISOS[iso]/800);
+  const balanced = Math.abs(stops)<0.25;
+  const PARAMS={
+    sh:{label:"SHUTTER", effect:"motion blur", arr:SHUTTERS, idx:sh, set:setSh, fmt:fmtShutter},
+    ap:{label:"IRIS",    effect:"depth of field", arr:APERTURES, idx:ap, set:setAp, fmt:fmtAperture},
+    iso:{label:"ISO",    effect:"noise", arr:ISOS, idx:iso, set:setIso, fmt:fmtIso},
+  };
+  const A=PARAMS[active];
   useEffect(()=>{
     const img=new Image();
     img.onload=()=>{
@@ -2431,16 +2477,35 @@ function ModuleExposureTriangle({ image }) {
         The <strong>exposure triangle</strong> is the three controls that set image brightness — and each carries a <em>side-effect</em>. <strong>Shutter</strong> (exposure time) also sets <em>motion blur</em>: a 180° shutter (1/50 at 25 fps) is the cinema norm; faster freezes motion, slower smears it. <strong>Aperture</strong> (f-stop) also sets <em>depth of field</em>: wide (f/1.4) throws the background out of focus, narrow (f/16) keeps it sharp. <strong>ISO</strong> (sensitivity) also sets <em>noise</em>: low is clean, high is grainy. Each full stop <em>doubles or halves</em> the light — so you can trade one for another and keep the same exposure (<strong>reciprocity</strong>). Watch the EV badge: keep it near <span style={{color:"#34d399"}}>balanced</span> while changing which side-effect you accept.
       </InfoBox>
       <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 300px",minWidth:280}}>
-          <ExpRow name="Shutter" arr={SHUTTERS} val={sh} set={setSh} fmt={v=>"1/"+v+"s"} effect="↔ motion blur"/>
-          <ExpRow name="Aperture" arr={APERTURES} val={ap} set={setAp} fmt={v=>"f/"+v} effect="↔ depth of field"/>
-          <ExpRow name="ISO" arr={ISOS} val={iso} set={setIso} fmt={v=>v} effect="↔ noise"/>
-          <div style={{marginTop:8,padding:"8px 12px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,fontSize:12,color:"#9ca3af",lineHeight:1.6}}>
-            Try: open the aperture <em>and</em> speed up the shutter by the same number of stops — the brightness stays the same, but you swap deep focus for shallow, and motion blur for a frozen frame.
+        <div style={{flex:"1 1 360px",minWidth:300,background:"#111",borderRadius:8,padding:12}}>
+          <div style={{position:"relative"}}>
+            <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
+            <div style={{position:"absolute",left:8,right:8,bottom:8,display:"flex",gap:6}}>
+              {["sh","ap","iso"].map(k=>{ const P=PARAMS[k], on=active===k; return (
+                <button key={k} onClick={()=>setActive(k)} style={{flex:"1 1 0",background:on?"rgba(245,158,11,0.20)":"rgba(0,0,0,0.5)",border:`1px solid ${on?"#f59e0b":"rgba(255,255,255,0.16)"}`,borderRadius:6,padding:"5px 4px",cursor:"pointer",backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)"}}>
+                  <div style={{color:on?"#f59e0b":"#9ca3af",fontSize:8.5,fontFamily:"monospace",letterSpacing:"0.08em"}}>{P.label}</div>
+                  <div style={{color:"#fff",fontSize:13,fontFamily:"monospace",fontWeight:"bold"}}>{P.fmt(P.arr[P.idx])}</div>
+                </button>);})}
+            </div>
+          </div>
+          <div style={{marginTop:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
+              <span style={{color:"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.06em"}}>{A.label}</span>
+              <span style={{color:"#6b7280",fontSize:11}}>↔ {A.effect}</span>
+            </div>
+            <ExposureDial key={active} values={A.arr} index={A.idx} format={A.fmt} onChange={A.set} accent="#f59e0b"/>
+            <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginTop:5,textAlign:"center"}}>tap a value on the screen · then flick the dial (or ◀ ▶)</div>
           </div>
         </div>
-        <div style={{flex:"1 1 340px",minWidth:300,background:"#111",borderRadius:8,padding:12}}>
-          <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
+        <div style={{flex:"1 1 240px",minWidth:220}}>
+          <div style={{padding:"12px 16px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,marginBottom:12}}>
+            <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.08em",marginBottom:4}}>EXPOSURE</div>
+            <div style={{fontSize:24,fontWeight:"bold",color:balanced?"#34d399":stops>0?"#f59e0b":"#60a5fa"}}>{stops>0?"+":""}{stops.toFixed(1)} EV</div>
+            <div style={{color:"#9ca3af",fontSize:12}}>{balanced?"balanced":stops>0?"over-exposed":"under-exposed"}</div>
+          </div>
+          <div style={{padding:"10px 14px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,fontSize:12,color:"#9ca3af",lineHeight:1.6}}>
+            Try: open the aperture <em>and</em> speed up the shutter by the same number of stops — the brightness stays the same, but you swap deep focus for shallow, and motion blur for a frozen frame.
+          </div>
         </div>
       </div>
     </div>
