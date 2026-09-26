@@ -334,7 +334,7 @@ function ModuleAspectRatio({ image }) {
           </button>
         ))}
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
       <p style={styles.noteText}>📌 {RATIOS[sel].note}</p>
@@ -407,7 +407,7 @@ function ModuleResolution({ image }) {
           <button key={r.label} onClick={()=>setSel(i)} style={i===sel?styles.btnActive:styles.btnChip}>{r.label}</button>
         ))}
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
       <div style={{...styles.statRow,marginTop:12}}>
@@ -455,7 +455,7 @@ function ChromaBlock({ scheme }) {
                 return (
                   <div key={i} style={{
                     width:cellSize,height:cellSize,borderRadius:3,
-                    background:hasData?color:"#1f2937",
+                    background:hasData?color:"#2a2b32",
                     border:`1px solid ${hasData?color+"88":"#374151"}`,
                     display:"flex",alignItems:"center",justifyContent:"center",
                     fontSize:9,color:"#000",fontWeight:"bold",
@@ -621,15 +621,15 @@ function ModuleChromaSubsampling() {
         </button>
       </div>
       <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"0 1 auto",background:"#111",borderRadius:8,padding:10}}>
+        <div style={{flex:"0 1 auto",background:"#16171c",borderRadius:8,padding:10}}>
           <canvas ref={sceneRef} style={{display:"block",maxWidth:"100%",borderRadius:4}}/>
         </div>
-        <div style={{flex:"1 1 420px",minWidth:300,background:"#111",borderRadius:8,padding:10}}>
+        <div style={{flex:"1 1 420px",minWidth:300,background:"#16171c",borderRadius:8,padding:10}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>LOUPE — the green / subject edge (pixel level)</div>
           <canvas ref={magRef} style={{display:"block",width:"100%"}}/>
         </div>
       </div>
-      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,marginTop:12,display:"block",maxWidth:"100%",overflowX:"auto"}}>
+      <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,marginTop:12,display:"block",maxWidth:"100%",overflowX:"auto"}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8}}>PIXEL SAMPLING (8×8) — which chroma samples the codec keeps</div>
         <canvas ref={gridRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
@@ -670,7 +670,7 @@ function ModulePictureProfiles({ image }) {
     const ctx=gc.getContext("2d");
     ctx.clearRect(0,0,W,H);
     // grid
-    ctx.strokeStyle="#1f2937"; ctx.lineWidth=1;
+    ctx.strokeStyle="#2a2b32"; ctx.lineWidth=1;
     for(let i=0;i<=4;i++){
       const x=i*(W/4), y=i*(H/4);
       ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
@@ -687,7 +687,7 @@ function ModulePictureProfiles({ image }) {
     ctx.fillText("Output (code value)",0,0);ctx.restore();
     // hover line
     if(hoveredX!==null){
-      ctx.strokeStyle="#f59e0b44"; ctx.lineWidth=1;
+      ctx.strokeStyle="#ff5a4d44"; ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(hoveredX*W,0);ctx.lineTo(hoveredX*W,H);ctx.stroke();
     }
     // curves
@@ -751,7 +751,7 @@ function ModulePictureProfiles({ image }) {
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:8}}>
+        <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:8}}>
           <canvas ref={graphRef} style={{display:"block",cursor:"crosshair"}}
             onMouseMove={e=>{const r=e.currentTarget.getBoundingClientRect();setHoveredX((e.clientX-r.left)/r.width);}}
             onMouseLeave={()=>setHoveredX(null)}
@@ -762,7 +762,7 @@ function ModulePictureProfiles({ image }) {
             ))}
           </div>
         </div>
-        <div style={{background:"#111",borderRadius:8,padding:16,flex:1,minWidth:200}}>
+        <div style={{background:"#16171c",borderRadius:8,padding:16,flex:1,minWidth:200}}>
           <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
         </div>
       </div>
@@ -777,7 +777,7 @@ function ModulePictureProfiles({ image }) {
 const GAMUTS = {
   "sRGB / Rec.709": { color:"#60a5fa", points:[[0.640,0.330],[0.300,0.600],[0.150,0.060]], note:"Web, consumer displays, HD broadcast (ITU-R BT.709)." },
   "DCI-P3":         { color:"#34d399", points:[[0.680,0.320],[0.265,0.690],[0.150,0.060]], note:"Digital cinema projection (SMPTE ST 2087). ~25% wider than Rec.709." },
-  "Rec.2020":       { color:"#f59e0b", points:[[0.708,0.292],[0.170,0.797],[0.131,0.046]], note:"UHDTV / HDR target (ITU-R BT.2020). ~75% of the visible spectrum." },
+  "Rec.2020":       { color:"#ff5a4d", points:[[0.708,0.292],[0.170,0.797],[0.131,0.046]], note:"UHDTV / HDR target (ITU-R BT.2020). ~75% of the visible spectrum." },
   "DaVinci WG":     { color:"#22d3ee", points:[[0.8000,0.3130],[0.1682,0.9877],[0.0790,-0.1155]], note:"DaVinci Wide Gamut — Resolve's internal working space." },
   "ARRI AWG3":      { color:"#a3e635", points:[[0.6840,0.3130],[0.2210,0.8480],[0.0861,-0.1020]], note:"ARRI ALEXA Wide Gamut 3 — the camera's native encoding." },
   "Sony SG3.Cine":  { color:"#fb923c", points:[[0.766,0.275],[0.225,0.800],[0.089,-0.087]], note:"Sony S-Gamut3.Cine — practical cine variant of S-Gamut3." },
@@ -876,7 +876,7 @@ function ModuleColorSpaces() {
           </button>
         ))}
       </div>
-      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
       {active.length>0 && (
@@ -914,7 +914,7 @@ function ModuleRollingShutter() {
       ctx.fillStyle="#0a0a0f"; ctx.fillRect(0,0,480,270);
       // Draw stripes (static scene)
       for(let y=0;y<270;y+=30){
-        ctx.fillStyle=y%60===0?"#1f2937":"#111827";
+        ctx.fillStyle=y%60===0?"#2a2b32":"#25262e";
         ctx.fillRect(0,y,480,30);
       }
       // Moving object (vertical bar going right)
@@ -950,14 +950,14 @@ function ModuleRollingShutter() {
       </InfoBox>
       <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
         <label style={styles.label}>
-          Object speed: <strong style={{color:"#f59e0b"}}>{speed}</strong>
+          Object speed: <strong style={{color:"#ff5a4d"}}>{speed}</strong>
           <input type="range" min={1} max={20} value={speed} onChange={e=>setSpeed(+e.target.value)} style={styles.slider}/>
         </label>
         <button onClick={()=>setRunning(r=>!r)} style={styles.btnSecondary}>
           {running?"⏸ Pause":"▶ Play"}
         </button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",width:"100%",maxWidth:720}}/>
       </div>
       <p style={styles.noteText}>📌 At high speeds, the yellow bar visibly leans (skews) due to the sequential line readout. This is rolling shutter. Blue line shows the sensor's current read row.</p>
@@ -1008,10 +1008,10 @@ function ModuleMoire() {
         <strong>Moiré</strong> is an interference pattern that appears when two regular grids of similar—but not identical—frequencies overlap. In camera sensors, it occurs when fine repetitive detail in the scene (fabric weave, brick patterns, window blinds) approaches the <strong>Nyquist frequency</strong> (half the sensor's pixel pitch). The sensor cannot resolve the pattern unambiguously and produces false-colour banding. Solution: <strong>optical low-pass filter (OLPF)</strong> or careful focal length/distance choice. <strong>Aliasing</strong> is the more general term for any sampling artifact. The <em>Shannon–Nyquist theorem</em> requires sampling at ≥2× the highest frequency present.
       </InfoBox>
       <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
-        <label style={styles.label}>Grid A freq: <strong style={{color:"#f59e0b"}}>{freq1}</strong>
+        <label style={styles.label}>Grid A freq: <strong style={{color:"#ff5a4d"}}>{freq1}</strong>
           <input type="range" min={2} max={30} value={freq1} onChange={e=>setFreq1(+e.target.value)} style={styles.slider}/>
         </label>
-        <label style={styles.label}>Grid B freq: <strong style={{color:"#f59e0b"}}>{freq2}</strong>
+        <label style={styles.label}>Grid B freq: <strong style={{color:"#ff5a4d"}}>{freq2}</strong>
           <input type="range" min={2} max={30} value={freq2} onChange={e=>setFreq2(+e.target.value)} style={styles.slider}/>
         </label>
         <button onClick={()=>setShowAA(a=>!a)}
@@ -1019,7 +1019,7 @@ function ModuleMoire() {
           {showAA?"AA Filter: ON":"AA Filter: OFF"}
         </button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",width:"100%",maxWidth:720}}/>
       </div>
       <p style={styles.noteText}>📌 Move Grid A and B to similar values to see moiré intensify. Enable AA to see how filtering reduces the artifact (at the cost of some sharpness).</p>
@@ -1067,7 +1067,7 @@ function ModuleBanding() {
         <strong>Bit depth</strong> defines the number of discrete tonal steps per channel: <em>2ⁿ steps</em>. At <strong>8-bit</strong> (256 steps), smooth gradients — especially in skies or skin — show <strong>banding</strong> (posterization): visible tonal jumps. At <strong>10-bit</strong> (1024 steps) the jumps are ~4× smaller and visually imperceptible in most content. <strong>12-bit</strong> (4096) and <strong>16-bit</strong> (65,536) are common in RAW and high-end cinema workflows. H.265 Main 10 Profile and ProRes 4444 support 10-bit. H.264 is natively 8-bit. Banding is also exacerbated by heavy colour grading on 8-bit footage.
       </InfoBox>
       <div style={{marginBottom:12}}>
-        <div style={{color:"#9ca3af",fontSize:12,marginBottom:8}}>Bit depth: <strong style={{color:"#f59e0b"}}>{bits}-bit ({Math.pow(2,bits).toLocaleString()} steps)</strong></div>
+        <div style={{color:"#9ca3af",fontSize:12,marginBottom:8}}>Bit depth: <strong style={{color:"#ff5a4d"}}>{bits}-bit ({Math.pow(2,bits).toLocaleString()} steps)</strong></div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {[2,4,6,8,10,12,14,16].map(b=>(
             <button key={b} onClick={()=>setBits(b)} style={b===bits?styles.btnActive:styles.btnChip}>{b}-bit</button>
@@ -1080,7 +1080,7 @@ function ModuleBanding() {
           ))}
         </div>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
     </div>
@@ -1133,7 +1133,7 @@ function ModuleNoise({ image }) {
       </InfoBox>
       <div style={{display:"flex",gap:16,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
         <label style={styles.label}>
-          ISO: <strong style={{color:"#f59e0b"}}>{isoVal}</strong>
+          ISO: <strong style={{color:"#ff5a4d"}}>{isoVal}</strong>
           <input type="range" min={0} max={8} value={iso} onChange={e=>setIso(+e.target.value)} style={styles.slider}/>
         </label>
         <button onClick={()=>setShowChroma(c=>!c)}
@@ -1141,7 +1141,7 @@ function ModuleNoise({ image }) {
           Chroma noise: {showChroma?"ON":"OFF"}
         </button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
     </div>
@@ -1211,7 +1211,7 @@ function ModuleShotTypes() {
       rc.width=RW; rc.height=Math.round(RW*9/16);
       const rx=rc.getContext("2d");
       rx.drawImage(scene, crop.x*scene.width, crop.y*scene.height, crop.w*scene.width, crop.h*scene.height, 0,0,rc.width,rc.height);
-      rx.strokeStyle="#1f2937"; rx.lineWidth=1; rx.strokeRect(0.5,0.5,rc.width-1,rc.height-1);
+      rx.strokeStyle="#2a2b32"; rx.lineWidth=1; rx.strokeRect(0.5,0.5,rc.width-1,rc.height-1);
     }
   },[sel]);
 
@@ -1226,11 +1226,11 @@ function ModuleShotTypes() {
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 380px",minWidth:260,background:"#111",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 380px",minWidth:260,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>FRAMING ON SCENE</div>
           <canvas ref={frameRef} style={{display:"block",width:"100%"}}/>
         </div>
-        <div style={{flex:"0 1 auto",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12}}>
+        <div style={{flex:"0 1 auto",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:"#a78bfa",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.08em"}}>RESULTING SHOT</div>
           <canvas ref={resultRef} style={{display:"block",maxWidth:"100%"}}/>
         </div>
@@ -1248,7 +1248,7 @@ function ModuleACES() {
     { id:"scene", label:"Scene", sub:"Real world light", x:10, y:50, color:"#60a5fa" },
     { id:"idt", label:"IDT", sub:"Input Device Transform", x:22, y:50, color:"#a78bfa" },
     { id:"ap0", label:"ACES AP0", sub:"Scene-referred\nExchange space\nSMPTE ST 2065-1", x:38, y:50, color:"#f472b6" },
-    { id:"rrt", label:"RRT", sub:"Reference Rendering\nTransform", x:55, y:50, color:"#f59e0b" },
+    { id:"rrt", label:"RRT", sub:"Reference Rendering\nTransform", x:55, y:50, color:"#ff5a4d" },
     { id:"odt", label:"ODT", sub:"Output Device Transform\n(P3-D60, Rec.709,\nRec.2020-ST2084…)", x:72, y:50, color:"#34d399" },
     { id:"display", label:"Display", sub:"Output-referred\nimage", x:87, y:50, color:"#60a5fa" },
   ];
@@ -1266,7 +1266,7 @@ function ModuleACES() {
       <InfoBox>
         <strong>ACES</strong> (Academy Color Encoding System, SMPTE ST 2065) is the industry-standard colour management and interchange framework, developed by the Academy of Motion Picture Arts and Sciences. It solves the problem of consistent colour across cameras, displays, and delivery formats. The pipeline is: Camera → <strong>IDT</strong> → <strong>AP0</strong> (scene-linear) → <strong>RRT</strong> (tone map) → <strong>ODT</strong> → Display. The creative grade (CDL, LUTs) lives between AP0 and RRT, in <strong>ACEScct</strong> or <strong>ACEScc</strong> (log-like working spaces). Supported natively in DaVinci Resolve, Nuke, SCRATCH, and most modern NLEs.
       </InfoBox>
-      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:20,overflowX:"auto"}}>
+      <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:20,overflowX:"auto"}}>
         <div style={{display:"flex",alignItems:"center",gap:0,minWidth:600}}>
           {nodes.map((node,i)=>(
             <div key={node.id} style={{display:"flex",alignItems:"center",flex:1}}>
@@ -1274,7 +1274,7 @@ function ModuleACES() {
                 onMouseEnter={()=>setHovered(node.id)}
                 onMouseLeave={()=>setHovered(null)}
                 style={{
-                  background:hovered===node.id?node.color+"22":"#111827",
+                  background:hovered===node.id?node.color+"22":"#25262e",
                   border:`2px solid ${node.color}`,
                   borderRadius:8, padding:"10px 8px", textAlign:"center",
                   cursor:"pointer", transition:"all 0.2s", flex:1,
@@ -1290,7 +1290,7 @@ function ModuleACES() {
           ))}
         </div>
         {hovered && (
-          <div style={{marginTop:16,background:"#111",border:"1px solid #1f2937",borderRadius:6,padding:12}}>
+          <div style={{marginTop:16,background:"#16171c",border:"1px solid #2a2b32",borderRadius:6,padding:12}}>
             <p style={{color:"#e5e7eb",fontSize:13,margin:0}}>{descriptions[hovered]}</p>
           </div>
         )}
@@ -1301,7 +1301,7 @@ function ModuleACES() {
           {label:"Exchange",val:"ACES AP0 (scene-linear, SMPTE ST 2065-1)"},
           {label:"Grading gamut",val:"ACES AP1 (slightly smaller, more practical)"},
         ].map(({label,val})=>(
-          <div key={label} style={{background:"#111",border:"1px solid #1f2937",borderRadius:6,padding:"8px 12px",flex:1,minWidth:160}}>
+          <div key={label} style={{background:"#16171c",border:"1px solid #2a2b32",borderRadius:6,padding:"8px 12px",flex:1,minWidth:160}}>
             <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace"}}>{label}</div>
             <div style={{color:"#e5e7eb",fontSize:12,marginTop:2}}>{val}</div>
           </div>
@@ -1375,10 +1375,10 @@ function ModuleDepthOfField() {
     const sc=sideRef.current; if(!sc) return;
     const SW=W, SH=Math.round(W*0.34); sc.width=SW; sc.height=SH;
     const sx=sc.getContext("2d");
-    sx.fillStyle="#0d1117"; sx.fillRect(0,0,SW,SH);
+    sx.fillStyle="#1c1d23"; sx.fillRect(0,0,SW,SH);
     const x1=54, x2=SW-22, groundY=SH-28, K=9;
     const dmap=d=> x1 + (d/(d+K))*(x2-x1);            // hyperbolic depth mapping (∞ → x2)
-    sx.strokeStyle="#1f2937"; sx.lineWidth=1; sx.beginPath();sx.moveTo(x1,groundY);sx.lineTo(x2,groundY);sx.stroke();
+    sx.strokeStyle="#2a2b32"; sx.lineWidth=1; sx.beginPath();sx.moveTo(x1,groundY);sx.lineTo(x2,groundY);sx.stroke();
     // DoF "force field" band around the focus plane
     const dnX=dmap(Dn/1000), dfX=farInf?x2:dmap(Df/1000);
     const g=sx.createLinearGradient(dnX,0,dfX,0);
@@ -1418,15 +1418,15 @@ function ModuleDepthOfField() {
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:12}}>
         <label style={styles.label}>
-          Aperture: <strong style={{color:"#f59e0b"}}>f/{fstop}</strong>
+          Aperture: <strong style={{color:"#ff5a4d"}}>f/{fstop}</strong>
           <input type="range" min={1.2} max={22} step={0.1} value={fstop} onChange={e=>setFstop(+e.target.value)} style={styles.slider}/>
         </label>
         <label style={styles.label}>
-          Focal length: <strong style={{color:"#f59e0b"}}>{focal}mm</strong>
+          Focal length: <strong style={{color:"#ff5a4d"}}>{focal}mm</strong>
           <input type="range" min={16} max={200} step={1} value={focal} onChange={e=>setFocal(+e.target.value)} style={styles.slider}/>
         </label>
         <label style={styles.label}>
-          Focus distance: <strong style={{color:"#f59e0b"}}>{distance}m</strong>
+          Focus distance: <strong style={{color:"#ff5a4d"}}>{distance}m</strong>
           <input type="range" min={1} max={40} step={0.5} value={distance} onChange={e=>setDistance(+e.target.value)} style={styles.slider}/>
         </label>
       </div>
@@ -1435,11 +1435,11 @@ function ModuleDepthOfField() {
         <StatBadge label="Near limit" value={(Dn/1000).toFixed(2)+"m"}/>
         <StatBadge label="Far limit" value={farInf?"∞":(Df/1000).toFixed(2)+"m"}/>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12,display:"block",maxWidth:"100%",marginBottom:10}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12,display:"block",maxWidth:"100%",marginBottom:10}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>FRONT VIEW (what the lens sees)</div>
         <canvas ref={canvasRef} style={{display:"block",width:"100%",borderRadius:4}}/>
       </div>
-      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,display:"block",maxWidth:"100%"}}>
         <canvas ref={sideRef} style={{display:"block",width:"100%"}}/>
       </div>
     </div>
@@ -1482,15 +1482,15 @@ function ModuleVignetting({ image }) {
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:12}}>
         <label style={styles.label}>
-          Amount: <strong style={{color:"#f59e0b"}}>{Math.round(amount*100)}%</strong>
+          Amount: <strong style={{color:"#ff5a4d"}}>{Math.round(amount*100)}%</strong>
           <input type="range" min={0} max={1} step={0.01} value={amount} onChange={e=>setAmount(+e.target.value)} style={styles.slider}/>
         </label>
         <label style={styles.label}>
-          Feather: <strong style={{color:"#f59e0b"}}>{Math.round(feather*100)}%</strong>
+          Feather: <strong style={{color:"#ff5a4d"}}>{Math.round(feather*100)}%</strong>
           <input type="range" min={0} max={0.99} step={0.01} value={feather} onChange={e=>setFeather(+e.target.value)} style={styles.slider}/>
         </label>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
     </div>
@@ -1561,11 +1561,11 @@ function ModuleChromaticAberration({ image }) {
       </InfoBox>
       <div style={{marginBottom:12}}>
         <label style={styles.label}>
-          CA amount: <strong style={{color:"#f59e0b"}}>{amount}px</strong>
+          CA amount: <strong style={{color:"#ff5a4d"}}>{amount}px</strong>
           <input type="range" min={0} max={12} step={0.5} value={amount} onChange={e=>setAmount(+e.target.value)} style={styles.slider}/>
         </label>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
     </div>
@@ -1610,7 +1610,7 @@ function ModuleFrameRate() {
       }
       ctx.fillStyle="#0a0a0f"; ctx.fillRect(0,0,W,H);
       // Floor + pivot
-      ctx.strokeStyle="#1f2937"; ctx.lineWidth=1;
+      ctx.strokeStyle="#2a2b32"; ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(0,H-24);ctx.lineTo(W,H-24);ctx.stroke();
       // Trail of the last shown frames (older = fainter) — this IS the temporal sampling
       const s=st.samples;
@@ -1627,7 +1627,7 @@ function ModuleFrameRate() {
       ctx.strokeStyle="#4b5563"; ctx.lineWidth=2;
       ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
       ctx.fillStyle="#f59e0b"; ctx.beginPath();ctx.arc(px,py,18,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle="#1f2937"; ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#2a2b32"; ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fill();
       // Readout
       ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.fillRect(0,0,W,28);
       ctx.fillStyle="#f59e0b"; ctx.font="bold 13px monospace";
@@ -1649,7 +1649,7 @@ function ModuleFrameRate() {
         ))}
         <button onClick={()=>setPlaying(p=>!p)} style={styles.btnSecondary}>{playing?"⏸ Pause":"▶ Play"}</button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
     </div>
@@ -1742,11 +1742,11 @@ function ModuleColorTemp() {
         <Row items={LIGHT_SOURCES} active={src} onPick={setSrc}/>
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 360px",minWidth:280,background:"#111",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 360px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
           <canvas ref={canvasRef} style={{display:"block",width:"100%",borderRadius:4}}/>
           <div style={{marginTop:8,color:verdict[1],fontSize:13,fontWeight:"bold"}}>{verdict[0]}</div>
         </div>
-        <div style={{flex:"0 1 auto",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12}}>
+        <div style={{flex:"0 1 auto",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8}}>NEUTRAL REFERENCES</div>
           {[["White",[245,245,245]],["Grey",[150,150,150]],["Skin",[224,172,120]]].map(([lbl,base])=>(
             <div key={lbl} style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
@@ -1886,16 +1886,16 @@ function ModuleRAW() {
           </button>
         ))}
         <label style={styles.label}>
-          Exposure: <strong style={{color:"#f59e0b"}}>{exposure>=0?"+":""}{exposure} EV</strong>
+          Exposure: <strong style={{color:"#ff5a4d"}}>{exposure>=0?"+":""}{exposure} EV</strong>
           <input type="range" min={-5} max={2} step={0.5} value={exposure} onChange={e=>setExposure(+e.target.value)} style={{...styles.slider,width:200}}/>
         </label>
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 300px",minWidth:260,background:"#111",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 300px",minWidth:260,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>IMAGE</div>
           <canvas ref={imgRef} style={{display:"block",width:"100%",borderRadius:4}}/>
         </div>
-        <div style={{flex:"1 1 260px",minWidth:220,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 260px",minWidth:220,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:mode==="RAW"?"#34d399":"#f87171",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.08em"}}>WAVEFORM (luma, IRE)</div>
           <canvas ref={wfRef} style={{display:"block",width:"100%"}}/>
         </div>
@@ -1908,7 +1908,7 @@ function ModuleRAW() {
 // MODULE: Camera Movement
 // ─────────────────────────────────────────────
 const MOVES = [
-  { key:"pan", label:"Pan", color:"#f59e0b", note:"Rotation around the camera's vertical axis — the camera stays put and turns. Reveals space or follows action. Being a rotation, it produces almost no parallax." },
+  { key:"pan", label:"Pan", color:"#ff5a4d", note:"Rotation around the camera's vertical axis — the camera stays put and turns. Reveals space or follows action. Being a rotation, it produces almost no parallax." },
   { key:"tilt", label:"Tilt", color:"#60a5fa", note:"Rotation around the horizontal axis — the camera looks up or down from a fixed position. Establishes height and scale." },
   { key:"track", label:"Track / Truck", color:"#34d399", note:"The camera physically travels sideways (dolly/slider). Watch the PARALLAX: near objects slide past faster than far ones — the true signature of a translational move." },
   { key:"dolly", label:"Dolly in/out", color:"#34d399", note:"The camera physically moves toward/away from the subject. Near objects grow much faster than the background → the spatial relationship changes. This is NOT a zoom." },
@@ -1975,7 +1975,7 @@ function ModuleCameraMovement() {
           <button key={m.key} onClick={()=>setSel(i)} style={i===sel?styles.btnActive:styles.btnChip}>{m.label}</button>
         ))}
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
       <p style={styles.noteText}>📌 {M.note}</p>
@@ -2019,15 +2019,15 @@ function ModuleTimecode() {
           <button key={f} onClick={()=>{setFps(f);frameRef.current=0;}} style={f===fps?styles.btnActive:styles.btnChip}>{f}fps</button>
         ))}
         <button onClick={()=>setRunning(r=>!r)} style={styles.btnSecondary}>{running?"⏸":"▶"}</button>
-        <button onClick={()=>setDf(d=>!d)} style={{...styles.btnSecondary,...(df?{borderColor:"#f59e0b",color:"#f59e0b"}:{})}}>
+        <button onClick={()=>setDf(d=>!d)} style={{...styles.btnSecondary,...(df?{borderColor:"#ff5a4d",color:"#ff5a4d"}:{})}}>
           Drop-frame: {df?"ON":"OFF"}
         </button>
         <button onClick={()=>frameRef.current=0} style={styles.btnSecondary}>Reset</button>
       </div>
       <div style={{
-        background:"#0d1117",border:"1px solid #1f2937",borderRadius:12,
+        background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:12,
         padding:"24px 32px",display:"inline-block",fontFamily:"monospace",
-        letterSpacing:"0.15em",fontSize:48,color:"#f59e0b",
+        letterSpacing:"0.15em",fontSize:48,color:"#ff5a4d",
         textShadow:"0 0 20px #f59e0b88",
       }}>
         {tc}
@@ -2040,13 +2040,13 @@ function ModuleTimecode() {
       </div>
 
       {/* Drop-frame visual explainer */}
-      <div style={{marginTop:20,background:"#0d1117",border:"1px solid #1f2937",borderRadius:10,padding:"16px 18px"}}>
-        <div style={{color:"#f59e0b",fontSize:13,fontWeight:"bold",fontFamily:"monospace",marginBottom:8}}>What is drop-frame?</div>
+      <div style={{marginTop:20,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:10,padding:"16px 18px"}}>
+        <div style={{color:"#ff5a4d",fontSize:13,fontWeight:"bold",fontFamily:"monospace",marginBottom:8}}>What is drop-frame?</div>
         <p style={{color:"#d1d5db",fontSize:13,lineHeight:1.6,margin:"0 0 14px"}}>
           NTSC video runs at <strong>29.97 fps</strong>, but timecode counts a whole <strong>30 frames every second</strong>.
           Counting 30 when only 29.97 actually happen makes the timecode run <strong>ahead of the real clock</strong> —
           about <strong style={{color:"#f87171"}}>+3.6 s every hour</strong>. <strong>Drop-frame</strong> fixes this by
-          <em> skipping the frame numbers</em> <code style={{color:"#f59e0b"}}>;00</code> and <code style={{color:"#f59e0b"}}>;01</code> at
+          <em> skipping the frame numbers</em> <code style={{color:"#ff5a4d"}}>;00</code> and <code style={{color:"#ff5a4d"}}>;01</code> at
           the start of every minute — <strong>except every 10th minute</strong>. (No actual video frames are lost — only frame
           <em> numbers</em> are skipped.) 24, 25 and true 30 fps are always non-drop.
         </p>
@@ -2057,7 +2057,7 @@ function ModuleTimecode() {
               <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#9ca3af",fontFamily:"monospace",marginBottom:2}}>
                 <span>{lbl}</span><span style={{color:col}}>{val}</span>
               </div>
-              <div style={{height:10,background:"#1f2937",borderRadius:5,overflow:"hidden"}}>
+              <div style={{height:10,background:"#2a2b32",borderRadius:5,overflow:"hidden"}}>
                 <div style={{height:"100%",width:`${w}%`,maxWidth:"100%",background:col,opacity:0.8}}/>
               </div>
             </div>
@@ -2286,11 +2286,11 @@ function ModuleScopes({ image }) {
           <button key={k} onClick={()=>setScope(k)} style={k===scope?styles.btnActive:styles.btnChip}>{lbl}</button>
         ))}
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12,display:"block",maxWidth:"100%"}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12,display:"block",maxWidth:"100%"}}>
         <canvas ref={previewRef} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
           style={{display:"block",width:"100%",borderRadius:4,cursor:"grab"}}/>
       </div>
-      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:"12px 16px"}}>
+      <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:"12px 16px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
           <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace",letterSpacing:"0.06em"}}>GRADING</span>
           <button onClick={reset} style={{...styles.btnSecondary,fontSize:11,padding:"4px 10px"}}>Reset</button>
@@ -2321,7 +2321,7 @@ function InfoBox({ children }) {
         {open?"▼ Hide explanation":"▶ Show explanation"}
       </button>
       {open && (
-        <div style={{marginTop:8,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:"12px 16px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
+        <div style={{marginTop:8,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:"12px 16px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
           {children}
         </div>
       )}
@@ -2331,9 +2331,9 @@ function InfoBox({ children }) {
 
 function StatBadge({ label, value }) {
   return (
-    <div style={{background:"#111",border:"1px solid #1f2937",borderRadius:6,padding:"6px 12px",minWidth:80}}>
+    <div style={{background:"#16171c",border:"1px solid #2a2b32",borderRadius:6,padding:"6px 12px",minWidth:80}}>
       <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace"}}>{label}</div>
-      <div style={{color:"#f59e0b",fontSize:12,fontFamily:"monospace",fontWeight:"bold"}}>{value}</div>
+      <div style={{color:"#ff5a4d",fontSize:12,fontFamily:"monospace",fontWeight:"bold"}}>{value}</div>
     </div>
   );
 }
@@ -2343,25 +2343,25 @@ function StatBadge({ label, value }) {
 // ─────────────────────────────────────────────
 const styles = {
   btnActive: {
-    padding:"6px 12px",borderRadius:6,border:"2px solid #f59e0b",
-    background:"#f59e0b22",color:"#f59e0b",cursor:"pointer",
+    padding:"6px 12px",borderRadius:6,border:"2px solid #ff5a4d",
+    background:"#ff5a4d22",color:"#ff5a4d",cursor:"pointer",
     fontSize:12,fontFamily:"monospace",fontWeight:"bold",
   },
   btnChip: {
-    padding:"6px 12px",borderRadius:6,border:"1px solid #374151",
+    padding:"6px 12px",borderRadius:6,border:"1px solid #2a2b32",
     background:"transparent",color:"#9ca3af",cursor:"pointer",
     fontSize:12,fontFamily:"monospace",transition:"all 0.15s",
   },
   btnSecondary: {
-    padding:"6px 14px",borderRadius:6,border:"1px solid #374151",
-    background:"#111",color:"#9ca3af",cursor:"pointer",
+    padding:"6px 14px",borderRadius:6,border:"1px solid #2a2b32",
+    background:"#16171c",color:"#9ca3af",cursor:"pointer",
     fontSize:12,fontFamily:"monospace",
   },
   label: {
     color:"#9ca3af",fontSize:12,display:"flex",flexDirection:"column",gap:4,
   },
   slider: {
-    accentColor:"#f59e0b",width:140,
+    accentColor:"#ff5a4d",width:140,
   },
   noteText: {
     color:"#6b7280",fontSize:12,marginTop:8,fontStyle:"italic",
@@ -2477,7 +2477,7 @@ function ModuleExposureTriangle({ image }) {
         The <strong>exposure triangle</strong> is the three controls that set image brightness — and each carries a <em>side-effect</em>. <strong>Shutter</strong> (exposure time) also sets <em>motion blur</em>: a 180° shutter (1/50 at 25 fps) is the cinema norm; faster freezes motion, slower smears it. <strong>Aperture</strong> (f-stop) also sets <em>depth of field</em>: wide (f/1.4) throws the background out of focus, narrow (f/16) keeps it sharp. <strong>ISO</strong> (sensitivity) also sets <em>noise</em>: low is clean, high is grainy. Each full stop <em>doubles or halves</em> the light — so you can trade one for another and keep the same exposure (<strong>reciprocity</strong>). Watch the EV badge: keep it near <span style={{color:"#34d399"}}>balanced</span> while changing which side-effect you accept.
       </InfoBox>
       <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 360px",minWidth:300,background:"#111",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 360px",minWidth:300,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{position:"relative"}}>
             <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
             <div style={{position:"absolute",left:8,right:8,bottom:8,display:"flex",gap:6}}>
@@ -2490,7 +2490,7 @@ function ModuleExposureTriangle({ image }) {
           </div>
           <div style={{marginTop:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:5}}>
-              <span style={{color:"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.06em"}}>{A.label}</span>
+              <span style={{color:"#ff5a4d",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.06em"}}>{A.label}</span>
               <span style={{color:"#6b7280",fontSize:11}}>↔ {A.effect}</span>
             </div>
             <ExposureDial key={active} values={A.arr} index={A.idx} format={A.fmt} onChange={A.set} accent="#f59e0b"/>
@@ -2498,12 +2498,12 @@ function ModuleExposureTriangle({ image }) {
           </div>
         </div>
         <div style={{flex:"1 1 240px",minWidth:220}}>
-          <div style={{padding:"12px 16px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,marginBottom:12}}>
+          <div style={{padding:"12px 16px",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,marginBottom:12}}>
             <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.08em",marginBottom:4}}>EXPOSURE</div>
             <div style={{fontSize:24,fontWeight:"bold",color:balanced?"#34d399":stops>0?"#f59e0b":"#60a5fa"}}>{stops>0?"+":""}{stops.toFixed(1)} EV</div>
             <div style={{color:"#9ca3af",fontSize:12}}>{balanced?"balanced":stops>0?"over-exposed":"under-exposed"}</div>
           </div>
-          <div style={{padding:"10px 14px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,fontSize:12,color:"#9ca3af",lineHeight:1.6}}>
+          <div style={{padding:"10px 14px",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,fontSize:12,color:"#9ca3af",lineHeight:1.6}}>
             Try: open the aperture <em>and</em> speed up the shutter by the same number of stops — the brightness stays the same, but you swap deep focus for shallow, and motion blur for a frozen frame.
           </div>
         </div>
@@ -2565,10 +2565,10 @@ function ModuleFalseColor({ image }) {
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 340px",minWidth:300,background:"#111",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 340px",minWidth:300,background:"#16171c",borderRadius:8,padding:12}}>
           <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
         </div>
-        <div style={{flex:"1 1 200px",minWidth:190,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 200px",minWidth:190,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>IRE LEGEND</div>
           {[...FC_BANDS].reverse().map((b,i)=>(
             <div key={i} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
@@ -2636,7 +2636,7 @@ function ModuleLUT({ image }) {
         <button onClick={()=>setSplit(s=>!s)} style={split?styles.btnActive:styles.btnChip}>{split?"Split view: ON":"Split view: OFF"}</button>
         <span style={{color:"#6b7280",fontSize:12}}>{active.kind!=="—" && <><strong style={{color:active.kind==="technical"?"#60a5fa":"#f59e0b"}}>{active.kind}</strong> · {active.note}</>}</span>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}>
         <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
       </div>
     </div>
@@ -2717,18 +2717,18 @@ function ModuleCodecs({ image }) {
   return (
     <div>
       <InfoBox>
-        A <strong>codec</strong> (coder-decoder) shrinks video two ways. <strong>Spatial (intra)</strong> compression works <em>inside</em> one frame — a DCT (or wavelet) throws away detail the eye barely sees; too little bitrate and the <strong>8×8 blocks</strong> show up as <em>macroblocking</em>. <strong>Temporal (inter)</strong> compression works <em>between</em> frames: only an <span style={{color:"#f59e0b"}}>I-frame</span> is complete; <span style={{color:"#60a5fa"}}>P-frames</span> store just the change from the previous frame and <span style={{color:"#a78bfa"}}>B-frames</span> interpolate from both sides. <strong>Intra-only</strong> codecs (ProRes, DNxHR) make every frame an I-frame — huge files but you can cut on any frame; <strong>long-GOP</strong> codecs (H.264/265) are tiny but must decode a whole group, which is why they scrub badly on a timeline. The other axes that define a codec: <em>bit depth</em> (8/10/12), <em>chroma</em> (4:2:0…4:4:4), <em>alpha</em>, and <em>open vs licensed</em>.
+        A <strong>codec</strong> (coder-decoder) shrinks video two ways. <strong>Spatial (intra)</strong> compression works <em>inside</em> one frame — a DCT (or wavelet) throws away detail the eye barely sees; too little bitrate and the <strong>8×8 blocks</strong> show up as <em>macroblocking</em>. <strong>Temporal (inter)</strong> compression works <em>between</em> frames: only an <span style={{color:"#ff5a4d"}}>I-frame</span> is complete; <span style={{color:"#60a5fa"}}>P-frames</span> store just the change from the previous frame and <span style={{color:"#a78bfa"}}>B-frames</span> interpolate from both sides. <strong>Intra-only</strong> codecs (ProRes, DNxHR) make every frame an I-frame — huge files but you can cut on any frame; <strong>long-GOP</strong> codecs (H.264/265) are tiny but must decode a whole group, which is why they scrub badly on a timeline. The other axes that define a codec: <em>bit depth</em> (8/10/12), <em>chroma</em> (4:2:0…4:4:4), <em>alpha</em>, and <em>open vs licensed</em>.
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start",marginBottom:16}}>
-        <div style={{flex:"1 1 300px",minWidth:280,background:"#111",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>SPATIAL — bitrate vs blocking</div>
           <canvas ref={imgRef} style={{display:"block",width:"100%",borderRadius:4}}/>
           <label style={{...styles.label,marginTop:10}}>
-            Bitrate / quality: <strong style={{color:"#f59e0b"}}>{q}%</strong>
+            Bitrate / quality: <strong style={{color:"#ff5a4d"}}>{q}%</strong>
             <input type="range" min={3} max={100} step={1} value={q} onChange={e=>setQ(+e.target.value)} style={{...styles.slider,width:"100%"}}/>
           </label>
         </div>
-        <div style={{flex:"1 1 300px",minWidth:280,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>TEMPORAL — GOP structure</div>
           <canvas ref={gopRef} style={{display:"block",width:"100%"}}/>
           <div style={{display:"flex",gap:8,marginTop:10}}>
@@ -2738,11 +2738,11 @@ function ModuleCodecs({ image }) {
           </div>
         </div>
       </div>
-      <div style={{overflowX:"auto",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8}}>
+      <div style={{overflowX:"auto",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8}}>
         <table style={{borderCollapse:"collapse",width:"100%",fontSize:11.5,fontFamily:"monospace",minWidth:720}}>
           <thead><tr style={{color:"#9ca3af",textAlign:"left"}}>
             {["Codec","Type","Compression","Bit depth","Chroma","Alpha","Licence","Typical use"].map(h=>(
-              <th key={h} style={{padding:"8px 10px",borderBottom:"1px solid #1f2937",whiteSpace:"nowrap"}}>{h}</th>
+              <th key={h} style={{padding:"8px 10px",borderBottom:"1px solid #2a2b32",whiteSpace:"nowrap"}}>{h}</th>
             ))}
           </tr></thead>
           <tbody>
@@ -2813,9 +2813,9 @@ function ModuleContainers() {
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 320px",minWidth:300,background:"#0d1117",border:"1px solid #1f2937",borderRadius:10,padding:"14px 18px"}}>
+        <div style={{flex:"1 1 320px",minWidth:300,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:10,padding:"14px 18px"}}>
           <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:8,flexWrap:"wrap",gap:8}}>
-            <div><span style={{color:"#f59e0b",fontFamily:"monospace",fontSize:18,fontWeight:"bold"}}>{c.ext}</span> <span style={{color:"#9ca3af",fontSize:13}}>{c.name}</span></div>
+            <div><span style={{color:"#ff5a4d",fontFamily:"monospace",fontSize:18,fontWeight:"bold"}}>{c.ext}</span> <span style={{color:"#9ca3af",fontSize:13}}>{c.name}</span></div>
             <span style={{fontSize:11,fontFamily:"monospace",padding:"3px 8px",borderRadius:4,background:c.open?"#134e2a":"#4c1d1d",color:c.open?"#86efac":"#fca5a5"}}>{c.open?"OPEN":"PROPRIETARY"}</span>
           </div>
           <div style={{color:"#6b7280",fontSize:11,marginBottom:8}}>{c.lic}</div>
@@ -2825,7 +2825,7 @@ function ModuleContainers() {
           <ContainerRow label="⏱ timecode" value={c.tc}/>
           <ContainerRow label="🏷 metadata" value={c.meta}/>
         </div>
-        <div style={{flex:"1 1 240px",minWidth:220,background:"#111",borderRadius:10,padding:"14px 18px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
+        <div style={{flex:"1 1 240px",minWidth:220,background:"#16171c",borderRadius:10,padding:"14px 18px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>WHEN TO USE</div>
           {c.note}
         </div>
@@ -2884,7 +2884,7 @@ function ModuleSignals() {
       <div style={{marginBottom:6,color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.08em"}}>IP TRANSPORTS / PROTOCOLS (ride on Ethernet)</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>{ip.map(Chip)}</div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 340px",minWidth:300,background:"#0d1117",border:`1px solid ${s.cat==="ip"?"#164e46":"#1f2937"}`,borderRadius:10,padding:"14px 18px"}}>
+        <div style={{flex:"1 1 340px",minWidth:300,background:"#1c1d23",border:`1px solid ${s.cat==="ip"?"#164e46":"#2a2b32"}`,borderRadius:10,padding:"14px 18px"}}>
           <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",flexWrap:"wrap",gap:8,marginBottom:6}}>
             <span style={{color:"#f3f4f6",fontSize:17,fontWeight:"bold"}}>{s.name}</span>
             <span style={{fontSize:11,fontFamily:"monospace",padding:"3px 8px",borderRadius:4,background:s.cat==="ip"?"#134e4a":"#1e3a5f",color:s.cat==="ip"?"#5eead4":"#93c5fd"}}>
@@ -2905,7 +2905,7 @@ function ModuleSignals() {
             <span style={{color:s.open?"#86efac":"#fca5a5"}}>{s.lic}</span>
           </div>
         </div>
-        <div style={{flex:"1 1 240px",minWidth:220,background:"#111",borderRadius:10,padding:"14px 18px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
+        <div style={{flex:"1 1 240px",minWidth:220,background:"#16171c",borderRadius:10,padding:"14px 18px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>NOTES</div>
           {s.note}
         </div>
@@ -2955,12 +2955,12 @@ function ModuleLensDistortion({ image }) {
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
         <label style={styles.label}>
-          Distortion: <strong style={{color:"#f59e0b"}}>{k>0.02?"barrel":k<-0.02?"pincushion":"none"} ({k.toFixed(2)})</strong>
+          Distortion: <strong style={{color:"#ff5a4d"}}>{k>0.02?"barrel":k<-0.02?"pincushion":"none"} ({k.toFixed(2)})</strong>
           <input type="range" min={-0.4} max={0.4} step={0.01} value={k} onChange={e=>setK(+e.target.value)} style={{...styles.slider,width:220}}/>
         </label>
         <button onClick={()=>setGrid(g=>!g)} style={grid?styles.btnActive:styles.btnChip}>{grid?"Grid: ON":"Grid: OFF"}</button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3012,11 +3012,11 @@ function ModuleInterlacing({ image }) {
           ))}
         </div>
         <label style={styles.label}>
-          Motion: <strong style={{color:"#f59e0b"}}>{motion}px/field</strong>
+          Motion: <strong style={{color:"#ff5a4d"}}>{motion}px/field</strong>
           <input type="range" min={0} max={30} step={1} value={motion} onChange={e=>setMotion(+e.target.value)} style={{...styles.slider,width:180}}/>
         </label>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3064,13 +3064,13 @@ function ModuleHalation({ image }) {
         <strong>Bloom</strong> is light bleeding out of bright areas — glare scattering in the lens and around sensor photosites, so highlights glow past their edges. <strong>Halation</strong> is the film cousin: light passes through the emulsion, reflects off the film backing and re-exposes the surrounding grains — classically a <em>red/orange</em> ring around highlights (tungsten bulbs, sunlit windows, neon), because the red-sensitive layer sits deepest. Kodak Vision3 and stocks without an anti-halation layer show it strongly; it's now faked in post for a filmic look (and baked into looks like teal-and-orange grades). Push <em>threshold</em> to pick which highlights glow, <em>amount</em> for strength, and toggle the red halation tint vs neutral bloom.
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
-        <label style={styles.label}>Threshold: <strong style={{color:"#f59e0b"}}>{Math.round(thr*100)} IRE</strong>
+        <label style={styles.label}>Threshold: <strong style={{color:"#ff5a4d"}}>{Math.round(thr*100)} IRE</strong>
           <input type="range" min={0.3} max={0.95} step={0.01} value={thr} onChange={e=>setThr(+e.target.value)} style={{...styles.slider,width:160}}/></label>
-        <label style={styles.label}>Amount: <strong style={{color:"#f59e0b"}}>{Math.round(amt*100)}%</strong>
+        <label style={styles.label}>Amount: <strong style={{color:"#ff5a4d"}}>{Math.round(amt*100)}%</strong>
           <input type="range" min={0} max={1} step={0.01} value={amt} onChange={e=>setAmt(+e.target.value)} style={{...styles.slider,width:160}}/></label>
         <button onClick={()=>setHalo(h=>!h)} style={halo?styles.btnActive:styles.btnChip}>{halo?"Halation (red)":"Bloom (neutral)"}</button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3115,11 +3115,11 @@ function ModuleFlicker({ image }) {
         <div style={{display:"flex",gap:8}}>
           {[50,60].map(v=>(<button key={v} onClick={()=>setFreq(v)} style={freq===v?styles.btnActive:styles.btnChip}>{v} Hz</button>))}
         </div>
-        <label style={styles.label}>Shutter angle: <strong style={{color:"#f59e0b"}}>{shutter}°</strong>
+        <label style={styles.label}>Shutter angle: <strong style={{color:"#ff5a4d"}}>{shutter}°</strong>
           <input type="range" min={45} max={360} step={5} value={shutter} onChange={e=>setShutter(+e.target.value)} style={{...styles.slider,width:180}}/></label>
         <button onClick={()=>setAnimate(a=>!a)} style={animate?styles.btnActive:styles.btnChip}>{animate?"Roll: ON":"Roll: OFF"}</button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3162,13 +3162,13 @@ function ModuleFocusBreathing({ image }) {
         <strong>Focus breathing</strong> is a lens changing its <em>field of view</em> as you rack focus — pull from a near subject to a far one and the framing subtly zooms. It happens because moving the focusing group also shifts the effective focal length. It's distracting on a focus pull and makes match-cuts and VFX plates harder, so <strong>cine lenses</strong> are engineered to minimise it (internal-focus designs, floating elements) — one of the things you pay for over stills glass. Some cameras now offer electronic <em>breathing compensation</em> (a slight digital crop that counteracts it). Watch the image creep past the fixed crop marks as focus rolls near↔far.
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
-        <label style={{...styles.label,opacity:animate?0.4:1}}>Focus: <strong style={{color:"#f59e0b"}}>{focus<0.45?"near":focus>0.55?"far":"mid"}</strong>
+        <label style={{...styles.label,opacity:animate?0.4:1}}>Focus: <strong style={{color:"#ff5a4d"}}>{focus<0.45?"near":focus>0.55?"far":"mid"}</strong>
           <input type="range" min={0} max={1} step={0.01} value={focus} disabled={animate} onChange={e=>setFocus(+e.target.value)} style={{...styles.slider,width:180}}/></label>
-        <label style={styles.label}>Breathing amount: <strong style={{color:"#f59e0b"}}>{Math.round(amount*100)}%</strong>
+        <label style={styles.label}>Breathing amount: <strong style={{color:"#ff5a4d"}}>{Math.round(amount*100)}%</strong>
           <input type="range" min={0} max={1} step={0.01} value={amount} onChange={e=>setAmount(+e.target.value)} style={{...styles.slider,width:160}}/></label>
         <button onClick={()=>setAnimate(a=>!a)} style={animate?styles.btnActive:styles.btnChip}>{animate?"Auto rack: ON":"Auto rack: OFF"}</button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3251,7 +3251,7 @@ function drawTopDown(canvas, lights, sel){
   const W=Math.min(canvas.parentElement?.clientWidth-24||300,300), H=W; canvas.width=W;canvas.height=H;
   const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,W,H);
   const cx=W/2, cy=H*0.52, R=W*0.12, dist=W*0.26;
-  ctx.strokeStyle="#1f2937"; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.arc(cx,cy,R+dist,0,7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.strokeStyle="#2a2b32"; ctx.setLineDash([3,4]); ctx.beginPath(); ctx.arc(cx,cy,R+dist,0,7); ctx.stroke(); ctx.setLineDash([]);
   // camera
   ctx.fillStyle="#374151"; ctx.beginPath(); ctx.moveTo(cx-11,H-8); ctx.lineTo(cx+11,H-8); ctx.lineTo(cx+6,H-22); ctx.lineTo(cx-6,H-22); ctx.closePath(); ctx.fill();
   ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="center"; ctx.fillText("camera",cx,H-1);
@@ -3294,7 +3294,7 @@ function ModulePortraitLight() {
   return (
     <div>
       <InfoBox>
-        <strong>Three-point lighting</strong> is the foundation of portrait and interview lighting, built from three roles. The <strong style={{color:"#f59e0b"}}>Key</strong> is the main light — put it off to one side and above, and the shadow of the nose and brow carves out the classic patterns (<em>butterfly, loop, Rembrandt, split</em>). The <strong style={{color:"#22d3ee"}}>Fill</strong> sits on the <em>opposite</em> side, softer and dimmer, and lifts the shadows — the <strong>key-to-fill ratio</strong> sets how dramatic (low fill) or flat (high fill) the face looks. The <strong style={{color:"#a78bfa"}}>Back</strong> (or rim/hair) light sits <em>behind</em> the subject and rims the edge of the head, separating them from the background. Each light has its own position (azimuth + elevation), <strong>intensity</strong>, <strong>softness</strong> (big soft source vs small hard one) and <strong>colour temperature</strong> — mixing warm and cool lights is a classic look. Pick a preset, then select a light and drag it around the top-down diagram or tune it below. The face is shaded live by all three (N·L + specular).
+        <strong>Three-point lighting</strong> is the foundation of portrait and interview lighting, built from three roles. The <strong style={{color:"#ff5a4d"}}>Key</strong> is the main light — put it off to one side and above, and the shadow of the nose and brow carves out the classic patterns (<em>butterfly, loop, Rembrandt, split</em>). The <strong style={{color:"#22d3ee"}}>Fill</strong> sits on the <em>opposite</em> side, softer and dimmer, and lifts the shadows — the <strong>key-to-fill ratio</strong> sets how dramatic (low fill) or flat (high fill) the face looks. The <strong style={{color:"#a78bfa"}}>Back</strong> (or rim/hair) light sits <em>behind</em> the subject and rims the edge of the head, separating them from the background. Each light has its own position (azimuth + elevation), <strong>intensity</strong>, <strong>softness</strong> (big soft source vs small hard one) and <strong>colour temperature</strong> — mixing warm and cool lights is a classic look. Pick a preset, then select a light and drag it around the top-down diagram or tune it below. The face is shaded live by all three (N·L + specular).
       </InfoBox>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
         {LIGHT_PRESETS.map(p=>(
@@ -3302,10 +3302,10 @@ function ModulePortraitLight() {
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 300px",minWidth:260,background:"#0d1117",borderRadius:8,padding:12,textAlign:"center"}}>
+        <div style={{flex:"1 1 300px",minWidth:260,background:"#1c1d23",borderRadius:8,padding:12,textAlign:"center"}}>
           <canvas ref={frontRef} style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto",borderRadius:4}}/>
         </div>
-        <div style={{flex:"1 1 260px",minWidth:240,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,textAlign:"center"}}>
+        <div style={{flex:"1 1 260px",minWidth:240,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,textAlign:"center"}}>
           <canvas ref={topRef}
             onPointerDown={e=>{ e.currentTarget.setPointerCapture(e.pointerId); onTop(e,true); }}
             onPointerMove={e=>{ if(dragRef.current>=0) onTop(e,false); }}
@@ -3326,7 +3326,7 @@ function ModulePortraitLight() {
         </button>
       </div>
       {/* selected light controls */}
-      <div style={{marginTop:12,padding:"12px 14px",background:"#0d1117",border:`1px solid ${rc}44`,borderRadius:8,opacity:cur.on?1:0.5}}>
+      <div style={{marginTop:12,padding:"12px 14px",background:"#1c1d23",border:`1px solid ${rc}44`,borderRadius:8,opacity:cur.on?1:0.5}}>
         <div style={{color:rc,fontSize:12,fontFamily:"monospace",fontWeight:"bold",marginBottom:8}}>editing: {LIGHT_ROLES[sel].name} light</div>
         <div style={{display:"flex",gap:18,flexWrap:"wrap"}}>
           <label style={styles.label}>Azimuth: <strong style={{color:rc}}>{Math.round(cur.az)}°</strong>
@@ -3341,7 +3341,7 @@ function ModulePortraitLight() {
             <input type="range" min={2800} max={8000} step={100} value={cur.kelvin} onChange={e=>upd({kelvin:+e.target.value})} style={{...styles.slider,width:140,accentColor:rc}}/></label>
         </div>
       </div>
-      {presetNote && <div style={{marginTop:12,padding:"10px 14px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6}}><strong style={{color:"#facc15"}}>{LIGHT_PRESETS.find(p=>p.id===preset)?.name}:</strong> {presetNote}</div>}
+      {presetNote && <div style={{marginTop:12,padding:"10px 14px",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6}}><strong style={{color:"#facc15"}}>{LIGHT_PRESETS.find(p=>p.id===preset)?.name}:</strong> {presetNote}</div>}
     </div>
   );
 }
@@ -3376,7 +3376,7 @@ function ModuleAudioChain() {
           <div key={st.id} style={{display:"flex",alignItems:"center",gap:6}}>
             <button onClick={()=>setSel(st.id)} style={{
               display:"flex",flexDirection:"column",alignItems:"center",gap:2,minWidth:92,padding:"10px 8px",borderRadius:8,cursor:"pointer",
-              border:`1px solid ${sel===st.id?"#f472b6":"#1f2937"}`, background:sel===st.id?"#f472b622":"#0d1117", transition:"all 0.15s"}}>
+              border:`1px solid ${sel===st.id?"#f472b6":"#2a2b32"}`, background:sel===st.id?"#f472b622":"#1c1d23", transition:"all 0.15s"}}>
               <span style={{fontSize:20}}>{st.icon}</span>
               <span style={{color:"#f3f4f6",fontSize:12,fontWeight:"bold"}}>{st.name}</span>
               <span style={{color:"#6b7280",fontSize:9.5,fontFamily:"monospace",textAlign:"center"}}>{st.sub}</span>
@@ -3386,7 +3386,7 @@ function ModuleAudioChain() {
           </div>
         ))}
       </div>
-      <div style={{background:"#0d1117",border:`1px solid ${s.gain?"#f472b644":"#1f2937"}`,borderRadius:10,padding:"14px 18px"}}>
+      <div style={{background:"#1c1d23",border:`1px solid ${s.gain?"#f472b644":"#2a2b32"}`,borderRadius:10,padding:"14px 18px"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
           <span style={{fontSize:22}}>{s.icon}</span>
           <span style={{color:"#f3f4f6",fontSize:17,fontWeight:"bold"}}>{s.name}</span>
@@ -3460,29 +3460,29 @@ function ModulePolarPatterns() {
         {POLAR_PATTERNS.map(p=>(<button key={p.id} onClick={()=>setPat(p.id)} style={pat===p.id?styles.btnActive:styles.btnChip}>{p.name}</button>))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 300px",minWidth:280,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,textAlign:"center"}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,textAlign:"center"}}>
           <canvas ref={ref}
             onPointerDown={e=>{dragRef.current=true; e.currentTarget.setPointerCapture(e.pointerId); onMove(e);}}
             onPointerMove={onMove} onPointerUp={()=>{dragRef.current=false;}}
             style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto",cursor:"grab",touchAction:"none"}}/>
         </div>
         <div style={{flex:"1 1 240px",minWidth:220}}>
-          <div style={{background:"#111",borderRadius:8,padding:14,marginBottom:12}}>
+          <div style={{background:"#16171c",borderRadius:8,padding:14,marginBottom:12}}>
             <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>PICKUP AT {Math.round(deg)}°</div>
             <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:6}}>
               <span style={{color:zone[1],fontSize:24,fontWeight:"bold",fontFamily:"monospace"}}>{Math.round(resp*100)}%</span>
               <span style={{color:"#9ca3af",fontFamily:"monospace",fontSize:13}}>{dB<=-60?"−∞":dB.toFixed(1)} dB</span>
             </div>
-            <div style={{height:8,background:"#1f2937",borderRadius:4,overflow:"hidden",marginBottom:8}}>
+            <div style={{height:8,background:"#2a2b32",borderRadius:4,overflow:"hidden",marginBottom:8}}>
               <div style={{width:`${resp*100}%`,height:"100%",background:zone[1],transition:"width 0.1s"}}/>
             </div>
             <div style={{color:zone[1],fontSize:12,fontFamily:"monospace"}}>{zone[0]}</div>
           </div>
-          <label style={styles.label}>Source angle: <strong style={{color:"#f59e0b"}}>{Math.round(deg)}°</strong>
+          <label style={styles.label}>Source angle: <strong style={{color:"#ff5a4d"}}>{Math.round(deg)}°</strong>
             <input type="range" min={0} max={360} step={1} value={deg} onChange={e=>setDeg(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
         </div>
       </div>
-      <div style={{marginTop:12,padding:"10px 14px",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6}}>
+      <div style={{marginTop:12,padding:"10px 14px",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6}}>
         <strong style={{color:"#f472b6"}}>{P.name}:</strong> {P.note}
       </div>
     </div>
@@ -3509,7 +3509,7 @@ function ModuleLevels() {
   useEffect(()=>{
     const c=wfRef.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||520,520), H=150; c.width=W;c.height=H;
     const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H); const mid=H/2;
-    ctx.strokeStyle="#1f2937"; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
+    ctx.strokeStyle="#2a2b32"; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
     // clip lines at ±1
     ctx.strokeStyle="rgba(248,113,113,0.4)"; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.moveTo(0,2);ctx.lineTo(W,2);ctx.moveTo(0,H-2);ctx.lineTo(W,H-2);ctx.stroke(); ctx.setLineDash([]);
     ctx.strokeStyle=clipped?"#f87171":"#34d399"; ctx.lineWidth=1.4; ctx.beginPath();
@@ -3524,7 +3524,7 @@ function ModuleLevels() {
     ctx.fillStyle="rgba(245,158,11,0.10)"; ctx.fillRect(dbToX(-18),0,W-dbToX(-18),H);
     // scale
     ctx.fillStyle="#4b5563"; ctx.font="9px monospace"; ctx.textAlign="center";
-    [-60,-48,-36,-24,-18,-12,-6,0].forEach(db=>{ const x=dbToX(db); ctx.strokeStyle="#1f2937"; ctx.beginPath();ctx.moveTo(x,14);ctx.lineTo(x,H);ctx.stroke(); ctx.fillText(db,x,10); });
+    [-60,-48,-36,-24,-18,-12,-6,0].forEach(db=>{ const x=dbToX(db); ctx.strokeStyle="#2a2b32"; ctx.beginPath();ctx.moveTo(x,14);ctx.lineTo(x,H);ctx.stroke(); ctx.fillText(db,x,10); });
     // RMS bar
     const rG=ctx.createLinearGradient(0,0,W,0); rG.addColorStop(0,"#166534"); rG.addColorStop(0.7,"#22c55e"); rG.addColorStop(0.85,"#eab308"); rG.addColorStop(1,"#ef4444");
     ctx.fillStyle=rG; ctx.fillRect(0,20,Math.max(0,dbToX(rmsDB)),18);
@@ -3539,11 +3539,11 @@ function ModuleLevels() {
       </InfoBox>
       <label style={{...styles.label,marginBottom:12}}>Input gain: <strong style={{color:clipped?"#f87171":"#f59e0b"}}>{gain>0?"+":""}{gain} dB</strong> {clipped && <span style={{color:"#f87171",fontFamily:"monospace"}}> · CLIPPING</span>}
         <input type="range" min={-12} max={24} step={0.5} value={gain} onChange={e=>setGain(+e.target.value)} style={{...styles.slider,width:280}}/></label>
-      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>WAVEFORM</div>
         <canvas ref={wfRef} style={{display:"block",width:"100%"}}/>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
           <span style={{color:"#6b7280",fontSize:10,fontFamily:"monospace"}}>METER (dBFS) · amber = headroom zone</span>
           <span style={{fontFamily:"monospace",fontSize:11}}><span style={{color:"#9ca3af"}}>peak </span><strong style={{color:peakDB>-0.1?"#f87171":"#e5e7eb"}}>{peakDB<=-0.05?peakDB.toFixed(1):"0.0"} </strong><span style={{color:"#9ca3af"}}> RMS </span><strong style={{color:"#22c55e"}}>{rmsDB.toFixed(1)}</strong></span>
@@ -3601,14 +3601,14 @@ function ModuleLoudness() {
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
         {LOUD_TARGETS.map(t=>(<button key={t.id} onClick={()=>setTarget(t.id)} style={target===t.id?styles.btnActive:styles.btnChip}>{t.name} ({t.lufs})</button>))}
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>LOUDNESS OVER TIME (LUFS)</div>
         <canvas ref={ref} style={{display:"block",width:"100%"}}/>
       </div>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
-        <label style={styles.label}>Gain offset: <strong style={{color:"#f59e0b"}}>{offset>0?"+":""}{offset.toFixed(1)} LU</strong>
+        <label style={styles.label}>Gain offset: <strong style={{color:"#ff5a4d"}}>{offset>0?"+":""}{offset.toFixed(1)} LU</strong>
           <input type="range" min={-12} max={12} step={0.1} value={offset} onChange={e=>setOffset(+e.target.value)} style={{...styles.slider,width:220}}/></label>
-        <div style={{padding:"6px 12px",borderRadius:6,background:ok?"#134e2a":"#0d1117",border:`1px solid ${ok?"#166534":"#1f2937"}`,color:ok?"#86efac":"#f59e0b",fontFamily:"monospace",fontSize:12}}>
+        <div style={{padding:"6px 12px",borderRadius:6,background:ok?"#134e2a":"#1c1d23",border:`1px solid ${ok?"#166534":"#2a2b32"}`,color:ok?"#86efac":"#f59e0b",fontFamily:"monospace",fontSize:12}}>
           {ok?"✓ on target":`${toTarget>0?"+":""}${toTarget.toFixed(1)} LU to target`}
         </div>
       </div>
@@ -3646,7 +3646,7 @@ function ModuleMicTypes() {
     const c=curveRef.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||460,460),H=130; c.width=W;c.height=H;
     const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
     const x0=30, mid=H*0.52;
-    ctx.strokeStyle="#1f2937"; ctx.beginPath();ctx.moveTo(x0,mid);ctx.lineTo(W,mid);ctx.stroke();
+    ctx.strokeStyle="#2a2b32"; ctx.beginPath();ctx.moveTo(x0,mid);ctx.lineTo(W,mid);ctx.stroke();
     ctx.fillStyle="#4b5563"; ctx.font="9px monospace";
     [20,100,1000,10000,20000].forEach(f=>{ const x=x0+(Math.log10(f)-Math.log10(20))/(Math.log10(20000)-Math.log10(20))*(W-x0); ctx.fillText(f>=1000?(f/1000)+"k":f,x-6,H-2); });
     ctx.fillText("+6",2,mid-30); ctx.fillText("0",6,mid+3); ctx.fillText("−6",2,mid+34);
@@ -3670,11 +3670,11 @@ function ModuleMicTypes() {
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
         {[["Boom","boom"],["Lav","lav"]].map(([l,v])=>(<button key={v} onClick={()=>setPlace(v)} style={place===v?styles.btnActive:styles.btnChip}>{l}</button>))}
-        <label style={styles.label}>Distance: <strong style={{color:"#f59e0b"}}>{dist.toFixed(2)} m</strong>
+        <label style={styles.label}>Distance: <strong style={{color:"#ff5a4d"}}>{dist.toFixed(2)} m</strong>
           <input type="range" min={0.15} max={2} step={0.01} value={dist} onChange={e=>setDist(+e.target.value)} style={{...styles.slider,width:200}}/></label>
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 300px",minWidth:280,background:"#111",borderRadius:8,padding:12}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>FREQUENCY RESPONSE ({place}, {dist.toFixed(2)} m)</div>
           <canvas ref={curveRef} style={{display:"block",width:"100%"}}/>
           <div style={{marginTop:8,display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -3683,7 +3683,7 @@ function ModuleMicTypes() {
             <StatBadge label="Phantom" value={mt.phantom?"+48V required":"not needed"}/>
           </div>
         </div>
-        <div style={{flex:"1 1 240px",minWidth:220,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:14,color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
+        <div style={{flex:"1 1 240px",minWidth:220,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:14,color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
           <div style={{color:"#f472b6",fontWeight:"bold",marginBottom:6}}>{mt.name}</div>
           {mt.detail}
           <div style={{marginTop:8,color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>max SPL: {mt.spl}</div>
@@ -3726,7 +3726,7 @@ function drawLanes(canvas, lanes, ph, antennaU){
 function XLRConnector(){
   const P1="#6b7280", P2="#2563eb", P3="#38bdf8";
   return (
-    <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap",background:"#0d1117",border:"1px solid #1f2937",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
+    <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:10,padding:"12px 16px",marginBottom:16}}>
       <svg viewBox="0 0 120 132" width="98" height="108" style={{flexShrink:0}}>
         <circle cx="60" cy="62" r="54" fill="#161c26" stroke="#2b3646" strokeWidth="2"/>
         <circle cx="60" cy="62" r="45" fill="#0b0e13" stroke="#232d3a" strokeWidth="1"/>
@@ -3801,7 +3801,7 @@ function ModuleBalancedAudio() {
           <input type="range" min={0} max={1} step={0.01} value={noise} onChange={e=>setNoise(+e.target.value)} style={{...styles.slider,width:180,accentColor:"#f97316"}}/></label>
         <button onClick={()=>setAnimate(a=>!a)} style={animate?styles.btnActive:styles.btnChip}>{animate?"Live: ON":"Live: OFF"}</button>
       </div>
-      <div style={{background:"#0d1117",border:"1px solid #1f2937",borderRadius:10,padding:"6px 14px"}}>
+      <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:10,padding:"6px 14px"}}>
         {stages.map((st,i)=>{
           const accent=st.good?"#34d399":st.bad?"#f97316":"#6b7280";
           return (
@@ -3848,7 +3848,7 @@ function ModuleProdSound() {
   useEffect(()=>{
     const c=ref.current; if(!c)return; const W=Math.min(c.parentElement?.clientWidth-24||560,560),H=170; c.width=W;c.height=H;
     const ctx=c.getContext("2d"); ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H); const mid=H/2;
-    ctx.strokeStyle="#1f2937"; ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();
+    ctx.strokeStyle="#2a2b32"; ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();
     const N=W;
     ctx.strokeStyle="#e5e7eb"; ctx.lineWidth=1.2; ctx.beginPath();
     for(let i=0;i<N;i++){ const x=i/N;
@@ -3878,11 +3878,11 @@ function ModuleProdSound() {
         ))}
         <button onClick={()=>setRoomTone(r=>!r)} style={roomTone?styles.btnActive:styles.btnChip}>Room tone</button>
       </div>
-      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
         <canvas ref={ref} style={{display:"block",width:"100%"}}/>
       </div>
       {active.length>0 ? active.map(p=>(
-        <div key={p.id} style={{padding:"10px 14px",background:"#0d1117",border:`1px solid ${p.col}44`,borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6,marginBottom:8}}>
+        <div key={p.id} style={{padding:"10px 14px",background:"#1c1d23",border:`1px solid ${p.col}44`,borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6,marginBottom:8}}>
           <strong style={{color:p.col}}>{p.name}:</strong> {p.fix}
         </div>
       )) : <div style={{color:"#6b7280",fontSize:13,fontStyle:"italic"}}>Toggle a problem to see what it does to the waveform and how to fix it on set.</div>}
@@ -3933,7 +3933,7 @@ function ModuleSyncTimecode() {
       <InfoBox>
         In <strong>double-system</strong> sound, picture and audio are recorded on <em>separate</em> devices, so they must be brought back together. The oldest, most reliable sync point is the <strong>slate</strong> (clapperboard): the instant the clap closes gives one frame in picture and one sharp spike in the sound — line them up and the take is synced. Professionally, both camera and recorder run <strong>timecode</strong>: at the start of the day they're <strong>jam-synced</strong> to the same clock so every file is stamped with matching time and the NLE aligns them automatically. Production audio is <strong>48 kHz</strong> (the A/V standard) and carries metadata inside the file — <strong>BWF/iXML</strong> holds scene/take, timecode and track names. Slide the sound until the clap spike meets the clap frame. <strong>Your QRClappeR/ClapTag works exactly this metadata — QR slate, timecode and iXML.</strong>
       </InfoBox>
-      <div style={{background:"#111",borderRadius:8,padding:12,marginBottom:12}}>
+      <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
         <canvas ref={ref} style={{display:"block",width:"100%"}}/>
       </div>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
@@ -3941,7 +3941,7 @@ function ModuleSyncTimecode() {
           <input type="range" min={0} max={18} step={1} value={offset} onChange={e=>setOffset(+e.target.value)} style={{...styles.slider,width:240}}/></label>
         <button onClick={()=>setOffset(9)} style={styles.btnChip}>Auto-sync (jam)</button>
       </div>
-      <div style={{padding:"10px 14px",background:inSync?"#0f1a10":"#0d1117",border:`1px solid ${inSync?"#1f3a24":"#1f2937"}`,borderRadius:8,color:inSync?"#86efac":"#9ca3af",fontSize:13}}>
+      <div style={{padding:"10px 14px",background:inSync?"#0f1a10":"#1c1d23",border:`1px solid ${inSync?"#1f3a24":"#2a2b32"}`,borderRadius:8,color:inSync?"#86efac":"#9ca3af",fontSize:13}}>
         {inSync?"✓ Clap frame and audio spike aligned — the take is in sync. Timecode does this automatically for every file.":"Out of sync: the mouths won't match the voices. Drag until the pink spike meets the blue clap frame — or let jam-synced timecode do it."}
       </div>
     </div>
@@ -3969,7 +3969,7 @@ function ModulePostFlow() {
         A finished soundtrack is built from three families of sound, the <strong>stems</strong>: <strong style={{color:"#f472b6"}}>Dialogue</strong> (production sound, plus <em>ADR</em> re-recorded in a booth and loop-group crowd), <strong style={{color:"#a78bfa"}}>Music</strong> (score and source), and <strong style={{color:"#60a5fa"}}>Effects</strong> (<em>Foley</em> footsteps and cloth, hard SFX, and ambience/atmos beds). The re-recording mixer balances them so the <strong>dialogue always stays intelligible</strong> — the golden rule of the mix: music and effects duck under the words. Keeping the stems separate has a second payoff: mute the dialogue and you have the <strong>M&amp;E</strong> (Music &amp; Effects) stem that lets the film be <em>dubbed</em> into any language without losing the score or the world. Push music and effects up and watch the dialogue get buried; hit <em>M&amp;E</em> to hear what the dubbing house receives. <strong>Bus routing like this is exactly what your AudioPatchR does.</strong>
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 320px",minWidth:300,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:16}}>
+        <div style={{flex:"1 1 320px",minWidth:300,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:16}}>
           {DME_FADERS.map(f=>{ const dim=me&&f.id==="d"; const val=lv[f.id];
             return (
             <div key={f.id} style={{marginBottom:14,opacity:dim?0.35:1}}>
@@ -3985,10 +3985,10 @@ function ModulePostFlow() {
           );})}
           <button onClick={()=>setMe(v=>!v)} style={{...(me?styles.btnActive:styles.btnChip),marginTop:4}}>{me?"M&E stem: ON (dialogue muted)":"Solo M&E (mute dialogue)"}</button>
         </div>
-        <div style={{flex:"1 1 220px",minWidth:200,background:"#111",borderRadius:8,padding:16}}>
+        <div style={{flex:"1 1 220px",minWidth:200,background:"#16171c",borderRadius:8,padding:16}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>DIALOGUE INTELLIGIBILITY</div>
           <div style={{color:cLabel[1],fontSize:22,fontWeight:"bold",marginBottom:8}}>{cLabel[0]}</div>
-          <div style={{height:12,background:"#1f2937",borderRadius:6,overflow:"hidden",marginBottom:6}}>
+          <div style={{height:12,background:"#2a2b32",borderRadius:6,overflow:"hidden",marginBottom:6}}>
             <div style={{width:`${clarity*100}%`,height:"100%",background:cLabel[1],transition:"width 0.15s"}}/>
           </div>
           {!me && <div style={{color:"#9ca3af",fontSize:12,fontFamily:"monospace"}}>dialogue − bed = {snr>0?"+":""}{snr.toFixed(0)} dB</div>}
@@ -4020,7 +4020,7 @@ function ModuleStereoSurround() {
     const c=ref.current; if(!c)return; const S=Math.min(c.parentElement?.clientWidth-24||360,360); c.width=S;c.height=S;
     const ctx=c.getContext("2d"); ctx.clearRect(0,0,S,S); const cx=S/2, cy=S*0.54, R=S*0.36;
     // listener
-    ctx.strokeStyle="#1f2937"; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
+    ctx.strokeStyle="#2a2b32"; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
     ctx.fillStyle="#374151"; ctx.beginPath(); ctx.arc(cx,cy,10,0,7); ctx.fill();
     ctx.fillStyle="#6b7280"; ctx.font="9px monospace"; ctx.textAlign="center"; ctx.fillText("listener",cx,cy+22);
     // speakers
@@ -4045,15 +4045,15 @@ function ModuleStereoSurround() {
         {Object.entries(SPK_FORMATS).map(([k,v])=>(<button key={k} onClick={()=>setFmt(k)} style={fmt===k?styles.btnActive:styles.btnChip}>{v.name}</button>))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 300px",minWidth:280,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12,textAlign:"center"}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,textAlign:"center"}}>
           <canvas ref={ref} style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto"}}/>
         </div>
         <div style={{flex:"1 1 240px",minWidth:220}}>
-          <label style={{...styles.label,marginBottom:10}}>Pan: <strong style={{color:"#f59e0b"}}>{pan===0?"centre":pan<0?`L ${Math.round(-pan*100)}%`:`R ${Math.round(pan*100)}%`}</strong>
+          <label style={{...styles.label,marginBottom:10}}>Pan: <strong style={{color:"#ff5a4d"}}>{pan===0?"centre":pan<0?`L ${Math.round(-pan*100)}%`:`R ${Math.round(pan*100)}%`}</strong>
             <input type="range" min={-1} max={1} step={0.02} value={pan} onChange={e=>setPan(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
-          <label style={{...styles.label,marginBottom:14}}>Stereo width: <strong style={{color:"#f59e0b"}}>{width>0.6?"narrow/mono":width>-0.2?"wide":"inverted!"}</strong>
+          <label style={{...styles.label,marginBottom:14}}>Stereo width: <strong style={{color:"#ff5a4d"}}>{width>0.6?"narrow/mono":width>-0.2?"wide":"inverted!"}</strong>
             <input type="range" min={-1} max={1} step={0.02} value={width} onChange={e=>setWidth(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
-          <div style={{background:"#111",borderRadius:8,padding:12}}>
+          <div style={{background:"#16171c",borderRadius:8,padding:12}}>
             <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>PHASE CORRELATION</div>
             <div style={{position:"relative",height:10,background:"linear-gradient(90deg,#ef4444,#eab308,#22c55e)",borderRadius:5,marginBottom:4}}>
               <div style={{position:"absolute",left:`${(corr+1)/2*100}%`,top:-3,width:3,height:16,background:"#fff",transform:"translateX(-50%)"}}/>
@@ -4089,9 +4089,9 @@ function ModuleAudioFormats() {
         Production audio has its own house standard: <strong>48 kHz, 24-bit</strong>. Why 48 and not the 44.1 kHz of CDs? Because <strong>48 kHz is the video world's number</strong> — it divides cleanly against frame rates and is what cameras, recorders and NLEs expect, so everything stays in step. Why 24-bit? <strong>Headroom and a low noise floor</strong>: ~144 dB of dynamic range means you can record conservatively (well below 0 dBFS) and still have clean quiet detail — you record safe and normalise later. The working format is always <strong>uncompressed PCM in a WAV/BWF</strong> (Broadcast WAVE, which carries timecode + iXML); lossy AAC/MP3 is <em>delivery only</em>, never a master. One gotcha unique to film: <strong>pull-up / pull-down</strong> — the 0.1% speed change between 24 and 23.976 fps drifts sound out of sync over a reel if you ignore it. <em>(For the physics of sampling and the Nyquist limit, play in SoundLab.)</em>
       </InfoBox>
       <div style={{display:"flex",gap:18,flexWrap:"wrap",marginBottom:16}}>
-        <label style={styles.label}>Sample rate: <strong style={{color:"#f59e0b"}}>{(sr/1000).toFixed(sr%1000?1:0)} kHz</strong>
+        <label style={styles.label}>Sample rate: <strong style={{color:"#ff5a4d"}}>{(sr/1000).toFixed(sr%1000?1:0)} kHz</strong>
           <input type="range" min={0} max={4} step={1} value={[32000,44100,48000,96000,192000].indexOf(sr)} onChange={e=>setSr([32000,44100,48000,96000,192000][+e.target.value])} style={{...styles.slider,width:180}}/></label>
-        <label style={styles.label}>Bit depth: <strong style={{color:"#f59e0b"}}>{bd}-bit</strong>
+        <label style={styles.label}>Bit depth: <strong style={{color:"#ff5a4d"}}>{bd}-bit</strong>
           <input type="range" min={0} max={3} step={1} value={[8,16,24,32].indexOf(bd)} onChange={e=>setBd([8,16,24,32][+e.target.value])} style={{...styles.slider,width:150}}/></label>
         <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
           <StatBadge label="Dynamic range" value={`~${dr} dB`}/>
@@ -4099,10 +4099,10 @@ function ModuleAudioFormats() {
           <StatBadge label="A/V standard" value={sr===48000&&bd===24?"✓ 48k/24":"— (48k/24)"}/>
         </div>
       </div>
-      <div style={{overflowX:"auto",background:"#0d1117",border:"1px solid #1f2937",borderRadius:8}}>
+      <div style={{overflowX:"auto",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8}}>
         <table style={{borderCollapse:"collapse",width:"100%",fontSize:12.5,minWidth:560}}>
           <thead><tr style={{color:"#9ca3af",textAlign:"left"}}>
-            {["Format","Type","Typical use","Notes"].map(h=>(<th key={h} style={{padding:"8px 12px",borderBottom:"1px solid #1f2937",whiteSpace:"nowrap"}}>{h}</th>))}
+            {["Format","Type","Typical use","Notes"].map(h=>(<th key={h} style={{padding:"8px 12px",borderBottom:"1px solid #2a2b32",whiteSpace:"nowrap"}}>{h}</th>))}
           </tr></thead>
           <tbody>
             {AUDIO_FORMATS.map((f,i)=>(
@@ -4134,7 +4134,7 @@ const CREDIT_ENTRIES=[
 function creditCycleOf(v){ let frac=Math.round(v*100)%100; if(frac===0)return 0; let a=frac,b=100,t; while(b){t=b;b=a%b;a=t;} return 100/a; }
 function CreditPane({ name, frameRef, magRef, rd, idk }){
   return (
-    <div style={{flex:"1 1 300px",minWidth:260,background:"#0d1117",border:"1px solid #1f2937",borderRadius:8,padding:12}}>
+    <div style={{flex:"1 1 300px",minWidth:260,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6,gap:8}}>
         <span style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.06em"}}>{name}</span>
         <strong ref={el=>rd.current["badge"+idk]=el} style={{fontFamily:"monospace",fontSize:11,fontWeight:"bold",whiteSpace:"nowrap"}}/>
@@ -4144,7 +4144,7 @@ function CreditPane({ name, frameRef, magRef, rd, idk }){
       <canvas ref={magRef} style={{display:"block",width:"100%",borderRadius:4,imageRendering:"pixelated",background:"#050506"}}/>
       <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
         <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>offset <strong ref={el=>rd.current["off"+idk]=el} style={{color:"#e5e7eb"}}/></span>
-        <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>phase <strong ref={el=>rd.current["ph"+idk]=el} style={{color:"#f59e0b"}}/></span>
+        <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>phase <strong ref={el=>rd.current["ph"+idk]=el} style={{color:"#ff5a4d"}}/></span>
         <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>edge cycle <strong ref={el=>rd.current["cyc"+idk]=el} style={{color:"#e5e7eb"}}/></span>
       </div>
     </div>
@@ -4222,7 +4222,7 @@ function ModuleCreditJitter() {
         <button onClick={()=>setPlaying(p=>!p)} style={playing?styles.btnActive:styles.btnChip}>{playing?"⏸ Pause":"▶ Play"}</button>
         <button onClick={()=>{ setPlaying(false); rd.current.step&&rd.current.step(); }} style={styles.btnChip}>Step 1 frame ▸</button>
         <button onClick={()=>setSpeed(Math.max(1,Math.round(speed)))} style={styles.btnChip}>Snap to whole pixel</button>
-        <label style={styles.label}>Right panel speed: <strong style={{color:"#f59e0b"}}>{speed.toFixed(2)} px/f</strong>
+        <label style={styles.label}>Right panel speed: <strong style={{color:"#ff5a4d"}}>{speed.toFixed(2)} px/f</strong>
           <input type="range" min={1} max={6} step={0.01} value={speed} onChange={e=>setSpeed(+e.target.value)} style={{...styles.slider,width:220}}/></label>
         <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>frame <strong ref={el=>rd.current.frameNo=el} style={{color:"#9ca3af"}}/></span>
       </div>
@@ -4301,8 +4301,8 @@ function HubCard({ id, catColor, onClick }) {
       onMouseEnter={()=>setHov(true)}
       onMouseLeave={()=>setHov(false)}
       style={{
-        background:hov?"#111827":"#0d1117",
-        border:`1px solid ${hov?catColor+"66":"#1f2937"}`,
+        background:hov?"#25262e":"#1c1d23",
+        border:`1px solid ${hov?catColor+"66":"#2a2b32"}`,
         borderRadius:10,padding:"16px",cursor:"pointer",
         transition:"all 0.18s",
         boxShadow:hov?`0 0 20px ${catColor}22`:"none",
@@ -4352,7 +4352,7 @@ export default function AVHandbook() {
     }}>
       {/* Header */}
       <div style={{
-        borderBottom:"1px solid #1f2937",padding:"16px 24px",
+        borderBottom:"1px solid #2a2b32",padding:"16px 24px",
         display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",
         background:"#0a0a0f",
         position:"sticky",top:0,zIndex:100,
@@ -4360,7 +4360,7 @@ export default function AVHandbook() {
         <div style={{flex:1,minWidth:200}}>
           <div style={{
             fontSize:22,fontWeight:"bold",letterSpacing:"0.05em",
-            background:"linear-gradient(90deg,#f59e0b,#fb923c)",
+            background:"linear-gradient(90deg,#ff5a4d,#ff8a63)",
             WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
           }}>
             AVHandbook
@@ -4378,7 +4378,7 @@ export default function AVHandbook() {
             onChange={e=>setSearch(e.target.value)}
             placeholder="Search modules…"
             style={{
-              background:"#0d1117",border:"1px solid #1f2937",borderRadius:6,
+              background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:6,
               padding:"6px 12px",color:"#e5e7eb",fontSize:12,fontFamily:"monospace",
               outline:"none",width:180,
             }}
@@ -4422,8 +4422,8 @@ export default function AVHandbook() {
           {!search && (
             <div style={{
               marginBottom:32,padding:"24px 28px",
-              background:"linear-gradient(135deg,#0d1117,#111827)",
-              border:"1px solid #1f2937",borderRadius:12,
+              background:"linear-gradient(135deg,#1c1d23,#25262e)",
+              border:"1px solid #2a2b32",borderRadius:12,
             }}>
               <h2 style={{margin:"0 0 8px",fontSize:20,color:"#f3f4f6"}}>
                 {Object.values(MODULE_COMPONENTS).length} Interactive Modules
@@ -4438,7 +4438,7 @@ export default function AVHandbook() {
             <div key={cat.id} style={{marginBottom:32}}>
               <div style={{
                 display:"flex",alignItems:"center",gap:10,marginBottom:12,
-                borderBottom:"1px solid #1f2937",paddingBottom:8,
+                borderBottom:"1px solid #2a2b32",paddingBottom:8,
               }}>
                 <div style={{
                   width:8,height:8,borderRadius:"50%",
@@ -4463,7 +4463,7 @@ export default function AVHandbook() {
           ))}
           {filteredCategories.length===0 && (
             <div style={{textAlign:"center",padding:48,color:"#4b5563"}}>
-              No modules match "<span style={{color:"#f59e0b"}}>{search}</span>"
+              No modules match "<span style={{color:"#ff5a4d"}}>{search}</span>"
             </div>
           )}
         </div>
