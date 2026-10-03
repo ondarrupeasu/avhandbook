@@ -2434,7 +2434,9 @@ function ModuleExposureTriangle({ image }) {
   const [ap,setAp]=useState(3);   // index → f/4
   const [iso,setIso]=useState(3); // index → 800
   const [active,setActive]=useState("sh");
-  const ref=useRef();
+  const [videoLook,setVideoLook]=useState(false);   // "realistic look": drive a camera clip if present
+  const [videoReady,setVideoReady]=useState(false);
+  const ref=useRef(), videoRef=useRef(), liveRef=useRef({});
   const stops = Math.log2(50/SHUTTERS[sh]) + Math.log2(16/(APERTURES[ap]**2)) + Math.log2(ISOS[iso]/800);
   const balanced = Math.abs(stops)<0.25;
   const PARAMS={
@@ -2443,7 +2445,41 @@ function ModuleExposureTriangle({ image }) {
     iso:{label:"ISO",    effect:"noise", arr:ISOS, idx:iso, set:setIso, fmt:fmtIso},
   };
   const A=PARAMS[active];
+  liveRef.current={gain:Math.pow(2,stops), nAmp:Math.max(0,(iso-2))*3.2, shL:SHUTTERS[sh], apL:APERTURES[ap], isoL:ISOS[iso], stops, balanced};
+  const usingVideo = videoLook && videoReady;
+  // detect whether a clip exists at public/footage/exposure.{webm,mp4}
   useEffect(()=>{
+    const v=videoRef.current; if(!v) return;
+    const ok=()=>setVideoReady(true), bad=()=>setVideoReady(false);
+    v.addEventListener("loadeddata",ok); v.addEventListener("canplay",ok); v.addEventListener("error",bad);
+    if(v.readyState>=2) setVideoReady(true);
+    return ()=>{ v.removeEventListener("loadeddata",ok); v.removeEventListener("canplay",ok); v.removeEventListener("error",bad); };
+  },[]);
+  // VIDEO loop: draw the clip each frame + exposure gain + ISO grain (shutter blur / DoF are baked into the clip)
+  useEffect(()=>{
+    if(!usingVideo) return;
+    const v=videoRef.current, c=ref.current; if(!v||!c) return; v.play().catch(()=>{});
+    let raf=0, alive=true;
+    const draw=()=>{ if(!alive)return;
+      const W=Math.min(c.parentElement?.clientWidth-32||600,600), H=Math.round(W*9/16);
+      if(c.width!==W){ c.width=W; c.height=H; } const ctx=c.getContext("2d");
+      if(v.readyState>=2){ ctx.drawImage(v,0,0,W,H);
+        const L=liveRef.current, id=ctx.getImageData(0,0,W,H), d=id.data;
+        for(let i=0;i<d.length;i+=4){ d[i]=Math.min(255,d[i]*L.gain); d[i+1]=Math.min(255,d[i+1]*L.gain); d[i+2]=Math.min(255,d[i+2]*L.gain); }
+        if(L.nAmp>0.5) for(let i=0;i<d.length;i+=4){ const n=(Math.random()-0.5)*L.nAmp, cn=(Math.random()-0.5)*L.nAmp*0.7;
+          d[i]=Math.max(0,Math.min(255,d[i]+n+cn)); d[i+1]=Math.max(0,Math.min(255,d[i+1]+n)); d[i+2]=Math.max(0,Math.min(255,d[i+2]+n-cn)); }
+        ctx.putImageData(id,0,0);
+        ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(0,0,W,22);ctx.font="11px monospace";
+        ctx.fillStyle=L.balanced?"#34d399":L.stops>0?"#f59e0b":"#60a5fa";
+        ctx.fillText(`1/${L.shL}s   f/${L.apL}   ISO ${L.isoL}    ·    ${L.stops>0?"+":""}${L.stops.toFixed(1)} EV  ·  LIVE`,8,14);
+      }
+      raf=requestAnimationFrame(draw);
+    };
+    raf=requestAnimationFrame(draw);
+    return ()=>{ alive=false; cancelAnimationFrame(raf); try{v.pause();}catch{} };
+  },[usingVideo]);
+  useEffect(()=>{
+    if(usingVideo) return;   // synthetic scene (all three side-effects); video loop owns the canvas otherwise
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
@@ -2473,7 +2509,7 @@ function ModuleExposureTriangle({ image }) {
       ctx.fillText(`1/${SHUTTERS[sh]}s   f/${APERTURES[ap]}   ISO ${ISOS[iso]}    ·    ${stops>0?"+":""}${stops.toFixed(1)} EV  ${Math.abs(stops)<0.25?"(balanced)":stops>0?"(over)":"(under)"}`,8,14);
     };
     img.src=image;
-  },[sh,ap,iso,image,stops]);
+  },[sh,ap,iso,image,stops,usingVideo]);
   return (
     <div>
       <InfoBox>
@@ -2481,6 +2517,10 @@ function ModuleExposureTriangle({ image }) {
       </InfoBox>
       <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"1 1 360px",minWidth:300,background:"#16171c",borderRadius:8,padding:12}}>
+          <video ref={videoRef} muted loop playsInline preload="auto" crossOrigin="anonymous" style={{display:"none"}}>
+            <source src="footage/exposure.webm" type="video/webm"/>
+            <source src="footage/exposure.mp4" type="video/mp4"/>
+          </video>
           <div style={{position:"relative"}}>
             <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
             <div style={{position:"absolute",left:8,right:8,bottom:8,display:"flex",gap:6}}>
@@ -2498,6 +2538,11 @@ function ModuleExposureTriangle({ image }) {
             </div>
             <ExposureDial key={active} values={A.arr} index={A.idx} format={A.fmt} onChange={A.set} accent="#f59e0b"/>
             <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginTop:5,textAlign:"center"}}>tap a value on the screen · then flick the dial (or ◀ ▶)</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
+              <button onClick={()=>setVideoLook(x=>!x)} style={videoLook?styles.btnActive:styles.btnChip}>{videoLook?"● Realistic look (video)":"○ Realistic look (video)"}</button>
+              {videoLook && !videoReady && <span style={{color:"#fdba74",fontSize:10,fontFamily:"monospace"}}>no clip yet — drop one in <code>public/footage/</code></span>}
+              {usingVideo && <span style={{color:"#8a8a92",fontSize:10}}>brightness + grain live; blur &amp; DoF are baked into the clip</span>}
+            </div>
           </div>
         </div>
         <div style={{flex:"1 1 240px",minWidth:220}}>
