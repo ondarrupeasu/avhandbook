@@ -4319,14 +4319,31 @@ function HubCard({ id, catColor, onClick }) {
 // ─────────────────────────────────────────────
 // Main App
 // ─────────────────────────────────────────────
+// Deep-link routing: #/<module-slug> (e.g. #/exposure-triangle, #/balanced-audio)
+const MODULE_SLUG = Object.fromEntries(Object.keys(MODULE_COMPONENTS).map(id=>[id, id.replace(/([a-z0-9])([A-Z])/g,"$1-$2").toLowerCase()]));
+const SLUG_MODULE = Object.fromEntries(Object.entries(MODULE_SLUG).map(([id,s])=>[s,id]));
+const moduleFromHash = () => SLUG_MODULE[(typeof location!=="undefined"?location.hash:"").replace(/^#\/?/,"").toLowerCase()] || null;
+
 export default function AVHandbook() {
-  const [activeModule, setActiveModule] = useState(null);
+  const [activeModule, setActiveModule] = useState(moduleFromHash);
   const [userImage, setUserImage] = useState(null);
   const [defaultImage, setDefaultImage] = useState(null);
   const [search, setSearch] = useState("");
 
   useEffect(()=>{
     setDefaultImage(generateDefaultImageDataURL());
+  },[]);
+
+  // keep the URL in sync with the open module (shareable deep links)
+  useEffect(()=>{
+    if(activeModule){ const want="#/"+MODULE_SLUG[activeModule]; if(location.hash!==want) location.hash=want; }
+    else if(location.hash){ history.replaceState(null,"",location.pathname+location.search); }
+  },[activeModule]);
+  // react to back/forward and to external #/module links
+  useEffect(()=>{
+    const onHash=()=>{ const id=moduleFromHash(); setActiveModule(id); if(id) window.scrollTo(0,0); };
+    window.addEventListener("hashchange",onHash);
+    return ()=>window.removeEventListener("hashchange",onHash);
   },[]);
 
   const image = userImage || defaultImage || "";
