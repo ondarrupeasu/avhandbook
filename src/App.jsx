@@ -31,6 +31,7 @@ const STRINGS = {
       pictureProfiles: { title: "Picture Profiles & LOG", desc: "S-Log, Log-C, V-Log — capturing latitude" },
       colorSpaces: { title: "Color Spaces & Gamuts", desc: "Rec.709, P3, Rec.2020 — the color universe" },
       aces: { title: "ACES Pipeline", desc: "IDT → RRT → ODT — the color management framework" },
+      hdr: { title: "SDR vs HDR", desc: "Nits, PQ/HLG transfer functions and highlight headroom" },
       colorTemp: { title: "Color Temperature", desc: "From candle to daylight — Kelvin scale" },
       rollingShutter: { title: "Rolling Shutter", desc: "Skew, wobble and jello — CMOS sensor artifacts" },
       moire: { title: "Moiré & Aliasing", desc: "Frequency interference and anti-aliasing" },
@@ -83,7 +84,7 @@ const CATEGORIES = [
   },
   {
     id: "color", label: T.categories.color,
-    modules: ["colorTemp","pictureProfiles","colorSpaces","lut","aces"],
+    modules: ["colorTemp","pictureProfiles","colorSpaces","lut","aces","hdr"],
   },
   {
     id: "defects", label: T.categories.defects,
@@ -2279,7 +2280,7 @@ function ModuleScopes({ image }) {
   return (
     <div>
       <InfoBox>
-        <strong>Scopes</strong> are objective measurement tools — more reliable than the camera LCD for exposure and colour. Pick a scope; it appears as a <strong>picture-in-picture overlay</strong> on the image, the way a camera or monitor shows it. The <strong>Histogram</strong> (monochrome luma) shows the tonal distribution. The <strong>Waveform</strong> maps luminance (IRE) against horizontal position — the standard for exposure and clipping (EBU R 103). The <strong>RGB Parade</strong> splits it into R/G/B for white balance. The <strong>Vectorscope</strong> plots chrominance on a polar diagram (distance = saturation, angle = hue) with 75% targets and the amber skin-tone line. Grade below and watch the scope respond — <em>Hue</em> rotates every colour, so the vectorscope trace spins around the centre.
+        <strong>Scopes</strong> are objective measurement tools — more reliable than the camera LCD for exposure and colour. Pick a scope; it appears as a <strong>picture-in-picture overlay</strong> on the image, the way a camera or monitor shows it. The <strong>Histogram</strong> (monochrome luma) shows the tonal distribution. The <strong>Waveform</strong> maps luminance (IRE) against horizontal position — the standard for exposure and clipping (EBU R 103). The <strong>RGB Parade</strong> splits it into R/G/B for white balance. The <strong>Vectorscope</strong> plots chrominance on a polar diagram (distance = saturation, angle = hue) with 75% targets and the amber skin-tone line. Grade below and watch the scope respond — <em>Hue</em> rotates every colour, so the vectorscope trace spins around the centre. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/video">analogue video as voltage (1 Vpp, IRE)</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
         {SCOPE_TYPES.map(([k,lbl])=>(
@@ -2377,6 +2378,8 @@ const styles = {
 const SHUTTERS=[1,2,4,8,15,30,50,60,125,250,500,1000,2000];   // 1/x s
 const APERTURES=[1.4,2,2.8,4,5.6,8,11,16,22];
 const ISOS=[100,200,400,800,1600,3200,6400,12800];
+// Cross-links to Volt (volt.cinemafilmak.com) — the electrical "why" behind our AV "what".
+function VoltLink({to,children}){ return <a href={"https://volt.cinemafilmak.com/#/"+to} target="_blank" rel="noopener noreferrer" style={{color:"#ff5a4d",textDecoration:"none",borderBottom:"1px dotted rgba(255,90,77,.5)"}}>{children}</a>; }
 const fmtShutter=v=>"1/"+v+"s", fmtAperture=v=>"f/"+v, fmtIso=v=>String(v);
 // DSLR/cine-style horizontal detented dial (canvas): drag/flick with momentum + snap, keyboard ◀▶.
 // index handled by remounting (key), so the effect sets up once per parameter.
@@ -2557,7 +2560,7 @@ function ModuleFalseColor({ image }) {
   return (
     <div>
       <InfoBox>
-        <strong>False colour</strong> paints every pixel by its <strong>luminance (IRE)</strong> instead of its real colour, so you can judge <em>exposure</em> at a glance — no guessing on an uncalibrated monitor. It is the on-set companion to the waveform. The palette is a convention (ARRI, Blackmagic and RED share the idea): <span style={{color:"#e02828"}}>red</span> = clipped highlights, <span style={{color:"#eb781e"}}>orange</span> just below clip, <span style={{color:"#dcb428"}}>yellow</span> bright, <span style={{color:"#28aa5a"}}>green</span> ≈ 18% middle grey, <span style={{color:"#2850d2"}}>blue</span> shadows, <span style={{color:"#5028a0"}}>purple</span> near black. The trick on set: expose a face so the skin sits around the pink/grey band, and make sure nothing you care about is red. Like a display LUT, it is a <em>monitoring overlay</em> — it never touches the recorded file.
+        <strong>False colour</strong> paints every pixel by its <strong>luminance (IRE)</strong> instead of its real colour, so you can judge <em>exposure</em> at a glance — no guessing on an uncalibrated monitor. It is the on-set companion to the waveform. The palette is a convention (ARRI, Blackmagic and RED share the idea): <span style={{color:"#e02828"}}>red</span> = clipped highlights, <span style={{color:"#eb781e"}}>orange</span> just below clip, <span style={{color:"#dcb428"}}>yellow</span> bright, <span style={{color:"#28aa5a"}}>green</span> ≈ 18% middle grey, <span style={{color:"#2850d2"}}>blue</span> shadows, <span style={{color:"#5028a0"}}>purple</span> near black. The trick on set: expose a face so the skin sits around the pink/grey band, and make sure nothing you care about is red. Like a display LUT, it is a <em>monitoring overlay</em> — it never touches the recorded file. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/video">analogue video as voltage (1 Vpp, IRE)</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
         {[["False colour",true],["Source",false]].map(([lbl,v])=>(
@@ -2874,7 +2877,7 @@ function ModuleSignals() {
   return (
     <div>
       <InfoBox>
-        Signals are easiest to understand on <strong>three separate axes</strong>, because people constantly mix them up. <strong>(1) The physical interface</strong> — the cable and connector you can hold: HDMI, SDI (BNC coax), fibre, Ethernet (RJ45), USB-C, XLR. <strong>(2) The transport / protocol</strong> — <em>how</em> the data travels, especially over a network: <span style={{color:"#2dd4bf"}}>NDI, SRT, RTMP, Dante, Art-Net are NOT cables</span> — they ride <em>on top of</em> Ethernet/IP. <strong>(3) What it carries</strong> — video, audio, data, control, tally, power; some cables carry several at once (SDI = video + audio + timecode). Then judge each by <em>distance limits</em> and <em>open vs licensed</em>. The classic trap: a 3-pin <strong>XLR</strong> can be <em>balanced audio</em> or <em>DMX lighting data</em> — same plug, totally different signal.
+        Signals are easiest to understand on <strong>three separate axes</strong>, because people constantly mix them up. <strong>(1) The physical interface</strong> — the cable and connector you can hold: HDMI, SDI (BNC coax), fibre, Ethernet (RJ45), USB-C, XLR. <strong>(2) The transport / protocol</strong> — <em>how</em> the data travels, especially over a network: <span style={{color:"#2dd4bf"}}>NDI, SRT, RTMP, Dante, Art-Net are NOT cables</span> — they ride <em>on top of</em> Ethernet/IP. <strong>(3) What it carries</strong> — video, audio, data, control, tally, power; some cables carry several at once (SDI = video + audio + timecode). Then judge each by <em>distance limits</em> and <em>open vs licensed</em>. The classic trap: a 3-pin <strong>XLR</strong> can be <em>balanced audio</em> or <em>DMX lighting data</em> — same plug, totally different signal. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/lineas">75 Ω / 120 Ω termination & reflections</VoltLink> · <VoltLink to="n5/impedancia">impedance</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{background:"#0f1a1a",border:"1px solid #164e46",borderRadius:8,padding:"10px 14px",marginBottom:14,color:"#5eead4",fontSize:13}}>
         🌐 <strong>Cables vs transports.</strong> Ethernet is the road; <strong>NDI, SRT, Dante, Art-Net</strong> are vehicles that drive on it. Asking "NDI or a cable?" is the wrong question — NDI <em>runs over</em> a cable.
@@ -3109,7 +3112,7 @@ function ModuleFlicker({ image }) {
   return (
     <div>
       <InfoBox>
-        <strong>Flicker</strong> comes from lights that pulse faster than the eye can see. Mains lighting runs at <strong>2× the grid frequency</strong> (100 Hz on 50 Hz mains, 120 Hz on 60 Hz); cheap <strong>LED and HMI</strong> fixtures pulse via PWM dimming. If the camera's exposure time isn't an exact multiple of that pulse, each frame — or, with a rolling shutter, each <em>band of scan lines</em> — catches a different part of the cycle, so you get <strong>rolling brightness bands</strong> or whole-frame flicker. The fix on set is to match up: shoot 50i/25p under 50 Hz, 60i/30p under 60 Hz, keep the shutter at a matching angle (172.8°/180°), or use flicker-free fixtures. Global-shutter and film cameras flicker as a whole frame; CMOS rolling shutters show the moving bands here.
+        <strong>Flicker</strong> comes from lights that pulse faster than the eye can see. Mains lighting runs at <strong>2× the grid frequency</strong> (100 Hz on 50 Hz mains, 120 Hz on 60 Hz); cheap <strong>LED and HMI</strong> fixtures pulse via PWM dimming. If the camera's exposure time isn't an exact multiple of that pulse, each frame — or, with a rolling shutter, each <em>band of scan lines</em> — catches a different part of the cycle, so you get <strong>rolling brightness bands</strong> or whole-frame flicker. The fix on set is to match up: shoot 50i/25p under 50 Hz, 60i/30p under 60 Hz, keep the shutter at a matching angle (172.8°/180°), or use flicker-free fixtures. Global-shutter and film cameras flicker as a whole frame; CMOS rolling shutters show the moving bands here. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/flicker">the electrical cause (50/60 Hz, dimmers)</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
         <div style={{display:"flex",gap:8}}>
@@ -3535,7 +3538,7 @@ function ModuleLevels() {
   return (
     <div>
       <InfoBox>
-        Digital audio is measured in <strong>dBFS</strong> — decibels relative to <em>full scale</em>. <strong>0 dBFS is the absolute ceiling</strong>: the loudest a sample can be. Go above it and the waveform's peaks are chopped flat — <strong>clipping</strong>, a harsh distortion you cannot undo. So you record with <strong>headroom</strong>: aim the signal comfortably below 0 (dialogue often sits around −18 to −12 dBFS on peaks) so unexpected louds still fit. Two meters matter: <strong>peak</strong> catches the instantaneous maximum (what clips), while <strong>RMS</strong> tracks the average energy (what you perceive as loudness). A signal can have modest RMS but a spiky peak — always leave room for the peak. Push the gain and watch the peak hit 0 dBFS and the waveform flatten into clipping.
+        Digital audio is measured in <strong>dBFS</strong> — decibels relative to <em>full scale</em>. <strong>0 dBFS is the absolute ceiling</strong>: the loudest a sample can be. Go above it and the waveform's peaks are chopped flat — <strong>clipping</strong>, a harsh distortion you cannot undo. So you record with <strong>headroom</strong>: aim the signal comfortably below 0 (dialogue often sits around −18 to −12 dBFS on peaks) so unexpected louds still fit. Two meters matter: <strong>peak</strong> catches the instantaneous maximum (what clips), while <strong>RMS</strong> tracks the average energy (what you perceive as loudness). A signal can have modest RMS but a spiky peak — always leave room for the peak. Push the gain and watch the peak hit 0 dBFS and the waveform flatten into clipping. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/niveles">line level as voltage (dBu / dBV)</VoltLink> — in Volt.</span>
       </InfoBox>
       <label style={{...styles.label,marginBottom:12}}>Input gain: <strong style={{color:clipped?"#f87171":"#f59e0b"}}>{gain>0?"+":""}{gain} dB</strong> {clipped && <span style={{color:"#f87171",fontFamily:"monospace"}}> · CLIPPING</span>}
         <input type="range" min={-12} max={24} step={0.5} value={gain} onChange={e=>setGain(+e.target.value)} style={{...styles.slider,width:280}}/></label>
@@ -3790,7 +3793,7 @@ function ModuleBalancedAudio() {
   return (
     <div>
       <InfoBox>
-        The <strong>balanced</strong> trick: the source sends the audio on <em>two</em> wires — <span style={{color:"#2563eb"}}>Hot</span> normal and <span style={{color:"#2563eb"}}>Cold</span> with <strong>inverted polarity</strong>. As they run down the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is picked up <em>identically</em> on both — same shape, same polarity. At the destination the receiver <strong>flips the Cold wire back</strong>: now the <span style={{color:"#2563eb"}}>signal</span> lines up with Hot (adding them <strong>reinforces it, 2×</strong>) while the <span style={{color:"#f97316"}}>interference</span> becomes the exact opposite (adding them <strong>cancels it</strong>). That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just sits on the signal and stays — keep those runs short. (The balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.)
+        The <strong>balanced</strong> trick: the source sends the audio on <em>two</em> wires — <span style={{color:"#2563eb"}}>Hot</span> normal and <span style={{color:"#2563eb"}}>Cold</span> with <strong>inverted polarity</strong>. As they run down the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is picked up <em>identically</em> on both — same shape, same polarity. At the destination the receiver <strong>flips the Cold wire back</strong>: now the <span style={{color:"#2563eb"}}>signal</span> lines up with Hot (adding them <strong>reinforces it, 2×</strong>) while the <span style={{color:"#f97316"}}>interference</span> becomes the exact opposite (adding them <strong>cancels it</strong>). That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just sits on the signal and stays — keep those runs short. (The balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.) <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/phantom">phantom as DC on the pair</VoltLink> · <VoltLink to="n5/zumbido">ground loops</VoltLink> — in Volt.</span>
       </InfoBox>
       <XLRConnector/>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:16}}>
@@ -3869,7 +3872,7 @@ function ModuleProdSound() {
   return (
     <div>
       <InfoBox>
-        Location sound is a fight against everything that isn't the dialogue. The usual suspects: <strong>wind</strong> (low-frequency rumble — kill it with a deadcat and a high-pass), <strong>handling noise</strong> (thumps through the mic and cable — shock mounts, don't touch), <strong>room reflections</strong> (echo and comb-filtering — get closer, treat the space), and <strong>mains hum</strong> (a constant 50/60 Hz tone — balanced cables, no ground loops). And the one everyone forgets: <strong>room tone</strong> — 30 seconds of the room's "silence" that the editor needs to patch gaps and smooth cuts. Toggle problems onto the dialogue waveform and read the fix. The rule stands: solve it at the source on set — post can only do so much.
+        Location sound is a fight against everything that isn't the dialogue. The usual suspects: <strong>wind</strong> (low-frequency rumble — kill it with a deadcat and a high-pass), <strong>handling noise</strong> (thumps through the mic and cable — shock mounts, don't touch), <strong>room reflections</strong> (echo and comb-filtering — get closer, treat the space), and <strong>mains hum</strong> (a constant 50/60 Hz tone — balanced cables, no ground loops). And the one everyone forgets: <strong>room tone</strong> — 30 seconds of the room's "silence" that the editor needs to patch gaps and smooth cuts. Toggle problems onto the dialogue waveform and read the fix. The rule stands: solve it at the source on set — post can only do so much. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/zumbido">ground loops & mains earth</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
         {PROD_PROBLEMS.map(p=>(
@@ -4235,6 +4238,106 @@ function ModuleCreditJitter() {
 }
 
 // ─────────────────────────────────────────────
+// MODULE: SDR vs HDR
+// ─────────────────────────────────────────────
+function pqNits(code){ const m1=0.1593017578125,m2=78.84375,c1=0.8359375,c2=18.8515625,c3=18.6875;
+  const e=Math.pow(Math.max(code,0),1/m2); return 10000*Math.pow(Math.max(e-c1,0)/(c2-c3*e),1/m1); }
+const NITS_MARKS=[{n:0.1,l:"shadow"},{n:1,l:"candle"},{n:18,l:"18% grey"},{n:100,l:"diffuse white"},{n:400,l:"bright sky"},{n:1000,l:"window / lamp"},{n:4000,l:"specular"},{n:10000,l:"sun"}];
+function ModuleHDR(){
+  const [mode,setMode]=useState("hdr");   // sdr | hdr
+  const [peak,setPeak]=useState(1000);    // HDR peak nits
+  const imgRef=useRef(), eotfRef=useRef(), ladRef=useRef(), sceneRef=useRef(null), dimRef=useRef({IW:0});
+  useEffect(()=>{
+    const enc=v=> v<=0.0031308?12.92*v:1.055*Math.pow(Math.max(v,0),1/2.4)-0.055;
+    const peakRel=peak/100;
+    // ---- scene (linear, with window/sun headroom) ----
+    const c=imgRef.current;
+    if(c){
+      const W=Math.min(c.parentElement?.clientWidth-24||460,480), IW=Math.round(W), IH=Math.round(W*9/16);
+      c.width=IW;c.height=IH; const ctx=c.getContext("2d");
+      if(!sceneRef.current||dimRef.current.IW!==IW){ sceneRef.current=rawSceneLinear(IW,IH); dimRef.current={IW}; }
+      const scene=sceneRef.current, id=ctx.createImageData(IW,IH), d=id.data; let peakLin=0;
+      for(let p=0,i=0;p<IW*IH;p++,i+=4){ let anyClip=false;
+        for(let ch=0;ch<3;ch++){ let lin=scene[p*3+ch]; if(lin>peakLin)peakLin=lin;
+          let disp; if(mode==="sdr"){ if(lin>1){disp=1;anyClip=true;} else disp=lin; }
+          else { disp = lin<=1? lin : 1-0.24*Math.exp(-(lin-1)*2/peakRel); }   // HDR: roll off highlights (keep texture)
+          d[i+ch]=Math.max(0,Math.min(255,Math.round(enc(disp)*255))); }
+        d[i+3]=255; if(mode==="sdr"&&anyClip){ const x=p%IW,y=(p/IW)|0; if((x+y)%6<3){d[i]=255;d[i+1]=45;d[i+2]=45;} }
+      }
+      ctx.putImageData(id,0,0);
+      ctx.fillStyle="rgba(0,0,0,0.6)";ctx.fillRect(0,0,IW,20);ctx.font="11px monospace";
+      ctx.fillStyle=mode==="sdr"?"#f87171":"#34d399";
+      ctx.fillText(mode==="sdr"?`SDR 100 nits — highlights CLIP (red)`:`HDR ${peak} nits — highlights retained · scene peak ≈ ${Math.round(peakLin*100)} nits`,8,14);
+    }
+    // ---- nits ladder (log) ----
+    const lc=ladRef.current;
+    if(lc){ const W=Math.min(lc.parentElement?.clientWidth-24||220,260), H=180; lc.width=W;lc.height=H; const x=lc.getContext("2d");
+      x.fillStyle="#0a0d12";x.fillRect(0,0,W,H); const padT=10,padB=16,bx=96,bw=26;
+      const ly=n=>padT+(1-(Math.log10(Math.max(0.1,n))+1)/(5))*(H-padT-padB);   // 0.1..10000 nits log
+      // full bar faint
+      x.fillStyle="#1c2230"; x.fillRect(bx,ly(10000),bw,ly(0.1)-ly(10000));
+      // SDR region 0.1..100
+      x.fillStyle="#3a4150"; x.fillRect(bx,ly(100),bw,ly(0.1)-ly(100));
+      // HDR region 100..peak
+      const gr=x.createLinearGradient(0,ly(peak),0,ly(100)); gr.addColorStop(0,"#34d399");gr.addColorStop(1,"#1f6f55");
+      x.fillStyle=gr; x.fillRect(bx,ly(peak),bw,ly(100)-ly(peak));
+      // ceiling lines + right-aligned labels (never clip)
+      x.font="9px monospace";
+      x.strokeStyle="#f87171";x.lineWidth=1.5;x.beginPath();x.moveTo(bx-4,ly(100));x.lineTo(W-2,ly(100));x.stroke();
+      x.fillStyle="#f87171";x.textAlign="right";x.fillText("SDR 100",W-3,ly(100)-3);
+      x.strokeStyle="#34d399";x.beginPath();x.moveTo(bx-4,ly(peak));x.lineTo(W-2,ly(peak));x.stroke();
+      x.fillStyle="#34d399";x.fillText("HDR "+peak,W-3,ly(peak)-3);
+      // marks
+      x.textAlign="right";x.font="9px monospace";
+      NITS_MARKS.forEach(m=>{ const y=ly(m.n); x.fillStyle="#6b7280"; x.fillText(m.l,bx-6,y+3); x.strokeStyle="#2a2b32";x.beginPath();x.moveTo(bx,y);x.lineTo(bx+bw,y);x.stroke(); });
+      x.fillStyle="#8a8a92";x.textAlign="left";x.font="9px monospace";x.fillText("cd/m² (nits)",2,H-3);
+    }
+    // ---- EOTF curves ----
+    const ec=eotfRef.current;
+    if(ec){ const W=Math.min(ec.parentElement?.clientWidth-24||300,340), H=150; ec.width=W;ec.height=H; const x=ec.getContext("2d");
+      x.fillStyle="#0a0d12";x.fillRect(0,0,W,H); const padL=30,padB=18,padT=8;
+      const X=code=>padL+code*(W-padL-6); const Y=n=>padT+(1-(Math.log10(Math.max(0.1,n))+1)/5)*(H-padT-padB);
+      x.strokeStyle="#1c2230";x.lineWidth=1; [0.1,1,10,100,1000,10000].forEach(n=>{const y=Y(n);x.beginPath();x.moveTo(padL,y);x.lineTo(W,y);x.stroke();x.fillStyle="#4b5563";x.font="8px monospace";x.textAlign="right";x.fillText(n>=1000?(n/1000)+"k":n,padL-3,y+3);});
+      const curve=(fn,col,w)=>{ x.strokeStyle=col;x.lineWidth=w||1.8;x.beginPath(); for(let i=0;i<=100;i++){const code=i/100;const y=Y(fn(code)); if(i===0)x.moveTo(X(code),y);else x.lineTo(X(code),y);} x.stroke(); };
+      curve(code=>100*Math.pow(code,2.4),"#60a5fa",2);     // SDR gamma 2.4 → 100 nits
+      curve(code=>Math.min(10000,pqNits(code)),"#34d399",2); // PQ (ST.2084) → 10000 nits absolute
+      curve(code=>1000*Math.pow(code,1.2),"#a78bfa",1.6);  // HLG (relative, ~1000 ref, approx)
+      x.font="9px monospace";x.textAlign="left";
+      x.fillStyle="#60a5fa";x.fillText("SDR γ2.4",padL+4,H-6); x.fillStyle="#34d399";x.fillText("PQ",padL+70,H-6); x.fillStyle="#a78bfa";x.fillText("HLG",padL+100,H-6);
+      x.fillStyle="#8a8a92";x.fillText("code →  nits ↑",W-86,padT+10);
+    }
+  },[mode,peak]);
+  return (
+    <div>
+      <InfoBox>
+        <strong>SDR</strong> (standard) grades to a <strong>~100-nit</strong> white on a gamma-2.4 display: anything brighter than diffuse white — the sun, a window, a specular glint — simply <strong>clips</strong> to flat white. <strong>HDR</strong> keeps a much larger <em>display</em> range (mastered to <strong>1000–4000 nits</strong>, spec'd to 10000), so those highlights stay <em>bright and detailed</em> instead of blowing out, and shadows hold more depth. Three things change together: <strong>(1) range</strong> — far more headroom above diffuse white; <strong>(2) the transfer function</strong> — SDR's relative gamma is replaced by <strong>PQ (ST.2084)</strong>, which maps each code value to an <em>absolute</em> brightness in nits (so "code 520 = 100 nits" everywhere), or <strong>HLG</strong>, a scene-relative curve that's backwards-compatible for broadcast; <strong>(3) a wider gamut</strong> — usually P3 or Rec.2020 (see <em>Color Spaces &amp; Gamuts</em>). Diffuse white sits near <strong>203 nits</strong> in HDR reference. Toggle SDR/HDR and raise the peak: watch the window and sun clip in SDR but survive in HDR. <em>(Your screen may be SDR — the HDR highlights here are simulated by rolling them off instead of clipping.)</em>
+      </InfoBox>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+        {[["SDR · Rec.709","sdr"],["HDR · PQ/HLG","hdr"]].map(([l,v])=>(
+          <button key={v} onClick={()=>setMode(v)} style={mode===v?styles.btnActive:styles.btnChip}>{l}</button>
+        ))}
+        <label style={{...styles.label,opacity:mode==="hdr"?1:0.4}}>Peak brightness: <strong style={{color:"#ff5a4d"}}>{peak} nits</strong>
+          <input type="range" min={400} max={4000} step={100} value={peak} disabled={mode!=="hdr"} onChange={e=>setPeak(+e.target.value)} style={{...styles.slider,width:200}}/></label>
+      </div>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <div style={{flex:"1 1 300px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
+          <canvas ref={imgRef} style={{display:"block",width:"100%",borderRadius:4}}/>
+        </div>
+        <div style={{flex:"1 1 200px",minWidth:190,background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
+          <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.06em"}}>BRIGHTNESS LADDER</div>
+          <canvas ref={ladRef} style={{display:"block",width:"100%"}}/>
+        </div>
+      </div>
+      <div style={{marginTop:16,background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
+        <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.06em"}}>TRANSFER FUNCTION (EOTF) — code value → absolute nits</div>
+        <canvas ref={eotfRef} style={{display:"block",width:"100%"}}/>
+        <div style={{marginTop:6,color:"#8a8a92",fontSize:11,lineHeight:1.5}}>SDR gamma tops out at 100 nits (relative). <strong style={{color:"#34d399"}}>PQ</strong> assigns every code an <em>absolute</em> nit value up to 10000. <strong style={{color:"#a78bfa"}}>HLG</strong> is scene-relative (shown approximate). The electrical/voltage side of signal levels lives in <VoltLink to="n5/video">Volt → video as voltage</VoltLink>.</div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
 const MODULE_COMPONENTS = {
@@ -4270,6 +4373,7 @@ const MODULE_COMPONENTS = {
   pictureProfiles: ModulePictureProfiles,
   colorSpaces: ModuleColorSpaces,
   aces: ModuleACES,
+  hdr: ModuleHDR,
   colorTemp: ModuleColorTemp,
   rollingShutter: ModuleRollingShutter,
   moire: ModuleMoire,
