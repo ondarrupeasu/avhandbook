@@ -49,6 +49,7 @@ const STRINGS = {
       lut: { title: "LUTs", desc: "1D & 3D lookup tables — technical vs creative looks" },
       codecs: { title: "Compression & Codecs", desc: "Intra vs inter, DCT blocking, I/P/B frames, the codec table" },
       containers: { title: "Containers & Wrappers", desc: "MOV, MP4, MXF, MKV — codec ≠ container" },
+      storageCalc: { title: "Storage Calculator", desc: "Resolution × bitrate × codec × time → disk space" },
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
       portraitLight: { title: "Portrait Lighting", desc: "Three-point (key/fill/back) & patterns — Rembrandt, butterfly, split" },
       lensDistortion: { title: "Lens Distortion", desc: "Barrel & pincushion — when straight lines bend" },
@@ -80,7 +81,7 @@ const T = STRINGS.en;
 const CATEGORIES = [
   {
     id: "image", label: T.categories.image,
-    modules: ["aspectRatio","resolution","chromaSubsampling","raw","codecs","containers","frameRate","exposureTriangle"],
+    modules: ["aspectRatio","resolution","chromaSubsampling","raw","codecs","containers","storageCalc","frameRate","exposureTriangle"],
   },
   {
     id: "color", label: T.categories.color,
@@ -4383,6 +4384,93 @@ function ModuleHDR(){
 }
 
 // ─────────────────────────────────────────────
+// MODULE: Storage / Recording Calculator
+// ─────────────────────────────────────────────
+const STG_RES=[
+  {l:"SD 576 (720×576)",w:720,h:576},{l:"HD 720p (1280×720)",w:1280,h:720},{l:"HD 1080 (1920×1080)",w:1920,h:1080},
+  {l:"2K DCI (2048×1080)",w:2048,h:1080},{l:"UHD 4K (3840×2160)",w:3840,h:2160},{l:"4K DCI (4096×2160)",w:4096,h:2160},
+  {l:"6K (6144×3456)",w:6144,h:3456},{l:"8K UHD (7680×4320)",w:7680,h:4320},
+];
+const STG_FPS=[23.976,24,25,29.97,30,50,59.94,60,120];
+const STG_CODECS=[
+  {g:"Delivery / camera (inter-frame)",items:[
+    {n:"H.264 — high",bpp:0.10},{n:"H.264 — medium",bpp:0.06},{n:"H.264 — streaming",bpp:0.03},
+    {n:"H.265 / HEVC — high",bpp:0.06},{n:"H.265 / HEVC — medium",bpp:0.035},
+  ]},
+  {g:"Editing / mastering (intra-frame)",items:[
+    {n:"ProRes 422 Proxy",bpp:0.72},{n:"ProRes 422 LT",bpp:1.64},{n:"ProRes 422",bpp:2.37},{n:"ProRes 422 HQ",bpp:3.54},{n:"ProRes 4444",bpp:5.30},{n:"ProRes 4444 XQ",bpp:8.00},
+    {n:"DNxHR LB",bpp:0.90},{n:"DNxHR SQ",bpp:2.00},{n:"DNxHR HQ",bpp:3.30},{n:"DNxHR HQX",bpp:5.00},{n:"DNxHR 444",bpp:7.50},
+  ]},
+  {g:"Camera RAW",items:[
+    {n:"BRAW 12:1",bpp:1.8},{n:"BRAW 8:1",bpp:2.7},{n:"BRAW 5:1",bpp:4.4},{n:"BRAW 3:1",bpp:7.3},{n:"R3D / RAW (heavy)",bpp:9.0},{n:"Uncompressed 10-bit 4:2:2",bpp:20},
+  ]},
+];
+const STG_FLAT=STG_CODECS.flatMap(g=>g.items);
+const STG_CARDS=[64,128,256,512,1024,2048];
+const selStyle={background:"#16171c",color:"#f2f2f4",border:"1px solid #2a2b32",borderRadius:6,padding:"6px 8px",fontFamily:"monospace",fontSize:12,width:"100%"};
+function fmtSize(gb){ return gb>=1000? (gb/1000).toFixed(2)+" TB" : gb>=10? gb.toFixed(0)+" GB" : gb.toFixed(2)+" GB"; }
+function fmtDur(min){ const s=Math.round(min*60); const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60; return (h?h+"h ":"")+(m||h?m+"m ":"")+ss+"s"; }
+function ModuleStorageCalc(){
+  const [ri,setRi]=useState(4);         // UHD 4K
+  const [fps,setFps]=useState(25);
+  const [codec,setCodec]=useState("ProRes 422 HQ");
+  const [custom,setCustom]=useState(false),[cMbps,setCMbps]=useState(100);
+  const [dur,setDur]=useState(10);      // minutes
+  const [audio,setAudio]=useState(true);
+  const R=STG_RES[ri], px=R.w*R.h, cc=STG_FLAT.find(c=>c.n===codec)||STG_FLAT[0];
+  const videoMbps = custom? cMbps : cc.bpp*px*fps/1e6;
+  const audioMbps = audio? 2*48000*24/1e6 : 0;
+  const totalMbps = videoMbps+audioMbps;
+  const MBs = totalMbps/8;
+  const sizeGB = totalMbps*dur*60/8000;         // Mb→GB
+  const GBh = totalMbps*3600/8000;
+  return (
+    <div>
+      <InfoBox>
+        How big is the footage? It comes down to one number — the <strong>data rate</strong> — times time. The data rate is set by <strong>resolution × frame rate × how many bits you spend per pixel</strong> (the codec). <strong>Inter-frame</strong> codecs (H.264/H.265) spend very few bits per pixel — tiny files, great for delivery. <strong>Intra-frame</strong> codecs (ProRes, DNxHR) spend far more for a clean edit master. <strong>RAW</strong> spends the most. A rough rule: <em>bitrate (Mb/s) = bits-per-pixel × width × height × fps</em>; size = bitrate × duration. Note the units trap: <strong>Mbps is mega<em>bits</em>, storage is giga<em>bytes</em></strong> — divide by 8. Pick a format and see the data rate, the total size, and how long a card or drive holds. <em>(Rates are typical approximations; real files vary with content and camera settings.)</em>
+      </InfoBox>
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
+        <div style={{flex:"1 1 320px",minWidth:290,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:14}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <label style={styles.label}>Resolution
+              <select value={ri} onChange={e=>setRi(+e.target.value)} style={selStyle}>{STG_RES.map((r,i)=><option key={i} value={i}>{r.l}</option>)}</select></label>
+            <label style={styles.label}>Frame rate
+              <select value={fps} onChange={e=>setFps(+e.target.value)} style={selStyle}>{STG_FPS.map(f=><option key={f} value={f}>{f} fps</option>)}</select></label>
+          </div>
+          <label style={{...styles.label,marginTop:10}}>Codec / format
+            <select value={custom?"__custom":codec} onChange={e=>{ if(e.target.value==="__custom")setCustom(true); else {setCustom(false);setCodec(e.target.value);} }} style={selStyle}>
+              {STG_CODECS.map(g=>(<optgroup key={g.g} label={g.g}>{g.items.map(c=><option key={c.n} value={c.n}>{c.n}</option>)}</optgroup>))}
+              <optgroup label="Custom"><option value="__custom">Custom bitrate…</option></optgroup>
+            </select></label>
+          {custom && <label style={{...styles.label,marginTop:10}}>Custom bitrate: <strong style={{color:"#ff5a4d"}}>{cMbps} Mbps</strong>
+            <input type="range" min={5} max={3000} step={5} value={cMbps} onChange={e=>setCMbps(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>}
+          <label style={{...styles.label,marginTop:10}}>Duration: <strong style={{color:"#ff5a4d"}}>{fmtDur(dur)}</strong>
+            <input type="range" min={0.5} max={240} step={0.5} value={dur} onChange={e=>setDur(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
+          <button onClick={()=>setAudio(a=>!a)} style={{...(audio?styles.btnActive:styles.btnChip),marginTop:12}}>{audio?"◉ +2ch audio 48k/24":"○ audio off"}</button>
+        </div>
+        <div style={{flex:"1 1 260px",minWidth:240}}>
+          <div style={{background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:14,marginBottom:12}}>
+            <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.06em"}}>DATA RATE</div>
+            <div style={{fontSize:22,fontWeight:"bold",color:"#ff5a4d"}}>{totalMbps>=1000?(totalMbps/1000).toFixed(2)+" Gbps":totalMbps.toFixed(0)+" Mbps"}</div>
+            <div style={{color:"#9ca3af",fontSize:12,fontFamily:"monospace"}}>{MBs.toFixed(1)} MB/s · {GBh.toFixed(1)} GB/hour</div>
+            <div style={{height:1,background:"#2a2b32",margin:"10px 0"}}/>
+            <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.06em"}}>FILE SIZE ({fmtDur(dur)})</div>
+            <div style={{fontSize:26,fontWeight:"bold",color:"#34d399"}}>{fmtSize(sizeGB)}</div>
+          </div>
+          <div style={{background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:"10px 14px"}}>
+            <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.06em"}}>RECORD TIME PER CARD / DRIVE</div>
+            {STG_CARDS.map(gb=>{ const mins=gb*8000/totalMbps/60; return (
+              <div key={gb} style={{display:"flex",justifyContent:"space-between",fontSize:12,fontFamily:"monospace",padding:"2px 0",color:"#d1d5db"}}>
+                <span style={{color:"#8a8a92"}}>{gb>=1024?(gb/1024)+" TB":gb+" GB"}</span><span>{fmtDur(mins)}</span>
+              </div>);})}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
 const MODULE_COMPONENTS = {
@@ -4403,6 +4491,7 @@ const MODULE_COMPONENTS = {
   lut: ModuleLUT,
   codecs: ModuleCodecs,
   containers: ModuleContainers,
+  storageCalc: ModuleStorageCalc,
   signals: ModuleSignals,
   portraitLight: ModulePortraitLight,
   lensDistortion: ModuleLensDistortion,
