@@ -51,6 +51,7 @@ const STRINGS = {
       containers: { title: "Containers & Wrappers", desc: "MOV, MP4, MXF, MKV — codec ≠ container" },
       storageCalc: { title: "Storage Calculator", desc: "Resolution × bitrate × codec × time → disk space" },
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
+      cableReach: { title: "Cable Reach Calculator", desc: "How far SDI runs by cable type & resolution (Percon)" },
       portraitLight: { title: "Portrait Lighting", desc: "Three-point (key/fill/back) & patterns — Rembrandt, butterfly, split" },
       lensDistortion: { title: "Lens Distortion", desc: "Barrel & pincushion — when straight lines bend" },
       interlacing: { title: "Interlacing & Combing", desc: "Fields, comb teeth on motion, deinterlacing" },
@@ -62,6 +63,7 @@ const STRINGS = {
       polarPatterns: { title: "Microphone Polar Patterns", desc: "Omni, cardioid, shotgun, figure-8 — what a mic hears off-axis" },
       levels: { title: "Levels & Metering", desc: "dBFS, headroom, peak vs RMS, and clipping" },
       loudness: { title: "Loudness — EBU R128", desc: "LUFS, LRA, true peak and the delivery target" },
+      audioWiring: { title: "Audio Wiring & Pinouts", desc: "XLR / TRS / RCA — balanced, unbalanced, insert" },
       micTypes: { title: "Mic Types & Placement", desc: "Dynamic vs condenser, boom vs lav, the proximity effect" },
       balancedAudio: { title: "Balanced Audio", desc: "Why XLR rejects noise — differential signalling & phantom" },
       prodSound: { title: "Production Sound", desc: "Room tone, wind, handling, reflections, hum — and the fix" },
@@ -105,7 +107,7 @@ const CATEGORIES = [
   },
   {
     id: "signals", label: T.categories.signals,
-    modules: ["signals"],
+    modules: ["signals","cableReach"],
   },
   {
     id: "lighting", label: T.categories.lighting,
@@ -113,7 +115,7 @@ const CATEGORIES = [
   },
   {
     id: "audio", label: T.categories.audio,
-    modules: ["audioChain","polarPatterns","micTypes","balancedAudio","levels","loudness","prodSound","syncTimecode","postFlow","stereoSurround","audioFormats"],
+    modules: ["audioChain","polarPatterns","micTypes","balancedAudio","audioWiring","levels","loudness","prodSound","syncTimecode","postFlow","stereoSurround","audioFormats"],
   },
 ];
 
@@ -4401,8 +4403,14 @@ const STG_CODECS=[
     {n:"ProRes 422 Proxy",bpp:0.72},{n:"ProRes 422 LT",bpp:1.64},{n:"ProRes 422",bpp:2.37},{n:"ProRes 422 HQ",bpp:3.54},{n:"ProRes 4444",bpp:5.30},{n:"ProRes 4444 XQ",bpp:8.00},
     {n:"DNxHR LB",bpp:0.90},{n:"DNxHR SQ",bpp:2.00},{n:"DNxHR HQ",bpp:3.30},{n:"DNxHR HQX",bpp:5.00},{n:"DNxHR 444",bpp:7.50},
   ]},
-  {g:"Camera RAW",items:[
-    {n:"BRAW 12:1",bpp:1.8},{n:"BRAW 8:1",bpp:2.7},{n:"BRAW 5:1",bpp:4.4},{n:"BRAW 3:1",bpp:7.3},{n:"R3D / RAW (heavy)",bpp:9.0},{n:"Uncompressed 10-bit 4:2:2",bpp:20},
+  {g:"Camera RAW — BRAW (Blackmagic)",items:[
+    {n:"BRAW Q0 (constant quality)",bpp:5.5},{n:"BRAW Q1",bpp:4.5},{n:"BRAW Q3",bpp:3.0},{n:"BRAW Q5",bpp:2.0},
+    {n:"BRAW 3:1",bpp:7.3},{n:"BRAW 5:1",bpp:4.4},{n:"BRAW 8:1",bpp:2.7},{n:"BRAW 12:1",bpp:1.8},
+  ]},
+  {g:"Camera RAW — RED / Sony / ARRI",items:[
+    {n:"RED R3D 3:1 (HQ)",bpp:9.0},{n:"RED R3D 8:1",bpp:3.4},{n:"RED R3D 12:1",bpp:2.3},
+    {n:"Sony X-OCN XT",bpp:6.0},{n:"Sony X-OCN ST",bpp:3.5},{n:"Sony X-OCN LT",bpp:2.3},
+    {n:"ARRIRAW",bpp:11.0},{n:"Sony RAW (uncompressed 16-bit)",bpp:16},{n:"Uncompressed 10-bit 4:2:2",bpp:20},
   ]},
 ];
 const STG_FLAT=STG_CODECS.flatMap(g=>g.items);
@@ -4471,6 +4479,191 @@ function ModuleStorageCalc(){
 }
 
 // ─────────────────────────────────────────────
+// MODULE: Audio Wiring / Pinouts
+// ─────────────────────────────────────────────
+const AW_CONN={
+  xlr:{name:"XLR-3",pts:["1","2","3"],lab:{"1":"1 · shield","2":"2 · hot (+)","3":"3 · cold (−)"}},
+  trs:{name:'TRS (balanced ¼")',pts:["T","R","S"],lab:{T:"Tip",R:"Ring",S:"Sleeve"}},
+  ts:{name:'TS (mono ¼")',pts:["T","S"],lab:{T:"Tip",S:"Sleeve"}},
+  rca:{name:"RCA",pts:["C","S"],lab:{C:"Centre",S:"Shield"}},
+};
+const AW_BAL={xlr:{HOT:"2",COLD:"3",GND:"1"},trs:{HOT:"T",COLD:"R",GND:"S"}};
+const AW_UB={xlr:{SIG:"2",GND:"1",COLD:"3"},trs:{SIG:"T",GND:"S",COLD:"R"},ts:{SIG:"T",GND:"S"},rca:{SIG:"C",GND:"S"}};
+const AW_COL={HOT:"#60a5fa",SIG:"#60a5fa",COLD:"#22d3ee",GND:"#8a8a92",SEND:"#34d399",RET:"#f59e0b"};
+function awYmap(ck){ const C=AW_CONN[ck]; const n=C.pts.length, y0=56, y1=168; const m={}; C.pts.forEach((p,i)=>{ m[p]=n===1?112:y0+i*(y1-y0)/(n-1); }); return m; }
+function AudioConnector({ ck, x, side, ymap }){
+  const C=AW_CONN[ck];
+  return (<g>
+    <rect x={side==="L"?x-10:x} y={44} width={10} height={136} rx={3} fill="#2a2b32"/>
+    <text x={side==="L"?x-26:x+26} y={36} fill="#c9c9cf" fontFamily="monospace" fontSize="11" fontWeight="bold" textAnchor="middle">{C.name}</text>
+    {C.pts.map((p)=>{ const y=ymap[p];
+      return (<g key={p}>
+        <circle cx={x} cy={y} r={5} fill="#0e0f12" stroke="#8a8a92" strokeWidth="1.5"/>
+        <text x={side==="L"?x-14:x+14} y={y+3.5} fill="#9ca3af" fontFamily="monospace" fontSize="9.5" textAnchor={side==="L"?"end":"start"}>{C.lab[p]}</text>
+      </g>);})}
+  </g>);
+}
+function ModuleAudioWiring(){
+  const [mode,setMode]=useState("balanced");
+  const [a,setA]=useState("xlr"),[b,setB]=useState("trs");
+  const [flip,setFlip]=useState(false);
+  const [ins,setIns]=useState("ts");   // insert return legs: ts | xlr
+  const optsBal=["xlr","trs"], optsUB=["xlr","trs","ts","rca"];
+  const LX=200, RX=360, RX2=360;
+  const connB = mode==="balanced" ? (optsBal.includes(b)?b:"trs") : b;
+  const la=awYmap(mode==="insert"?"trs":a), lb=awYmap(mode==="insert"?ins:connB), lb2=awYmap(ins);
+  // build wires
+  let wires=[], ties=[], note="";
+  if(mode==="balanced"){
+    [["GND","GND"],["HOT",flip?"COLD":"HOT"],["COLD",flip?"HOT":"COLD"]].forEach(([ra,rb])=>{
+      wires.push({a:AW_BAL[a][ra], b:AW_BAL[connB][rb], col:AW_COL[ra], lab:ra==="GND"?"shield":ra.toLowerCase()});
+    });
+    note="Balanced: the signal rides on hot (2/Tip) and cold (3/Ring) in opposite polarity inside a shield (1/Sleeve). Interference hits both equally and cancels at the receiver — long runs stay clean. See → Balanced Audio.";
+  } else if(mode==="unbalanced"){
+    wires.push({a:AW_UB[a].SIG,b:AW_UB[b].SIG,col:AW_COL.SIG,lab:"signal"});
+    wires.push({a:AW_UB[a].GND,b:AW_UB[b].GND,col:AW_COL.GND,lab:"ground + shield"});
+    if(AW_UB[a].COLD) ties.push({side:"L",from:AW_UB[a].COLD,to:AW_UB[a].GND});
+    if(AW_UB[b].COLD) ties.push({side:"R",from:AW_UB[b].COLD,to:AW_UB[b].GND});
+    note="Unbalanced: only signal + ground. If an end is XLR/TRS, its cold (3/Ring) is tied to ground — the balancing is lost, so there's nothing to cancel induced noise. Keep these runs short.";
+  } else {
+    // insert: TRS tip=send, ring=return, sleeve=ground → two mono legs
+    note="Insert cable: one TRS splits into send and return. Tip = send (to device input), Ring = return (from device output), Sleeve = common ground. Patch into a mixer channel's insert jack.";
+  }
+  return (
+    <div>
+      <InfoBox>
+        A cable is only as good as its <strong>wiring</strong>. The three contacts of a balanced connector carry <strong>hot (+)</strong>, <strong>cold (−)</strong> and <strong>shield</strong>: on <strong>XLR</strong> that's pins <strong>2 / 3 / 1</strong>; on a <strong>TRS</strong> jack it's <strong>Tip / Ring / Sleeve</strong>. Wire 2→Tip, 3→Ring, 1→Sleeve and a balanced XLR-to-TRS cable just works. An <strong>unbalanced</strong> lead (TS jack, RCA) has only <em>signal + ground</em> — plug a balanced source into it and the cold must be tied to ground, losing the noise rejection. An <strong>insert</strong> cable is the odd one: a single TRS where <strong>Tip is the send and Ring is the return</strong>, splitting to two mono plugs to patch a processor into a mixer channel. Pick the connectors and see exactly which contact goes where. <em>(This is the audio side of the XLR from Signals &amp; Connectivity — never DMX.)</em>
+      </InfoBox>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+        {[["Balanced","balanced"],["Unbalanced","unbalanced"],["Insert","insert"]].map(([l,v])=>(
+          <button key={v} onClick={()=>setMode(v)} style={mode===v?styles.btnActive:styles.btnChip}>{l}</button>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
+        {mode!=="insert" && <>
+          <label style={styles.label}>From
+            <select value={a} onChange={e=>setA(e.target.value)} style={{...selStyle,width:160}}>{(mode==="balanced"?optsBal:optsUB).map(k=><option key={k} value={k}>{AW_CONN[k].name}</option>)}</select></label>
+          <span style={{color:"#8a8a92"}}>→</span>
+          <label style={styles.label}>To
+            <select value={connB} onChange={e=>setB(e.target.value)} style={{...selStyle,width:160}}>{(mode==="balanced"?optsBal:optsUB).map(k=><option key={k} value={k}>{AW_CONN[k].name}</option>)}</select></label>
+          {mode==="balanced" && <button onClick={()=>setFlip(f=>!f)} style={flip?styles.btnActive:styles.btnChip}>{flip?"polarity flipped (2↔3)":"flip polarity (2↔3)"}</button>}
+        </>}
+        {mode==="insert" && <label style={styles.label}>Return legs
+          <select value={ins} onChange={e=>setIns(e.target.value)} style={{...selStyle,width:160}}><option value="ts">2× TS (mono jack)</option><option value="xlr">2× XLR</option></select></label>}
+      </div>
+      <div style={{background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
+        <svg viewBox="0 0 560 210" style={{display:"block",width:"100%",maxWidth:560,margin:"0 auto"}}>
+          {mode!=="insert" ? (<>
+            <AudioConnector ck={a} x={LX} side="L" ymap={la}/>
+            <AudioConnector ck={connB} x={RX} side="R" ymap={lb}/>
+            {wires.map((w,i)=>{ const y1=la[w.a], y2=lb[w.b]; if(y1==null||y2==null)return null; const mx=(LX+RX)/2;
+              return (<g key={i}><path d={`M${LX} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${RX} ${y2}`} stroke={w.col} strokeWidth="2.2" fill="none"/>
+                <text x={mx} y={(y1+y2)/2-4} fill={w.col} fontFamily="monospace" fontSize="9" textAnchor="middle">{w.lab}</text></g>);})}
+            {ties.map((t,i)=>{ const m=t.side==="L"?la:lb, X=t.side==="L"?LX:RX, dir=t.side==="L"?-16:16;
+              const y1=m[t.from],y2=m[t.to]; if(y1==null||y2==null)return null;
+              return (<path key={"t"+i} d={`M${X} ${y1} C ${X+dir} ${y1}, ${X+dir} ${y2}, ${X} ${y2}`} stroke="#8a8a92" strokeWidth="1.4" strokeDasharray="3 3" fill="none"/>);})}
+            {ties.length>0 && <text x={280} y={200} fill="#fdba74" fontFamily="monospace" fontSize="9" textAnchor="middle">cold tied to ground — balancing lost</text>}
+          </>) : (<>
+            <AudioConnector ck="trs" x={LX} side="L" ymap={la}/>
+            <g transform="translate(0,-40)"><AudioConnector ck={ins} x={RX2} side="R" ymap={lb}/></g>
+            <g transform="translate(0,52)"><AudioConnector ck={ins} x={RX2} side="R" ymap={lb2}/></g>
+            {(()=>{ const sig=ins==="xlr"?"2":"T", gnd=ins==="xlr"?"1":"S"; const mx=(LX+RX2)/2; const E=[];
+              const add=(y1,y2,col,lab)=>E.push(<g key={lab+y1}><path d={`M${LX} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${RX2} ${y2}`} stroke={col} strokeWidth="2.2" fill="none"/><text x={mx} y={(y1+y2)/2-4} fill={col} fontFamily="monospace" fontSize="9" textAnchor="middle">{lab}</text></g>);
+              if(la.T!=null&&lb[sig]!=null) add(la.T, lb[sig]-40, AW_COL.SEND,"send (tip)");
+              if(la.R!=null&&lb2[sig]!=null) add(la.R, lb2[sig]+52, AW_COL.RET,"return (ring)");
+              if(la.S!=null&&lb[gnd]!=null) add(la.S, lb[gnd]-40, AW_COL.GND,"gnd");
+              if(la.S!=null&&lb2[gnd]!=null) add(la.S, lb2[gnd]+52, AW_COL.GND,"gnd");
+              return E; })()}
+          </>)}
+        </svg>
+      </div>
+      <div style={{marginTop:12,padding:"10px 14px",background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,color:"#c9c9cf",fontSize:13,lineHeight:1.6}}>{note}</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MODULE: Cable Reach Calculator (coax / SDI)
+// ─────────────────────────────────────────────
+const REACH_SIG=[
+  {k:"sd",l:"SD-SDI · 270 Mbps"},{k:"hd",l:"HD-SDI 1.5G · 1080i"},{k:"g3",l:"3G-SDI · 1080p"},
+  {k:"g6",l:"6G-SDI · 4K"},{k:"g12",l:"12G-SDI · 4K"},{k:"g24",l:"24G-SDI · 8K"},
+];
+// Max distance (m) per single-link standard. Source: Percon chart (studio wall) + typical generics.
+const REACH_CABLES=[
+  {g:"Percon · rigid",items:[
+    {n:"VK2",m:{sd:150,hd:75,g3:45,g6:35,g12:25,g24:17}},
+    {n:"VK5",m:{sd:252,hd:116,g3:90,g6:67,g12:46,g24:33}},
+    {n:"VK50 Silver+",m:{sd:278,hd:125,g3:98,g6:54,g12:30,g24:35}},
+    {n:"VK6",m:{sd:330,hd:151,g3:120,g6:97,g12:61,g24:43}},
+    {n:"VK60 Silver+",m:{sd:348,hd:161,g3:125,g6:70,g12:40,g24:45}},
+    {n:"VK7",m:{sd:411,hd:182,g3:150,g6:111,g12:66,g24:47}},
+    {n:"VK70 Silver+",m:{sd:456,hd:202,g3:172,g6:87,g12:50,g24:59}},
+    {n:"VK80 Silver+",m:{sd:636,hd:265,g3:230,g6:110,g12:70,g24:76}},
+    {n:"VK9",m:{sd:626,hd:270,g3:230,g6:153,g12:108,g24:77}},
+    {n:"VK90 Silver+",m:{sd:700,hd:291,g3:253,g6:170,g12:120,g24:84}},
+  ]},
+  {g:"Percon · flexible",items:[
+    {n:"VK66",m:{sd:232,hd:118,g3:90,g6:60,g12:42,g24:30}},
+    {n:"VK680 Silver+",m:{sd:348,hd:160,g3:120,g6:70,g12:40,g24:45}},
+    {n:"VK77",m:{sd:306,hd:180,g3:128,g6:78,g12:49,g24:36}},
+    {n:"VK770F ENH+",m:{sd:322,hd:180,g3:128,g6:82,g12:55,g24:40}},
+    {n:"VK780 Silver+",m:{sd:456,hd:202,g3:172,g6:87,g12:50,g24:59}},
+    {n:"VK880 Silver+",m:{sd:636,hd:265,g3:230,g6:110,g12:70,g24:76}},
+  ]},
+  {g:"Generic (typical)",items:[
+    {n:"Belden 1694A (RG-6)",m:{sd:400,hd:200,g3:120,g6:90,g12:70,g24:45}},
+    {n:"Belden 1855A (mini RG-59)",m:{sd:250,hd:120,g3:75,g6:55,g12:42,g24:28}},
+    {n:"RG-59 (generic)",m:{sd:300,hd:100,g3:60,g6:45,g12:30,g24:20}},
+  ]},
+];
+const REACH_FLAT=REACH_CABLES.flatMap(g=>g.items);
+function ModuleCableReach(){
+  const [sig,setSig]=useState("g12");
+  const [cable,setCable]=useState("VK9");
+  const [dist,setDist]=useState(40);
+  const C=REACH_FLAT.find(c=>c.n===cable)||REACH_FLAT[0];
+  const max=C.m[sig]; const ok=dist<=max;
+  const barMax=Math.max(max,dist,50); const sigL=REACH_SIG.find(s=>s.k===sig).l;
+  return (
+    <div>
+      <InfoBox>
+        A coax run isn't "connected or not" — the higher the bit rate, the <strong>shorter the usable cable</strong>. Push an SDI signal too far and the high frequencies roll off until the receiver can no longer lock: you get sparkles, then black. Each jump in data rate (HD-SDI 1.5G → 3G → 6G → <strong>12G</strong> → 24G) <em>roughly halves</em> the reach, and thicker/better-shielded cable buys back metres. So the same cable that carries SD 270 Mbps 300 m might only do 12G-SDI (4K) for ~70 m. Pick your signal and cable and read the <strong>max distance</strong>; set the run length and see if it makes it. <em>Source: the Percon chart on the Tartanga studio wall, plus typical generics — values as printed; verify critical runs and add margin.</em>
+      </InfoBox>
+      <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"flex-end",marginBottom:16}}>
+        <label style={styles.label}>Signal / resolution
+          <select value={sig} onChange={e=>setSig(e.target.value)} style={{...selStyle,width:200}}>{REACH_SIG.map(s=><option key={s.k} value={s.k}>{s.l}</option>)}</select></label>
+        <label style={styles.label}>Cable
+          <select value={cable} onChange={e=>setCable(e.target.value)} style={{...selStyle,width:220}}>{REACH_CABLES.map(g=><optgroup key={g.g} label={g.g}>{g.items.map(c=><option key={c.n} value={c.n}>{c.n}</option>)}</optgroup>)}</select></label>
+      </div>
+      <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:16,marginBottom:14}}>
+        <label style={styles.label}>Cable run: <strong style={{color:"#ff5a4d"}}>{dist} m</strong>
+          <input type="range" min={0} max={Math.max(100,Math.ceil(max*1.5/10)*10)} step={1} value={dist} onChange={e=>setDist(+e.target.value)} style={{...styles.slider,width:"100%"}}/></label>
+        <div style={{position:"relative",height:30,background:"#0e0f12",borderRadius:6,marginTop:12,overflow:"hidden",border:"1px solid #2a2b32"}}>
+          <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,max/barMax*100)}%`,background:"#1f6f55"}}/>
+          <div style={{position:"absolute",left:`${Math.min(100,max/barMax*100)}%`,top:0,bottom:0,width:2,background:"#34d399"}}/>
+          <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,dist/barMax*100)}%`,background:ok?"rgba(52,211,153,0.25)":"rgba(248,113,113,0.35)"}}/>
+          <div style={{position:"absolute",left:`calc(${Math.min(100,dist/barMax*100)}% - 1px)`,top:0,bottom:0,width:2,background:ok?"#34d399":"#f87171"}}/>
+          <div style={{position:"absolute",right:6,top:6,fontSize:10,fontFamily:"monospace",color:"#34d399"}}>max {max} m</div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+        <div style={{flex:"1 1 220px",padding:"14px 16px",background:"#0d1117",border:`1px solid ${ok?"#1f3a24":"#3a2410"}`,borderRadius:8}}>
+          <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.06em"}}>{sigL}</div>
+          <div style={{fontSize:26,fontWeight:"bold",color:ok?"#34d399":"#f87171"}}>{ok?"✓ reaches":"✗ too far"}</div>
+          <div style={{color:"#9ca3af",fontSize:13}}>{C.n}: <strong>{max} m</strong> max · your run {dist} m {ok?`(${max-dist} m to spare)`:`(${dist-max} m over)`}</div>
+        </div>
+        <div style={{flex:"1 1 260px",background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:"10px 14px"}}>
+          <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.06em"}}>{C.n} — reach by standard</div>
+          {REACH_SIG.map(s=>(<div key={s.k} onClick={()=>setSig(s.k)} style={{display:"flex",justifyContent:"space-between",fontSize:12,fontFamily:"monospace",padding:"2px 0",cursor:"pointer",color:s.k===sig?"#ff5a4d":"#d1d5db"}}>
+            <span style={{color:s.k===sig?"#ff5a4d":"#8a8a92"}}>{s.l}</span><span>{C.m[s.k]} m</span></div>))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
 const MODULE_COMPONENTS = {
@@ -4479,6 +4672,7 @@ const MODULE_COMPONENTS = {
   polarPatterns: ModulePolarPatterns,
   micTypes: ModuleMicTypes,
   balancedAudio: ModuleBalancedAudio,
+  audioWiring: ModuleAudioWiring,
   levels: ModuleLevels,
   loudness: ModuleLoudness,
   prodSound: ModuleProdSound,
@@ -4493,6 +4687,7 @@ const MODULE_COMPONENTS = {
   containers: ModuleContainers,
   storageCalc: ModuleStorageCalc,
   signals: ModuleSignals,
+  cableReach: ModuleCableReach,
   portraitLight: ModulePortraitLight,
   lensDistortion: ModuleLensDistortion,
   interlacing: ModuleInterlacing,
