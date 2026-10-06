@@ -26,8 +26,8 @@ const asset = (name) => new URL(`./assets/${name}.glb`, import.meta.url).href;
 /** Subjects bundled with the module. `target` = the point lights and camera aim at (m). */
 const SUBJECTS = {
   bust: { name: 'Marble bust', target: [0, 1.25, 0], view: { az: 0, el: 3, dist: 3.2, focal: 85 }, credit: 'Marble Bust 01 — Poly Haven (CC0)' },
-  'living-room-figure': { name: 'Film set + figure', target: [-0.55, 1.45, 0.25], view: { az: 10, el: 2, dist: 3.4, focal: 50 },
-    credit: 'Figure of a Dancer, Agathon Léonard, c. 1900 — Cooper Hewitt, Smithsonian (CC0); living room as below' },
+  'living-room-figure': { name: 'Film set + figure', target: [-1.05, 1.6, 0.55], view: { az: 10, el: 2, dist: 3.4, focal: 50 },
+    credit: 'James Garfield, bronze statuette by J. Q. A. Ward — National Portrait Gallery, Smithsonian (CC0); living room as below' },
   'living-room': { name: 'Film set: living room', target: [0, 0.75, -0.95], view: { az: 12, el: 8, dist: 4.6, focal: 35 },
     credit: 'Sofa, armchair, coffee table, side table, oil lamp, shelves, frame, plant, vase, nightstand — Poly Haven (CC0); rug texture: Floral Jacquard, Poly Haven (CC0)' },
 };
@@ -92,6 +92,23 @@ const PRESETS = {
     world: { ambient: 0.02 } },
 };
 
+const FIGURE_YAW = Math.PI / 2 + 0.25;   // set by eye: the statue faces the camera (+Z), a touch turned
+const FIGURE_AT = [-1.05, 0.55];        // x, z on the set floor: beside the coffee table, in front of the sofa
+/** Rotate an object so the plane fitted to its lowest vertices (a statue's base) is level. */
+function levelOnBase(obj) {
+  obj.updateMatrixWorld(true);
+  const pts = [], v = new THREE.Vector3();
+  obj.traverse((o) => { if (o.isMesh) { const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i += 3) pts.push(v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld).clone()); } });
+  const ys = pts.map((q) => q.y).sort((x, y) => x - y), cut = ys[Math.floor(ys.length * 0.04)];
+  const low = pts.filter((q) => q.y <= cut);
+  // least squares y = a·x + b·z + c
+  let sx = 0, sz = 0, sy = 0, sxx = 0, szz = 0, sxz = 0, sxy = 0, szy = 0; const n = low.length;
+  for (const q of low) { sx += q.x; sz += q.z; sy += q.y; sxx += q.x * q.x; szz += q.z * q.z; sxz += q.x * q.z; sxy += q.x * q.y; szy += q.z * q.y; }
+  const M = new THREE.Matrix3().set(sxx, sxz, sx, sxz, szz, sz, sx, sz, n).invert();
+  const sol = new THREE.Vector3(sxy, szy, sy).applyMatrix3(M);
+  const normal = new THREE.Vector3(-sol.x, 1, -sol.y).normalize();
+  obj.quaternion.premultiply(new THREE.Quaternion().setFromUnitVectors(normal, new THREE.Vector3(0, 1, 0)));
+}
 const DEFAULT_LIGHT = { type: 'spot', role: '', kelvin: 5600, color: null, intensity: 1, az: 45, el: 30, dist: 2,
   cone: 40, softness: 0.4, size: 0.8, shadow: { on: true, softness: 0.3 } };
 // Physical scale: intensity 1 at 2 m ≈ a well exposed key (E = I/d² ≈ 3). Moving a light away darkens
@@ -256,7 +273,7 @@ export async function createLightingStudio(container, opts = {}) {
       /** Put a copy standing on height y, centred on (x, z) after turning it by rotY. */
       const place = (o, x, z, rotY = 0, y = 0) => {
         const c = o.clone(); c.rotation.y = rotY; c.updateMatrixWorld(true);
-        const box = new THREE.Box3().setFromObject(c), ctr = box.getCenter(new THREE.Vector3());
+        const box = new THREE.Box3().setFromObject(c, true), ctr = box.getCenter(new THREE.Vector3());   // precise: rotated scans inflate the quick box
         c.position.set(x - ctr.x, y - box.min.y, z - ctr.z);
         g.add(c); return c;
       };
@@ -276,7 +293,15 @@ export async function createLightingStudio(container, opts = {}) {
       place(m.ArmChair_01, 1.45, -0.25, -1.0, 0.032).userData.layer = 'foreground';
       const ct = place(m.CoffeeTable_01, 0, 0.05, 0, 0.032); ct.scale.setScalar(0.8); ct.userData.layer = 'foreground';
       place(m.side_table_01, -1.2, -1.15, 0);
-      place(m.vintage_oil_lamp, -1.2, -1.15, 0.3, 0.548);
+      const lamp = place(m.vintage_oil_lamp, -1.2, -1.15, 0.3, 0.548);
+      // the flame: a small emissive glow inside the chimney (so the practical reads as lit, with real
+      // over-white values in a linear export); the light it gives is a separate lamp in the presets
+      const lb = new THREE.Box3().setFromObject(lamp, true);
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 12), new THREE.MeshStandardMaterial({ color: '#000000', emissive: '#ffb45c', emissiveIntensity: 40 }));
+      flame.scale.set(1, 1.8, 1);
+      flame.position.set(-1.2, lb.min.y + (lb.max.y - lb.min.y) * 0.56, -1.15);
+      flame.castShadow = false; flame.userData.noShadow = true; flame.name = 'flame';
+      g.add(flame);
       place(m.wooden_display_shelves_01, 2.15, -1.3, -Math.PI / 2);
       place(m.potted_plant_04, 2.15, -1.3, 0, 1.17);
       place(m.ClassicNightstand_01, -2.0, -1.25, 0);
@@ -292,18 +317,25 @@ export async function createLightingStudio(container, opts = {}) {
       const painting = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.42), new THREE.MeshStandardMaterial({ map: ptex, roughness: 0.8 }));
       painting.position.set(0, 1.65 - 0.028, -1.51 + 0.018); g.add(painting);
       if (id === 'living-room-figure') {
-        // a life-size statue (scanned porcelain figurine, mm → 1.75 m), standing in front of the sofa
-        const fig = (await loadGlb('figure_dancer')).clone();
-        fig.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.color?.set('#ece8e1'); o.material.roughness = 0.45; } });
-        const raw = new THREE.Box3().setFromObject(fig).getSize(new THREE.Vector3());
-        fig.scale.multiplyScalar(1.75 / raw.y);
-        const f = place(fig, -0.55, 0.25, 0, 0.032);
+        // a life-size bronze (scanned statuette, mm, lying tilted along X): stand it up on its base, face the camera
+        const scan = (await loadGlb('figure_garfield')).clone();
+        scan.quaternion.setFromUnitVectors(new THREE.Vector3(0.905, 0.009, 0.426).normalize(), new THREE.Vector3(0, 1, 0));
+        levelOnBase(scan);                                   // fine levelling: the base's own plane becomes horizontal
+        const turnTo = new THREE.Group(); turnTo.add(scan);
+        scan.updateMatrixWorld(true);
+        const sb = new THREE.Box3().setFromObject(scan, true), sc = sb.getCenter(new THREE.Vector3());
+        scan.position.set(-sc.x, -sb.min.y, -sc.z);        // centred on its own axis, so it turns in place
+        turnTo.rotation.y = FIGURE_YAW;
+        const fig = new THREE.Group(); fig.add(turnTo); fig.updateMatrixWorld(true);
+        const raw = new THREE.Box3().setFromObject(fig, true).getSize(new THREE.Vector3());
+        fig.scale.setScalar(1.95 / raw.y);                 // ~1.80 m figure + its bronze base
+        const f = place(fig, FIGURE_AT[0], FIGURE_AT[1], 0, 0.032);
         f.userData.layer = 'subject'; f.name = 'figure';
       }
     } else if (id === 'custom' && customGroup) {
       g.add(customGroup.clone());
     } else throw new Error(`Unknown subject "${id}"`);
-    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = !o.userData.noShadow; o.receiveShadow = true; } });
     return g;
   }
   function pedestal(h) {
@@ -1277,6 +1309,40 @@ export async function createLightingStudio(container, opts = {}) {
     return withPngText(blob, 'lightstudio', JSON.stringify(getState()));
   }
 
+  /**
+   * The photo as LINEAR light (scene-referred, before tone mapping), for HDR / RAW lessons in a host
+   * without 3D: Float32 RGB, rows top-down, scaled by the camera exposure so 1.0 ≈ diffuse white of a
+   * well exposed shot; highlights (a lit lamp, a hot spot) keep their real values above 1.
+   * → { data: Float32Array(w·h·3), w, h, peak, meta }
+   */
+  function exportLinear({ width = 512 } = {}) {
+    const h = Math.round(width / photoAspect);
+    const rt = new THREE.WebGLRenderTarget(width, h, { type: THREE.FloatType });
+    const cam = camera.clone(); cam.aspect = photoAspect; cam.updateProjectionMatrix();
+    const ov = overlay.visible, bg = scene.background; overlay.visible = false;
+    const saved = [];
+    if (wbActive()) for (const L of lights.values()) for (const o of [L.obj, L.extra]) if (o) { saved.push([o, o.color.clone()]); o.color.multiply(new THREE.Color(wbGain.x, wbGain.y, wbGain.z)); }
+    content.updateMatrixWorld(true);
+    renderer.setRenderTarget(rt); renderer.clear(); renderer.render(scene, cam); renderer.setRenderTarget(null);
+    for (const [o, c] of saved) o.color.copy(c);
+    overlay.visible = ov; scene.background = bg;
+    const px = new Float32Array(width * h * 4);
+    renderer.readRenderTargetPixels(rt, 0, 0, width, h, px);
+    rt.dispose();
+    const k = 2 ** (world.exposure + cameraStops());       // the camera's exposure, as in the photo
+    const data = new Float32Array(width * h * 3);
+    let peak = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < width; x++) {
+      const s = ((h - 1 - y) * width + x) * 4, d = (y * width + x) * 3;   // flip to top-down
+      for (let c = 0; c < 3; c++) { const v = Math.max(0, px[s + c] * k); data[d + c] = v; if (v > peak) peak = v; }
+    }
+    invalidate();
+    const c = getCamera();
+    return { data, w: width, h, peak, meta: { w: width, h, channels: 'RGB', layout: 'row-major, top-down, Float32 little-endian', colorSpace: 'linear sRGB (Rec.709 primaries)',
+      whiteLinear: 1.0, whiteNote: '1.0 ≈ diffuse white of this exposure (≈ 100 nits SDR reference)', peakLinear: +peak.toFixed(3), peakStopsOverWhite: +Math.log2(Math.max(peak, 1e-6)).toFixed(2),
+      camera: { focalMm: c.focalMm, fstop: c.fstop, shutter: c.shutter, iso: c.iso, wb: c.wb } } };
+  }
+
   /** Layer of an object for exportLayers: its own tag or its parent's; untagged = background. */
   const layerOf = (o) => { for (; o; o = o.parent) if (o.userData?.layer) return o.userData.layer; return 'background'; };
   /**
@@ -1480,7 +1546,7 @@ export async function createLightingStudio(container, opts = {}) {
     // events: 'select' | 'lightmove' | 'camera' | 'change' | 'focuspick' | 'challenge' → returns an unsubscribe function
     on(name, cb) { if (!listeners.has(name)) listeners.set(name, []); listeners.get(name).push(cb); return () => { const a = listeners.get(name); if (a) a.splice(a.indexOf(cb), 1); }; },
     resize, dispose,
-    snapshot, snapshotInfo, readSnapshot, exportLayers,
+    snapshot, snapshotInfo, readSnapshot, exportLayers, exportLinear,
     // your own models (optional — everything else works without downloading anything)
     importModel,
     // challenge: recreate a reference

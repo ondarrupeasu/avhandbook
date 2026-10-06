@@ -1235,7 +1235,7 @@ function ModuleShotTypes() {
           <span>{S.focalMm} mm</span><span>f/{S.fstop}</span><span>{S.shutter}s</span><span>ISO {S.iso}</span><span>subject {S.distance} m</span>
         </div>
       </div>
-      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>Subject: Figure of a Dancer (Agathon Léonard, c. 1900) — Cooper Hewitt, Smithsonian Design Museum (CC0).</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>Subject: James Garfield (J. Q. A. Ward) — National Portrait Gallery, Smithsonian (CC0).</p>
     </div>
   );
 }
@@ -1316,7 +1316,7 @@ function ModuleACES() {
 // ─────────────────────────────────────────────
 // Photoreal reference scene (render of the 3D studio's living-room set, from SetFrameR).
 const loadImg = src => new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
-const SCENE_NEAR=0.05, SCENE_FAR=8.25791;   // depth16 encoding: z = near + (R*256+G)/65535 * (far-near)
+const SCENE_NEAR=0.05, SCENE_FAR=8.64036;   // depth16 encoding: z = near + (R*256+G)/65535 * (far-near)
 
 function ModuleDepthOfField() {
   const [fstop, setFstop] = useState(2.8);
@@ -1966,7 +1966,7 @@ function ModuleCameraMovement() {
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H);
       const imgs=imgsRef.current;
       if(imgs){
-        const LD=[5.60,5.17,3.82,3.80];   // background, midground, foreground, subject — back → front
+        const LD=[6.05,5.55,4.17,4.04];   // background, midground, foreground, subject — back → front
         imgs.forEach((img,li)=>{
           const {dx,dy,rot,sc}=moveTransform(move,osc,t,parallax(LD[li]),W,H);
           ctx.save();
