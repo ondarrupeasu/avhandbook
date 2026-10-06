@@ -15,8 +15,19 @@ Rigor técnico según EBU, SMPTE, ITU-R, DCI. En pleno repaso 2026 (ver más aba
 - **Repo**: https://github.com/ondarrupeasu/avhandbook
 
 ## Stack
-React 18 + Vite 5. Sin librerías de UI: canvas nativo, CSS-in-JS inline y Web APIs.
-Todo vive en `src/App.jsx` (~2100 líneas, un solo componente `AVHandbook`).
+React 18 + Vite 5. Base: canvas nativo, CSS-in-JS inline y Web APIs.
+Todo vive en `src/App.jsx` (un solo componente `AVHandbook`; ya ~4400+ líneas).
+
+> **Cambio de criterio (6 oct 2026, Alex): se LEVANTA la autolimitación "sin librerías".**
+> Era parte de por qué algunos módulos salían "toscos" (p.ej. la ruleta DSLR tipo
+> MiddleThings quedó menos pulida). Ahora SÍ se pueden traer librerías **con cabeza**:
+> donde aporten de verdad (3D, iconos, animación), y **lazy-cargadas** (code-split) para
+> que el resto de la app siga ligera. Primer caso: el **estudio de iluminación 3D**
+> (three.js) en Portrait Lighting — el motor lo construye la sesión **SetFrameR** como
+> núcleo reutilizable framework-agnostic y yo lo envuelvo en React aquí; TODO horneado
+> (escenario+bodegón+sujeto+luces), el alumno no descarga nada; se mantiene el 2.5D
+> actual como intro + botón "Entrar al estudio 3D". Pendiente: pasada de pulido a la
+> ruleta y otros módulos "toscos" cuando toque.
 
 Paleta: fondo `#060609`, accent amber `#f59e0b`, tipografía system-ui.
 Hub con cards por categoría → módulo individual. Upload de imagen global en el

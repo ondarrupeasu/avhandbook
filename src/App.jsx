@@ -258,8 +258,8 @@ function ImageUploader({ userImage, onUpload }) {
   const ref = useRef();
   return (
     <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-      <button onClick={()=>ref.current.click()} style={styles.btnSecondary}>
-        📁 {T.uploadBtn}
+      <button onClick={()=>ref.current.click()} style={{...styles.btnSecondary,display:"inline-flex",alignItems:"center",gap:7}}>
+        <Icon name="upload" size={14}/> {T.uploadBtn}
       </button>
       <input ref={ref} type="file" accept="image/*" style={{display:"none"}}
         onChange={e=>{
@@ -341,7 +341,7 @@ function ModuleAspectRatio({ image }) {
       <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
-      <p style={styles.noteText}>📌 {RATIOS[sel].note}</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>{RATIOS[sel].note}</p>
     </div>
   );
 }
@@ -637,7 +637,7 @@ function ModuleChromaSubsampling() {
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8}}>PIXEL SAMPLING (8×8) — which chroma samples the codec keeps</div>
         <canvas ref={gridRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
-      <p style={styles.noteText}>📌 {S.note}</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>{S.note}</p>
     </div>
   );
 }
@@ -964,7 +964,7 @@ function ModuleRollingShutter() {
       <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",width:"100%",maxWidth:720}}/>
       </div>
-      <p style={styles.noteText}>📌 At high speeds, the yellow bar visibly leans (skews) due to the sequential line readout. This is rolling shutter. Blue line shows the sensor's current read row.</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>At high speeds, the yellow bar visibly leans (skews) due to the sequential line readout. This is rolling shutter. Blue line shows the sensor's current read row.</p>
     </div>
   );
 }
@@ -1026,7 +1026,7 @@ function ModuleMoire() {
       <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",width:"100%",maxWidth:720}}/>
       </div>
-      <p style={styles.noteText}>📌 Move Grid A and B to similar values to see moiré intensify. Enable AA to see how filtering reduces the artifact (at the cost of some sharpness).</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>Move Grid A and B to similar values to see moiré intensify. Enable AA to see how filtering reduces the artifact (at the cost of some sharpness).</p>
     </div>
   );
 }
@@ -1239,7 +1239,7 @@ function ModuleShotTypes() {
           <canvas ref={resultRef} style={{display:"block",maxWidth:"100%"}}/>
         </div>
       </div>
-      <p style={styles.noteText}>📌 {S.note}</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>{S.note}</p>
     </div>
   );
 }
@@ -1673,21 +1673,21 @@ function kelvinToRGB(K){
   return [cl(r),cl(g),cl(b)];
 }
 const CAMERA_WB = [
-  { K:3200, label:"Tungsten", icon:"💡" },
-  { K:4000, label:"Fluorescent", icon:"🏢" },
-  { K:5500, label:"Daylight", icon:"☀️" },
-  { K:6500, label:"Cloudy", icon:"☁️" },
-  { K:7500, label:"Shade", icon:"⛅" },
+  { K:3200, label:"Tungsten", icon:"bulb" },
+  { K:4000, label:"Fluorescent", icon:"tube" },
+  { K:5500, label:"Daylight", icon:"sun" },
+  { K:6500, label:"Cloudy", icon:"cloud" },
+  { K:7500, label:"Shade", icon:"cloud" },
 ];
 const LIGHT_SOURCES = [
-  { K:1900, label:"Candle / fire", icon:"🕯️" },
-  { K:2700, label:"Tungsten bulb", icon:"💡" },
-  { K:3200, label:"Studio tungsten", icon:"🎬" },
-  { K:4000, label:"Warm LED", icon:"🔆" },
-  { K:4500, label:"Fluorescent", icon:"🏢" },
-  { K:5500, label:"Midday sun", icon:"☀️" },
-  { K:6500, label:"Overcast", icon:"☁️" },
-  { K:7500, label:"Open shade", icon:"⛅" },
+  { K:1900, label:"Candle / fire", icon:"flame" },
+  { K:2700, label:"Tungsten bulb", icon:"bulb" },
+  { K:3200, label:"Studio tungsten", icon:"film" },
+  { K:4000, label:"Warm LED", icon:"zap" },
+  { K:4500, label:"Fluorescent", icon:"tube" },
+  { K:5500, label:"Midday sun", icon:"sun" },
+  { K:6500, label:"Overcast", icon:"cloud" },
+  { K:7500, label:"Open shade", icon:"cloud" },
 ];
 
 function ModuleColorTemp() {
@@ -1726,7 +1726,7 @@ function ModuleColorTemp() {
           display:"flex",alignItems:"center",gap:5,
         }}>
           <span style={{width:12,height:12,borderRadius:3,display:"inline-block",background:`rgb(${kelvinToRGB(it.K).join(",")})`,border:"1px solid #0006"}}/>
-          {it.icon} {it.label}
+          <Icon name={it.icon} size={13}/> {it.label}
         </button>
       ))}
     </div>
@@ -1738,11 +1738,11 @@ function ModuleColorTemp() {
         <strong>Colour temperature</strong> (Kelvin) describes a light's colour vs a black-body radiator: <strong>lower K = warmer (reddish)</strong>, <strong>higher K = cooler (bluish)</strong>. The camera's <strong>white balance</strong> tells it what colour to treat as white. When <em>WB matches the light</em>, whites stay white. When they differ, you get a <strong>cast</strong>: set WB higher than the light → warm/orange image; set it lower → blue image. Pick a camera WB mode and a real light source below and watch the cast on the scene. This mismatch is often used <em>creatively</em> (e.g. tungsten WB under daylight for a cold look). D65 (6500K) is the reference white for sRGB/Rec.709.
       </InfoBox>
       <div style={{marginBottom:12}}>
-        <div style={{color:"#6b7280",fontSize:11,fontFamily:"monospace",marginBottom:6}}>📷 CAMERA WHITE BALANCE</div>
+        <div style={{color:"#6b7280",fontSize:11,fontFamily:"monospace",marginBottom:6,display:"flex",alignItems:"center",gap:6}}><Icon name="camera" size={13}/> CAMERA WHITE BALANCE</div>
         <Row items={CAMERA_WB} active={wb} onPick={setWb}/>
       </div>
       <div style={{marginBottom:14}}>
-        <div style={{color:"#6b7280",fontSize:11,fontFamily:"monospace",marginBottom:6}}>💡 SCENE LIGHT SOURCE</div>
+        <div style={{color:"#6b7280",fontSize:11,fontFamily:"monospace",marginBottom:6,display:"flex",alignItems:"center",gap:6}}><Icon name="bulb" size={13}/> SCENE LIGHT SOURCE</div>
         <Row items={LIGHT_SOURCES} active={src} onPick={setSrc}/>
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
@@ -1982,7 +1982,7 @@ function ModuleCameraMovement() {
       <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
         <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
       </div>
-      <p style={styles.noteText}>📌 {M.note}</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>{M.note}</p>
     </div>
   );
 }
@@ -2283,7 +2283,7 @@ function ModuleScopes({ image }) {
   return (
     <div>
       <InfoBox>
-        <strong>Scopes</strong> are objective measurement tools — more reliable than the camera LCD for exposure and colour. Pick a scope; it appears as a <strong>picture-in-picture overlay</strong> on the image, the way a camera or monitor shows it. The <strong>Histogram</strong> (monochrome luma) shows the tonal distribution. The <strong>Waveform</strong> maps luminance (IRE) against horizontal position — the standard for exposure and clipping (EBU R 103). The <strong>RGB Parade</strong> splits it into R/G/B for white balance. The <strong>Vectorscope</strong> plots chrominance on a polar diagram (distance = saturation, angle = hue) with 75% targets and the amber skin-tone line. Grade below and watch the scope respond — <em>Hue</em> rotates every colour, so the vectorscope trace spins around the centre. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/video">analogue video as voltage (1 Vpp, IRE)</VoltLink> — in Volt.</span>
+        <strong>Scopes</strong> are objective measurement tools — more reliable than the camera LCD for exposure and colour. Pick a scope; it appears as a <strong>picture-in-picture overlay</strong> on the image, the way a camera or monitor shows it. The <strong>Histogram</strong> (monochrome luma) shows the tonal distribution. The <strong>Waveform</strong> maps luminance (IRE) against horizontal position — the standard for exposure and clipping (EBU R 103). The <strong>RGB Parade</strong> splits it into R/G/B for white balance. The <strong>Vectorscope</strong> plots chrominance on a polar diagram (distance = saturation, angle = hue) with 75% targets and the amber skin-tone line. Grade below and watch the scope respond — <em>Hue</em> rotates every colour, so the vectorscope trace spins around the centre. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}><Icon name="zap" size={12} style={{marginRight:5,verticalAlign:"-0.1em"}}/><strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/video">analogue video as voltage (1 Vpp, IRE)</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
         {SCOPE_TYPES.map(([k,lbl])=>(
@@ -2317,15 +2317,51 @@ function ModuleScopes({ image }) {
 // ─────────────────────────────────────────────
 // Shared UI Components
 // ─────────────────────────────────────────────
+// Crisp inline icons (Lucide-style, stroke, currentColor) — replace toy emoji in the chrome.
+const ICONS = {
+  upload:["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4","M7 10l5-5 5 5","M12 5v10"],
+  x:["M18 6 6 18","M6 6l12 12"],
+  arrowLeft:["M19 12H5","M12 19l-7-7 7-7"],
+  chevron:["M9 18l6-6-6-6"],
+  search:["M21 21l-4.35-4.35","M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14z"],
+  info:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M12 11v5","M12 7.5h.01"],
+  sun:["M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z","M12 1v2","M12 21v2","M4.2 4.2l1.4 1.4","M18.4 18.4l1.4 1.4","M1 12h2","M21 12h2","M4.2 19.8l1.4-1.4","M18.4 5.6l1.4-1.4"],
+  cloud:["M17.5 19H9a7 7 0 1 1 6.7-9H17.5a4.5 4.5 0 1 1 0 9z"],
+  bulb:["M9 18h6","M10 22h4","M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"],
+  flame:["M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"],
+  tube:["M4 9h16a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2z","M7 9v6","M12 9v6","M17 9v6"],
+  film:["M3 10h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z","M20 6 3.5 10.5l-.8-2.3a1.6 1.6 0 0 1 1.1-2l12.9-3.8a1.6 1.6 0 0 1 2 1.1z","M7 5.4l2.6 3.3","M13 3.6l2.6 3.4"],
+  zap:["M13 2 3 14h9l-1 8 10-12h-9z"],
+  camera:["M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4z","M12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"],
+  volume:["M11 5 6 9H2v6h4l5 4z","M15.5 8.5a5 5 0 0 1 0 7","M19 5a9 9 0 0 1 0 14"],
+  captions:["M3 5h18a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z","M7 15h5","M15 15h2","M7 11h2","M12 11h5"],
+  tag:["M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z","M7.5 7.5h.01"],
+  clock:["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M12 7v5l3 2"],
+  network:["M9 2h6v4H9z","M3 18h6v4H3z","M15 18h6v4h-6z","M12 6v4","M6 18v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"],
+  sliders:["M4 7h16","M4 12h16","M4 17h16","M9 5.5v3","M15 10.5v3","M7 15.5v3"],
+  mic:["M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z","M19 10v2a7 7 0 0 1-14 0v-2","M12 19v3"],
+  person:["M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8z","M4 21c0-4 4-6 8-6s8 2 8 6"],
+  monitor:["M3 5h18a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z","M8 20h8","M12 16v4"],
+  wave:["M2 12h3l2.5-7 4 14 3-10 2 3h5.5"],
+  send:["M22 2 11 13","M22 2 15 22l-4-9-9-4z"],
+  tally:["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z","M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"],
+  box:["M21 8 12 3 3 8v8l9 5 9-5z","M3 8l9 5 9-5","M12 13v8"],
+};
+function Icon({ name, size=16, style }){
+  const ds=ICONS[name]||[];
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{display:"inline-block",verticalAlign:"-0.125em",flexShrink:0,...style}}>{ds.map((d,i)=><path key={i} d={d}/>)}</svg>;
+}
+
 function InfoBox({ children }) {
   const [open, setOpen] = useState(false);
   return (
     <div style={{marginBottom:16}}>
-      <button onClick={()=>setOpen(o=>!o)} style={{...styles.btnSecondary,fontSize:11,padding:"4px 10px"}}>
-        {open?"▼ Hide explanation":"▶ Show explanation"}
+      <button onClick={()=>setOpen(o=>!o)} style={{...styles.btnSecondary,fontSize:11,padding:"4px 10px",display:"inline-flex",alignItems:"center",gap:6}}>
+        <Icon name="chevron" size={13} style={{transform:open?"rotate(90deg)":"none",transition:"transform .2s var(--ease)"}}/>
+        {open?"Hide explanation":"Show explanation"}
       </button>
       {open && (
-        <div style={{marginTop:8,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:"12px 16px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
+        <div className="avh-fade" style={{marginTop:8,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:"12px 16px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
           {children}
         </div>
       )}
@@ -2350,6 +2386,7 @@ const styles = {
     padding:"6px 12px",borderRadius:6,border:"2px solid #ff5a4d",
     background:"#ff5a4d22",color:"#ff5a4d",cursor:"pointer",
     fontSize:12,fontFamily:"monospace",fontWeight:"bold",
+    boxShadow:"0 2px 10px rgba(255,90,77,.18)",
   },
   btnChip: {
     padding:"6px 12px",borderRadius:6,border:"1px solid #2a2b32",
@@ -2387,7 +2424,7 @@ const fmtShutter=v=>"1/"+v+"s", fmtAperture=v=>"f/"+v, fmtIso=v=>String(v);
 // DSLR/cine-style horizontal detented dial (canvas): drag/flick with momentum + snap, keyboard ◀▶.
 // index handled by remounting (key), so the effect sets up once per parameter.
 function ExposureDial({ values, index, format, onChange, accent="#f59e0b" }){
-  const cRef=useRef(); const st=useRef({fpos:index,vel:0,dragging:false,raf:0,lastX:0,samples:[],lastEmit:index,W:0,H:60,ctx:null});
+  const cRef=useRef(); const st=useRef({fpos:index,vel:0,dragging:false,raf:0,lastX:0,samples:[],lastEmit:index,W:0,H:64,ctx:null});
   useEffect(()=>{
     const c=cRef.current; if(!c) return; const s=st.current; s.fpos=index; s.lastEmit=index;
     const dpr=Math.min(2,window.devicePixelRatio||1);
@@ -2397,21 +2434,35 @@ function ExposureDial({ values, index, format, onChange, accent="#f59e0b" }){
     function emit(){ const ni=Math.round(s.fpos); if(ni!==s.lastEmit){ s.lastEmit=ni; onChange&&onChange(ni); } }
     function draw(){
       const ctx=s.ctx, W=s.W, H=s.H, cx=W/2; if(!ctx)return;
-      ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
-      const g=ctx.createLinearGradient(0,0,W,0); g.addColorStop(0,"#0a0d12"); g.addColorStop(0.5,"rgba(10,13,18,0)"); g.addColorStop(1,"#0a0d12");
+      const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,"#161922"); bg.addColorStop(1,"#0a0d12");
+      ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+      // center selection band (soft accent glow)
+      const bandW=pps*0.96;
+      const band=ctx.createLinearGradient(cx-bandW/2,0,cx+bandW/2,0);
+      band.addColorStop(0,accent+"00"); band.addColorStop(0.5,accent+"26"); band.addColorStop(1,accent+"00");
+      ctx.fillStyle=band; ctx.fillRect(cx-bandW/2,5,bandW,H-10);
       const yMid=H*0.60;
+      // baseline rail
+      ctx.strokeStyle="rgba(148,163,184,.12)"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(0,yMid+13); ctx.lineTo(W,yMid+13); ctx.stroke();
       for(let i=0;i<values.length;i++){
         const x=cx+(i-s.fpos)*pps; if(x<-50||x>W+50) continue;
         const near=1-Math.min(1,Math.abs(x-cx)/(W*0.5)); const sel=Math.round(s.fpos)===i;
-        ctx.strokeStyle=`rgba(148,163,184,${0.18+near*0.55})`; ctx.lineWidth=sel?2:1;
-        ctx.beginPath(); ctx.moveTo(x,yMid); ctx.lineTo(x,yMid+(sel?11:7)); ctx.stroke();
-        ctx.fillStyle= sel? accent : `rgba(203,213,225,${0.28+near*0.55})`;
-        ctx.font=`${sel?"bold ":""}${Math.round(11+near*4)}px ui-monospace, monospace`; ctx.textAlign="center";
-        ctx.fillText(format(values[i]), x, yMid-9);
+        ctx.strokeStyle= sel? accent : `rgba(148,163,184,${0.16+near*0.5})`; ctx.lineWidth=sel?2.5:1;
+        ctx.beginPath(); ctx.moveTo(x,yMid+2); ctx.lineTo(x,yMid+(sel?13:8)); ctx.stroke();
+        ctx.fillStyle= sel? accent : `rgba(203,213,225,${0.26+near*0.5})`;
+        ctx.font=`${sel?"600 ":""}${Math.round(11+near*5)}px ui-monospace, monospace`; ctx.textAlign="center";
+        if(sel){ ctx.shadowColor=accent; ctx.shadowBlur=14; }
+        ctx.fillText(format(values[i]), x, yMid-10);
+        ctx.shadowBlur=0;
       }
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);   // edge fade
-      ctx.strokeStyle=accent; ctx.globalAlpha=0.45; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(cx,H*0.28); ctx.lineTo(cx,H); ctx.stroke(); ctx.globalAlpha=1;
-      ctx.fillStyle=accent; ctx.beginPath(); ctx.moveTo(cx,H*0.28); ctx.lineTo(cx-6,H*0.28-9); ctx.lineTo(cx+6,H*0.28-9); ctx.closePath(); ctx.fill();
+      // edge fade
+      const g=ctx.createLinearGradient(0,0,W,0); g.addColorStop(0,"#0a0d12"); g.addColorStop(0.1,"rgba(10,13,18,0)"); g.addColorStop(0.9,"rgba(10,13,18,0)"); g.addColorStop(1,"#0a0d12");
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      // center pointer + line (glow)
+      ctx.save(); ctx.shadowColor=accent; ctx.shadowBlur=10;
+      ctx.fillStyle=accent; ctx.beginPath(); ctx.moveTo(cx,15); ctx.lineTo(cx-6,5); ctx.lineTo(cx+6,5); ctx.closePath(); ctx.fill(); ctx.restore();
+      ctx.strokeStyle=accent; ctx.globalAlpha=0.5; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(cx,15); ctx.lineTo(cx,H-5); ctx.stroke(); ctx.globalAlpha=1;
     }
     function anim(){
       if(s.dragging){ s.raf=0; return; }
@@ -2430,7 +2481,7 @@ function ExposureDial({ values, index, format, onChange, accent="#f59e0b" }){
     return ()=>{ cancelAnimationFrame(s.raf); c.removeEventListener("pointerdown",onDown); c.removeEventListener("pointermove",onMove); c.removeEventListener("pointerup",onUp); c.removeEventListener("pointercancel",onUp); c.removeEventListener("keydown",onKey); window.removeEventListener("resize",onResize); };
   },[values,format,accent]);
   return <canvas ref={cRef} tabIndex={0} role="slider" aria-label="exposure dial"
-    style={{display:"block",width:"100%",height:60,borderRadius:8,cursor:"grab",touchAction:"none",outline:"none",border:`1px solid ${accent}44`,background:"#0a0d12"}}/>;
+    style={{display:"block",width:"100%",height:64,borderRadius:8,cursor:"grab",touchAction:"none",outline:"none",border:`1px solid ${accent}44`,background:"#0a0d12"}}/>;
 }
 function ModuleExposureTriangle({ image }) {
   const [sh,setSh]=useState(6);   // index → 1/50
@@ -2608,7 +2659,7 @@ function ModuleFalseColor({ image }) {
   return (
     <div>
       <InfoBox>
-        <strong>False colour</strong> paints every pixel by its <strong>luminance (IRE)</strong> instead of its real colour, so you can judge <em>exposure</em> at a glance — no guessing on an uncalibrated monitor. It is the on-set companion to the waveform. The palette is a convention (ARRI, Blackmagic and RED share the idea): <span style={{color:"#e02828"}}>red</span> = clipped highlights, <span style={{color:"#eb781e"}}>orange</span> just below clip, <span style={{color:"#dcb428"}}>yellow</span> bright, <span style={{color:"#28aa5a"}}>green</span> ≈ 18% middle grey, <span style={{color:"#2850d2"}}>blue</span> shadows, <span style={{color:"#5028a0"}}>purple</span> near black. The trick on set: expose a face so the skin sits around the pink/grey band, and make sure nothing you care about is red. Like a display LUT, it is a <em>monitoring overlay</em> — it never touches the recorded file. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/video">analogue video as voltage (1 Vpp, IRE)</VoltLink> — in Volt.</span>
+        <strong>False colour</strong> paints every pixel by its <strong>luminance (IRE)</strong> instead of its real colour, so you can judge <em>exposure</em> at a glance — no guessing on an uncalibrated monitor. It is the on-set companion to the waveform. The palette is a convention (ARRI, Blackmagic and RED share the idea): <span style={{color:"#e02828"}}>red</span> = clipped highlights, <span style={{color:"#eb781e"}}>orange</span> just below clip, <span style={{color:"#dcb428"}}>yellow</span> bright, <span style={{color:"#28aa5a"}}>green</span> ≈ 18% middle grey, <span style={{color:"#2850d2"}}>blue</span> shadows, <span style={{color:"#5028a0"}}>purple</span> near black. The trick on set: expose a face so the skin sits around the pink/grey band, and make sure nothing you care about is red. Like a display LUT, it is a <em>monitoring overlay</em> — it never touches the recorded file. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}><Icon name="zap" size={12} style={{marginRight:5,verticalAlign:"-0.1em"}}/><strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/video">analogue video as voltage (1 Vpp, IRE)</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
         {[["False colour",true],["Source",false]].map(([lbl,v])=>(
@@ -2839,10 +2890,10 @@ const CONTAINERS=[
    video:["DV","MJPEG","DivX/Xvid"], audio:["PCM","MP3"], subs:"No", tc:"No", meta:"Minimal",
    note:"Legacy from 1992. No proper timecode, awkward past 4 GB, no modern metadata. Avoid for new work."},
 ];
-function ContainerRow({label,value,accent}){
+function ContainerRow({label,value,accent,icon}){
   return (
     <div style={{display:"flex",gap:10,padding:"7px 0",borderBottom:"1px solid #161c26",fontSize:12.5}}>
-      <span style={{color:"#6b7280",width:96,flexShrink:0,fontFamily:"monospace",fontSize:11}}>{label}</span>
+      <span style={{color:"#6b7280",width:96,flexShrink:0,fontFamily:"monospace",fontSize:11,display:"inline-flex",alignItems:"center",gap:6}}>{icon&&<Icon name={icon} size={13}/>}{label}</span>
       <span style={{color:accent||"#d1d5db"}}>{Array.isArray(value)?value.join(" · "):value}</span>
     </div>
   );
@@ -2856,7 +2907,7 @@ function ModuleContainers() {
         A <strong>container</strong> (or <em>wrapper</em>) is the file on disk — the box. The <strong>codec</strong> is what's inside it. They are <em>independent</em>: the same H.264 stream can live in a <code>.mp4</code>, a <code>.mov</code> or a <code>.mkv</code>; a <code>.mov</code> might hold ProRes <em>or</em> H.264. <strong>So the extension never tells you the codec</strong> — that is the single most common confusion. A container's job is to <em>multiplex</em> several tracks — video, one or more audio tracks, subtitles, <strong>timecode</strong> and metadata — and keep them in sync. What separates them is <em>what they're allowed to carry</em> and <em>how well</em>: <code>.mp4</code> for universal delivery, <code>.mov</code>/<code>.mxf</code> for professional post and broadcast, <code>.mkv</code> for maximum flexibility.
       </InfoBox>
       <div style={{background:"#0f1a10",border:"1px solid #1f3a24",borderRadius:8,padding:"10px 14px",marginBottom:14,color:"#86efac",fontSize:13}}>
-        📦 <strong>Container ≠ codec.</strong> The box is not the same as what's inside it. <code>.mov</code> can hold ProRes or H.264 — you can't know from the extension alone.
+        <Icon name="box" size={14} style={{marginRight:6,verticalAlign:"-0.15em"}}/><strong>Container ≠ codec.</strong> The box is not the same as what's inside it. <code>.mov</code> can hold ProRes or H.264 — you can't know from the extension alone.
       </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
         {CONTAINERS.map(x=>(
@@ -2870,11 +2921,11 @@ function ModuleContainers() {
             <span style={{fontSize:11,fontFamily:"monospace",padding:"3px 8px",borderRadius:4,background:c.open?"#134e2a":"#4c1d1d",color:c.open?"#86efac":"#fca5a5"}}>{c.open?"OPEN":"PROPRIETARY"}</span>
           </div>
           <div style={{color:"#6b7280",fontSize:11,marginBottom:8}}>{c.lic}</div>
-          <ContainerRow label="🎬 video" value={c.video} accent="#93c5fd"/>
-          <ContainerRow label="🔊 audio" value={c.audio} accent="#fcd34d"/>
-          <ContainerRow label="💬 subtitles" value={c.subs}/>
-          <ContainerRow label="⏱ timecode" value={c.tc}/>
-          <ContainerRow label="🏷 metadata" value={c.meta}/>
+          <ContainerRow icon="film" label="video" value={c.video} accent="#93c5fd"/>
+          <ContainerRow icon="volume" label="audio" value={c.audio} accent="#fcd34d"/>
+          <ContainerRow icon="captions" label="subtitles" value={c.subs}/>
+          <ContainerRow icon="clock" label="timecode" value={c.tc}/>
+          <ContainerRow icon="tag" label="metadata" value={c.meta}/>
         </div>
         <div style={{flex:"1 1 240px",minWidth:220,background:"#16171c",borderRadius:10,padding:"14px 18px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>WHEN TO USE</div>
@@ -2888,7 +2939,7 @@ function ModuleContainers() {
 // ─────────────────────────────────────────────
 // MODULE: Signals & Connectivity
 // ─────────────────────────────────────────────
-const CARRIES={video:["🎬","video"],audio:["🔊","audio"],data:["🖧","data"],control:["🎛","control"],tally:["🔴","tally"],power:["⚡","power"],tc:["⏱","timecode"]};
+const CARRIES={video:["film","video"],audio:["volume","audio"],data:["network","data"],control:["sliders","control"],tally:["tally","tally"],power:["zap","power"],tc:["clock","timecode"]};
 const SIGNALS=[
   {id:"hdmi",cat:"physical",name:"HDMI",conn:"HDMI Type-A",carries:["video","audio","control"],dist:"~5 m passive · ~15–30 m active/optical",bw:"up to 48 Gb/s (2.1)",lic:"Licensed",open:false,
    note:"Consumer/prosumer. The connector doesn't lock — it pulls out easily, so on set you tape it or use a clamp. No native long runs; convert to SDI or fibre for distance."},
@@ -2925,10 +2976,10 @@ function ModuleSignals() {
   return (
     <div>
       <InfoBox>
-        Signals are easiest to understand on <strong>three separate axes</strong>, because people constantly mix them up. <strong>(1) The physical interface</strong> — the cable and connector you can hold: HDMI, SDI (BNC coax), fibre, Ethernet (RJ45), USB-C, XLR. <strong>(2) The transport / protocol</strong> — <em>how</em> the data travels, especially over a network: <span style={{color:"#2dd4bf"}}>NDI, SRT, RTMP, Dante, Art-Net are NOT cables</span> — they ride <em>on top of</em> Ethernet/IP. <strong>(3) What it carries</strong> — video, audio, data, control, tally, power; some cables carry several at once (SDI = video + audio + timecode). Then judge each by <em>distance limits</em> and <em>open vs licensed</em>. The classic trap: a 3-pin <strong>XLR</strong> can be <em>balanced audio</em> or <em>DMX lighting data</em> — same plug, totally different signal. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/lineas">75 Ω / 120 Ω termination & reflections</VoltLink> · <VoltLink to="n5/impedancia">impedance</VoltLink> — in Volt.</span>
+        Signals are easiest to understand on <strong>three separate axes</strong>, because people constantly mix them up. <strong>(1) The physical interface</strong> — the cable and connector you can hold: HDMI, SDI (BNC coax), fibre, Ethernet (RJ45), USB-C, XLR. <strong>(2) The transport / protocol</strong> — <em>how</em> the data travels, especially over a network: <span style={{color:"#2dd4bf"}}>NDI, SRT, RTMP, Dante, Art-Net are NOT cables</span> — they ride <em>on top of</em> Ethernet/IP. <strong>(3) What it carries</strong> — video, audio, data, control, tally, power; some cables carry several at once (SDI = video + audio + timecode). Then judge each by <em>distance limits</em> and <em>open vs licensed</em>. The classic trap: a 3-pin <strong>XLR</strong> can be <em>balanced audio</em> or <em>DMX lighting data</em> — same plug, totally different signal. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}><Icon name="zap" size={12} style={{marginRight:5,verticalAlign:"-0.1em"}}/><strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/lineas">75 Ω / 120 Ω termination & reflections</VoltLink> · <VoltLink to="n5/impedancia">impedance</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{background:"#0f1a1a",border:"1px solid #164e46",borderRadius:8,padding:"10px 14px",marginBottom:14,color:"#5eead4",fontSize:13}}>
-        🌐 <strong>Cables vs transports.</strong> Ethernet is the road; <strong>NDI, SRT, Dante, Art-Net</strong> are vehicles that drive on it. Asking "NDI or a cable?" is the wrong question — NDI <em>runs over</em> a cable.
+        <Icon name="network" size={14} style={{marginRight:6,verticalAlign:"-0.15em"}}/><strong>Cables vs transports.</strong> Ethernet is the road; <strong>NDI, SRT, Dante, Art-Net</strong> are vehicles that drive on it. Asking "NDI or a cable?" is the wrong question — NDI <em>runs over</em> a cable.
       </div>
       <div style={{marginBottom:6,color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.08em"}}>PHYSICAL INTERFACES (cables &amp; connectors)</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>{phys.map(Chip)}</div>
@@ -2946,7 +2997,7 @@ function ModuleSignals() {
           <div style={{display:"flex",gap:10,padding:"7px 0",borderBottom:"1px solid #161c26",fontSize:12.5}}>
             <span style={{color:"#6b7280",width:96,flexShrink:0,fontFamily:"monospace",fontSize:11}}>carries</span>
             <span style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-              {s.carries.map(k=>(<span key={k} style={{color:"#d1d5db"}}>{CARRIES[k][0]} {CARRIES[k][1]}</span>))}
+              {s.carries.map(k=>(<span key={k} style={{color:"#d1d5db",display:"inline-flex",alignItems:"center",gap:5}}><Icon name={CARRIES[k][0]} size={13}/> {CARRIES[k][1]}</span>))}
             </span>
           </div>
           <ContainerRow label="max distance" value={s.dist} accent="#fcd34d"/>
@@ -3160,7 +3211,7 @@ function ModuleFlicker({ image }) {
   return (
     <div>
       <InfoBox>
-        <strong>Flicker</strong> comes from lights that pulse faster than the eye can see. Mains lighting runs at <strong>2× the grid frequency</strong> (100 Hz on 50 Hz mains, 120 Hz on 60 Hz); cheap <strong>LED and HMI</strong> fixtures pulse via PWM dimming. If the camera's exposure time isn't an exact multiple of that pulse, each frame — or, with a rolling shutter, each <em>band of scan lines</em> — catches a different part of the cycle, so you get <strong>rolling brightness bands</strong> or whole-frame flicker. The fix on set is to match up: shoot 50i/25p under 50 Hz, 60i/30p under 60 Hz, keep the shutter at a matching angle (172.8°/180°), or use flicker-free fixtures. Global-shutter and film cameras flicker as a whole frame; CMOS rolling shutters show the moving bands here. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/flicker">the electrical cause (50/60 Hz, dimmers)</VoltLink> — in Volt.</span>
+        <strong>Flicker</strong> comes from lights that pulse faster than the eye can see. Mains lighting runs at <strong>2× the grid frequency</strong> (100 Hz on 50 Hz mains, 120 Hz on 60 Hz); cheap <strong>LED and HMI</strong> fixtures pulse via PWM dimming. If the camera's exposure time isn't an exact multiple of that pulse, each frame — or, with a rolling shutter, each <em>band of scan lines</em> — catches a different part of the cycle, so you get <strong>rolling brightness bands</strong> or whole-frame flicker. The fix on set is to match up: shoot 50i/25p under 50 Hz, 60i/30p under 60 Hz, keep the shutter at a matching angle (172.8°/180°), or use flicker-free fixtures. Global-shutter and film cameras flicker as a whole frame; CMOS rolling shutters show the moving bands here. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}><Icon name="zap" size={12} style={{marginRight:5,verticalAlign:"-0.1em"}}/><strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/flicker">the electrical cause (50/60 Hz, dimmers)</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
         <div style={{display:"flex",gap:8}}>
@@ -3401,17 +3452,17 @@ function ModulePortraitLight() {
 // MODULE: The Audio Chain (signal flow)
 // ─────────────────────────────────────────────
 const AUDIO_STAGES=[
-  {id:"source",icon:"🗣",name:"Source",sub:"voice · instrument · room",gain:false,
+  {id:"source",icon:"person",name:"Source",sub:"voice · instrument · room",gain:false,
    detail:"The real sound in the air — acoustic energy. Its level, the distance to it and the room's acoustics are decided here, before any electronics touch it. The golden rule of production sound: the best fix is always at the source. Get the mic close and control the room; nothing downstream recovers a bad acoustic."},
-  {id:"mic",icon:"🎤",name:"Microphone",sub:"transducer · mic level",gain:false,
+  {id:"mic",icon:"mic",name:"Microphone",sub:"transducer · mic level",gain:false,
    detail:"Converts acoustic pressure into a tiny electrical signal — mic level, roughly −60 to −40 dBu. The polar pattern and placement decide what it captures and what it rejects. Condenser mics need +48 V phantom power; dynamics don't."},
-  {id:"pre",icon:"🎚",name:"Preamp / Gain",sub:"the critical stage",gain:true,
+  {id:"pre",icon:"sliders",name:"Preamp / Gain",sub:"the critical stage",gain:true,
    detail:"Amplifies mic level up toward line level. THIS is where you set gain staging: enough gain to sit the signal well above the noise floor, but with headroom so peaks never reach 0 dBFS. Too little gain = a noisy, thin recording; too much = clipping you can't undo. The single most important knob on set."},
-  {id:"rec",icon:"🎛",name:"Recorder / Mixer",sub:"capture · monitor · meter",gain:true,
+  {id:"rec",icon:"monitor",name:"Recorder / Mixer",sub:"capture · monitor · meter",gain:true,
    detail:"Records to file (48 kHz / 24-bit for A/V) and/or mixes several sources. The meters live here — dBFS, peak and RMS. Multi-track keeps every mic separate for post; a mixdown bakes them together. Set record level with headroom, monitor on headphones."},
-  {id:"post",icon:"💻",name:"Post",sub:"edit · mix",gain:true,
+  {id:"post",icon:"wave",name:"Post",sub:"edit · mix",gain:true,
    detail:"Editing and cleanup, ADR and Foley, then the D/M/E mix (dialogue-music-effects). Levels are balanced for intelligibility and shaped for the delivery format. → see the Post Audio Flow module; bus routing is what your AudioPatchR handles."},
-  {id:"deliver",icon:"📤",name:"Delivery",sub:"the target spec",gain:false,
+  {id:"deliver",icon:"send",name:"Delivery",sub:"the target spec",gain:false,
    detail:"The final file must hit a loudness target (−23 LUFS broadcast, −14 LUFS streaming) and a true-peak ceiling. → see Loudness — EBU R128; your LoudnessFixR automates exactly this last step."},
 ];
 function ModuleAudioChain() {
@@ -3428,7 +3479,7 @@ function ModuleAudioChain() {
             <button onClick={()=>setSel(st.id)} style={{
               display:"flex",flexDirection:"column",alignItems:"center",gap:2,minWidth:92,padding:"10px 8px",borderRadius:8,cursor:"pointer",
               border:`1px solid ${sel===st.id?"#f472b6":"#2a2b32"}`, background:sel===st.id?"#f472b622":"#1c1d23", transition:"all 0.15s"}}>
-              <span style={{fontSize:20}}>{st.icon}</span>
+              <Icon name={st.icon} size={22} style={{color:sel===st.id?"#f472b6":"#cbd5e1"}}/>
               <span style={{color:"#f3f4f6",fontSize:12,fontWeight:"bold"}}>{st.name}</span>
               <span style={{color:"#6b7280",fontSize:9.5,fontFamily:"monospace",textAlign:"center"}}>{st.sub}</span>
               {st.gain && <span style={{color:"#f472b6",fontSize:9,fontFamily:"monospace"}}>◈ gain</span>}
@@ -3439,7 +3490,7 @@ function ModuleAudioChain() {
       </div>
       <div style={{background:"#1c1d23",border:`1px solid ${s.gain?"#f472b644":"#2a2b32"}`,borderRadius:10,padding:"14px 18px"}}>
         <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:8}}>
-          <span style={{fontSize:22}}>{s.icon}</span>
+          <Icon name={s.icon} size={24} style={{color:"#f472b6"}}/>
           <span style={{color:"#f3f4f6",fontSize:17,fontWeight:"bold"}}>{s.name}</span>
           {s.gain && <span style={{fontSize:11,fontFamily:"monospace",padding:"2px 8px",borderRadius:4,background:"#f472b622",color:"#f472b6"}}>gain-staging point</span>}
         </div>
@@ -3586,7 +3637,7 @@ function ModuleLevels() {
   return (
     <div>
       <InfoBox>
-        Digital audio is measured in <strong>dBFS</strong> — decibels relative to <em>full scale</em>. <strong>0 dBFS is the absolute ceiling</strong>: the loudest a sample can be. Go above it and the waveform's peaks are chopped flat — <strong>clipping</strong>, a harsh distortion you cannot undo. So you record with <strong>headroom</strong>: aim the signal comfortably below 0 (dialogue often sits around −18 to −12 dBFS on peaks) so unexpected louds still fit. Two meters matter: <strong>peak</strong> catches the instantaneous maximum (what clips), while <strong>RMS</strong> tracks the average energy (what you perceive as loudness). A signal can have modest RMS but a spiky peak — always leave room for the peak. Push the gain and watch the peak hit 0 dBFS and the waveform flatten into clipping. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/niveles">line level as voltage (dBu / dBV)</VoltLink> — in Volt.</span>
+        Digital audio is measured in <strong>dBFS</strong> — decibels relative to <em>full scale</em>. <strong>0 dBFS is the absolute ceiling</strong>: the loudest a sample can be. Go above it and the waveform's peaks are chopped flat — <strong>clipping</strong>, a harsh distortion you cannot undo. So you record with <strong>headroom</strong>: aim the signal comfortably below 0 (dialogue often sits around −18 to −12 dBFS on peaks) so unexpected louds still fit. Two meters matter: <strong>peak</strong> catches the instantaneous maximum (what clips), while <strong>RMS</strong> tracks the average energy (what you perceive as loudness). A signal can have modest RMS but a spiky peak — always leave room for the peak. Push the gain and watch the peak hit 0 dBFS and the waveform flatten into clipping. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}><Icon name="zap" size={12} style={{marginRight:5,verticalAlign:"-0.1em"}}/><strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/niveles">line level as voltage (dBu / dBV)</VoltLink> — in Volt.</span>
       </InfoBox>
       <label style={{...styles.label,marginBottom:12}}>Input gain: <strong style={{color:clipped?"#f87171":"#f59e0b"}}>{gain>0?"+":""}{gain} dB</strong> {clipped && <span style={{color:"#f87171",fontFamily:"monospace"}}> · CLIPPING</span>}
         <input type="range" min={-12} max={24} step={0.5} value={gain} onChange={e=>setGain(+e.target.value)} style={{...styles.slider,width:280}}/></label>
@@ -3841,7 +3892,7 @@ function ModuleBalancedAudio() {
   return (
     <div>
       <InfoBox>
-        The <strong>balanced</strong> trick: the source sends the audio on <em>two</em> wires — <span style={{color:"#2563eb"}}>Hot</span> normal and <span style={{color:"#2563eb"}}>Cold</span> with <strong>inverted polarity</strong>. As they run down the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is picked up <em>identically</em> on both — same shape, same polarity. At the destination the receiver <strong>flips the Cold wire back</strong>: now the <span style={{color:"#2563eb"}}>signal</span> lines up with Hot (adding them <strong>reinforces it, 2×</strong>) while the <span style={{color:"#f97316"}}>interference</span> becomes the exact opposite (adding them <strong>cancels it</strong>). That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just sits on the signal and stays — keep those runs short. (The balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.) <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/phantom">phantom as DC on the pair</VoltLink> · <VoltLink to="n5/zumbido">ground loops</VoltLink> — in Volt.</span>
+        The <strong>balanced</strong> trick: the source sends the audio on <em>two</em> wires — <span style={{color:"#2563eb"}}>Hot</span> normal and <span style={{color:"#2563eb"}}>Cold</span> with <strong>inverted polarity</strong>. As they run down the cable, interference (<span style={{color:"#f97316"}}>orange</span>) is picked up <em>identically</em> on both — same shape, same polarity. At the destination the receiver <strong>flips the Cold wire back</strong>: now the <span style={{color:"#2563eb"}}>signal</span> lines up with Hot (adding them <strong>reinforces it, 2×</strong>) while the <span style={{color:"#f97316"}}>interference</span> becomes the exact opposite (adding them <strong>cancels it</strong>). That's common-mode rejection. An <strong>unbalanced</strong> lead has a single wire, so the interference just sits on the signal and stays — keep those runs short. (The balanced XLR also carries <strong>+48 V phantom</strong>. Audio side of the XLR from <em>Signals &amp; Connectivity</em> — never DMX.) <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}><Icon name="zap" size={12} style={{marginRight:5,verticalAlign:"-0.1em"}}/><strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/phantom">phantom as DC on the pair</VoltLink> · <VoltLink to="n5/zumbido">ground loops</VoltLink> — in Volt.</span>
       </InfoBox>
       <XLRConnector/>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:16}}>
@@ -3920,7 +3971,7 @@ function ModuleProdSound() {
   return (
     <div>
       <InfoBox>
-        Location sound is a fight against everything that isn't the dialogue. The usual suspects: <strong>wind</strong> (low-frequency rumble — kill it with a deadcat and a high-pass), <strong>handling noise</strong> (thumps through the mic and cable — shock mounts, don't touch), <strong>room reflections</strong> (echo and comb-filtering — get closer, treat the space), and <strong>mains hum</strong> (a constant 50/60 Hz tone — balanced cables, no ground loops). And the one everyone forgets: <strong>room tone</strong> — 30 seconds of the room's "silence" that the editor needs to patch gaps and smooth cuts. Toggle problems onto the dialogue waveform and read the fix. The rule stands: solve it at the source on set — post can only do so much. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}>⚡ <strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/zumbido">ground loops & mains earth</VoltLink> — in Volt.</span>
+        Location sound is a fight against everything that isn't the dialogue. The usual suspects: <strong>wind</strong> (low-frequency rumble — kill it with a deadcat and a high-pass), <strong>handling noise</strong> (thumps through the mic and cable — shock mounts, don't touch), <strong>room reflections</strong> (echo and comb-filtering — get closer, treat the space), and <strong>mains hum</strong> (a constant 50/60 Hz tone — balanced cables, no ground loops). And the one everyone forgets: <strong>room tone</strong> — 30 seconds of the room's "silence" that the editor needs to patch gaps and smooth cuts. Toggle problems onto the dialogue waveform and read the fix. The rule stands: solve it at the source on set — post can only do so much. <span style={{display:"block",marginTop:8,fontSize:12,color:"#8a8a92"}}><Icon name="zap" size={12} style={{marginRight:5,verticalAlign:"-0.1em"}}/><strong style={{color:"#c9c9cf",fontWeight:600}}>The electrical “why”:</strong> <VoltLink to="n5/zumbido">ground loops & mains earth</VoltLink> — in Volt.</span>
       </InfoBox>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
         {PROD_PROBLEMS.map(p=>(
@@ -4737,8 +4788,9 @@ function HubCard({ id, catColor, onClick }) {
         background:hov?"#25262e":"#1c1d23",
         border:`1px solid ${hov?catColor+"66":"#2a2b32"}`,
         borderRadius:10,padding:"16px",cursor:"pointer",
-        transition:"all 0.18s",
-        boxShadow:hov?`0 0 20px ${catColor}22`:"none",
+        transform:hov?"translateY(-2px)":"none",
+        transition:"transform .2s var(--ease), background-color .2s var(--ease), border-color .2s var(--ease), box-shadow .2s var(--ease)",
+        boxShadow:hov?`0 8px 24px ${catColor}22, 0 0 0 1px ${catColor}33`:"0 1px 2px rgba(0,0,0,.25)",
       }}>
       <div style={{color:catColor,fontSize:10,fontFamily:"monospace",fontWeight:"bold",marginBottom:6,letterSpacing:"0.1em",textTransform:"uppercase"}}>
         {T.categories[CATEGORIES.find(c=>c.modules.includes(id))?.id]}
@@ -4797,14 +4849,14 @@ export default function AVHandbook() {
 
   return (
     <div style={{
-      minHeight:"100vh",background:"#060609",color:"#e5e7eb",
+      minHeight:"100vh",background:"#0e0f12",color:"#e5e7eb",
       fontFamily:"system-ui,-apple-system,sans-serif",
     }}>
       {/* Header */}
       <div style={{
         borderBottom:"1px solid #2a2b32",padding:"16px 24px",
         display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",
-        background:"#0a0a0f",
+        background:"rgba(14,15,18,.72)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",
         position:"sticky",top:0,zIndex:100,
       }}>
         <div style={{flex:1,minWidth:200}}>
@@ -4818,25 +4870,28 @@ export default function AVHandbook() {
           <div style={{color:"#4b5563",fontSize:11,fontFamily:"monospace"}}>Interactive Audiovisual Reference</div>
         </div>
         {activeModule && (
-          <button onClick={()=>setActiveModule(null)} style={{...styles.btnSecondary,fontSize:12}}>
-            ← All Modules
+          <button onClick={()=>setActiveModule(null)} style={{...styles.btnSecondary,fontSize:12,display:"inline-flex",alignItems:"center",gap:7}}>
+            <Icon name="arrowLeft" size={14}/> All Modules
           </button>
         )}
         {!activeModule && (
-          <input
-            value={search}
-            onChange={e=>setSearch(e.target.value)}
-            placeholder="Search modules…"
-            style={{
-              background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:6,
-              padding:"6px 12px",color:"#e5e7eb",fontSize:12,fontFamily:"monospace",
-              outline:"none",width:180,
-            }}
-          />
+          <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+            <Icon name="search" size={14} style={{position:"absolute",left:10,color:"#6b7280",pointerEvents:"none"}}/>
+            <input
+              value={search}
+              onChange={e=>setSearch(e.target.value)}
+              placeholder="Search modules…"
+              style={{
+                background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:6,
+                padding:"6px 12px 6px 30px",color:"#e5e7eb",fontSize:12,fontFamily:"monospace",
+                outline:"none",width:180,
+              }}
+            />
+          </div>
         )}
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <label style={{...styles.btnSecondary,cursor:"pointer",fontSize:11}}>
-            📁 Upload Image
+          <label style={{...styles.btnSecondary,cursor:"pointer",fontSize:11,display:"inline-flex",alignItems:"center",gap:7}}>
+            <Icon name="upload" size={14}/> Upload Image
             <input type="file" accept="image/*" style={{display:"none"}}
               onChange={e=>{
                 const f=e.target.files[0]; if(!f)return;
@@ -4847,8 +4902,8 @@ export default function AVHandbook() {
             />
           </label>
           {userImage && (
-            <button onClick={()=>setUserImage(null)} style={{...styles.btnSecondary,fontSize:11}}>
-              ✕ Reset
+            <button onClick={()=>setUserImage(null)} style={{...styles.btnSecondary,fontSize:11,display:"inline-flex",alignItems:"center",gap:7}}>
+              <Icon name="x" size={14}/> Reset
             </button>
           )}
         </div>
@@ -4856,7 +4911,7 @@ export default function AVHandbook() {
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div style={{maxWidth:1080,margin:"0 auto",padding:"24px 20px"}}>
+        <div key={activeModule} className="avh-fade" style={{maxWidth:1080,margin:"0 auto",padding:"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}
@@ -4867,7 +4922,7 @@ export default function AVHandbook() {
           <ActiveComp image={image} userImage={userImage}/>
         </div>
       ) : (
-        <div style={{maxWidth:1280,margin:"0 auto",padding:"24px 20px"}}>
+        <div className="avh-fade" style={{maxWidth:1280,margin:"0 auto",padding:"24px 20px"}}>
           {/* Hero */}
           {!search && (
             <div style={{
