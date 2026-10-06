@@ -1,0 +1,56 @@
+{
+ "width": 1920,
+ "height": 1080,
+ "near": 0.05,
+ "far": 8.33193040798681,
+ "depthEncoding": "z = near + (R*256 + G)/65535 * (far - near), metres along the lens",
+ "camera": {
+  "focalMm": 32,
+  "sensorMm": 36,
+  "fovH": 58.71550708558255,
+  "fovV": 35.115393689697434,
+  "position": [
+   1.4255362513834964,
+   1.0499528370997389,
+   3.379581098811985
+  ],
+  "target": [
+   0.1,
+   0.75,
+   -0.7
+  ]
+ },
+ "layers": [
+  {
+   "index": 0,
+   "name": "foreground",
+   "near": 2.995,
+   "far": 4.14,
+   "depth": 3.311,
+   "mean": 3.362,
+   "file": "layer_0_foreground.png",
+   "depthFile": "layer_0_foreground_depth16.png"
+  },
+  {
+   "index": 1,
+   "name": "midground",
+   "near": 4.167,
+   "far": 5.154,
+   "depth": 4.653,
+   "mean": 4.642,
+   "file": "layer_1_midground.png",
+   "depthFile": "layer_1_midground_depth16.png"
+  },
+  {
+   "index": 2,
+   "name": "background",
+   "near": 2.652,
+   "far": 6.351,
+   "depth": 4.794,
+   "mean": 4.681,
+   "file": "layer_2_background.png",
+   "depthFile": "layer_2_background_depth16.png"
+  }
+ ],
+ "hero": "hero_living_room.jpg (same camera, same frame)"
+}

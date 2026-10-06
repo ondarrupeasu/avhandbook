@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import LightingStudio3D from "./LightingStudio.jsx";
 import heroScene from "./assets/hero-scene.jpg";
+import sceneColor from "./assets/scene/color.png";
+import sceneDepth from "./assets/scene/depth16.png";
 
 // ─────────────────────────────────────────────
 // i18n — centralised strings (add ES/EU here)
@@ -1321,15 +1323,18 @@ function ModuleACES() {
 // ─────────────────────────────────────────────
 // MODULE: Depth of Field
 // ─────────────────────────────────────────────
-// Approximate real-world distance (m) of each scene layer, for DoF blur.
-const LAYER_DIST = { sky:600, mountains:300, hills:120, ground:22, house:16, midtree:8, subject:5, foreground:1.8 };
+// Photoreal reference scene (render of the 3D studio's living-room set, from SetFrameR).
+const loadImg = src => new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
+const SCENE_NEAR=0.05, SCENE_FAR=8.33193;   // depth16 encoding: z = near + (R*256+G)/65535 * (far-near)
 
 function ModuleDepthOfField() {
   const [fstop, setFstop] = useState(2.8);
   const [focal, setFocal] = useState(50);
-  const [distance, setDistance] = useState(5);
+  const [distance, setDistance] = useState(4);
   const canvasRef = useRef();
   const sideRef = useRef();
+  const dataRef = useRef({ W:0 });
+  const liveRef = useRef({});
 
   // Thin-lens DoF limits (CoC 0.03mm, 35mm format). All in mm.
   const CoC=0.03, f=focal, N=fstop, s=distance*1000;
@@ -1344,39 +1349,41 @@ function ModuleDepthOfField() {
     const W=Math.min(c.parentElement?.clientWidth-32||840,840);
     c.width=W; c.height=Math.round(W*9/16); const H=c.height;
     const ctx=c.getContext("2d");
-    ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H);
-    const Dfmm=distance*1000;
-    const blurFor=depthM=>{
-      const D=depthM*1000;
-      const coc=(f*f/(N*Math.max(1,Dfmm-f)))*Math.abs(D-Dfmm)/D;   // CoC in mm
-      return Math.min(24, coc*22);                                 // → display px
+    liveRef.current={ fstop, focal, distance, dofM };
+    // Circle of confusion (px) at a given depth, from the thin-lens model and the current settings.
+    const blurPx=(depthM)=>{ const L=liveRef.current; const D=depthM*1000, Dfmm=L.distance*1000, ff=L.focal, Nn=L.fstop;
+      const coc=(ff*ff/(Nn*Math.max(1,Dfmm-ff)))*Math.abs(D-Dfmm)/Math.max(1,D); return Math.min(24, coc*22); };
+    // Per-pixel DoF: blend the sharp photo with a blurred copy by the circle of confusion at each pixel's real depth.
+    const renderFront=()=>{
+      const Dt=dataRef.current; if(!Dt.ready||Dt.W!==W) return;
+      const sd=Dt.sharp, bd=Dt.blur, dep=Dt.depth, out=Dt.out, data=out.data, n=W*H;
+      for(let i=0,p=0;i<n;i++,p+=4){ let a=blurPx(dep[i])/6; if(a>1)a=1; const ia=1-a;
+        data[p]=sd[p]*ia+bd[p]*a; data[p+1]=sd[p+1]*ia+bd[p+1]*a; data[p+2]=sd[p+2]*ia+bd[p+2]*a; data[p+3]=255; }
+      ctx.putImageData(out,0,0);
+      const L=liveRef.current;
+      ctx.fillStyle="rgba(0,0,0,0.65)"; ctx.fillRect(0,0,W,24);
+      ctx.fillStyle="#f59e0b"; ctx.font="bold 12px monospace";
+      ctx.fillText(`f/${L.fstop}  ${L.focal}mm  focus ${L.distance}m  ·  DoF ${L.dofM===Infinity?"∞":L.dofM.toFixed(2)+"m"}`,10,16);
     };
-    // Scene layers, each blurred by its distance from focus.
-    // Blur via downscale→upscale (works in every browser; ctx.filter blur is unreliable in Safari).
-    SCENE_LAYERS.forEach(l=>{
-      const b=blurFor(LAYER_DIST[l.name] ?? l.depth);
-      const lc=document.createElement("canvas"); lc.width=W; lc.height=H;
-      const lctx=lc.getContext("2d");
-      lctx.save(); lctx.translate(W/2,H/2); lctx.scale(1.06,1.06); lctx.translate(-W/2,-H/2); l.draw(lctx,W,H); lctx.restore();
-      if(b<0.6){ ctx.drawImage(lc,0,0); }
-      else {
-        // progressive halving → smooth blur (no pixelation), then smooth upscale back
-        const s=Math.max(0.05, 1/(1+b*0.5));
-        const steps=Math.max(1,Math.ceil(Math.log2(1/s)));
-        let cur=lc;
-        for(let k=0;k<steps;k++){
-          const nw=Math.max(2,Math.floor(cur.width/2)), nh=Math.max(2,Math.floor(cur.height/2));
-          const t=document.createElement("canvas"); t.width=nw; t.height=nh;
-          const tc=t.getContext("2d"); tc.imageSmoothingEnabled=true; tc.imageSmoothingQuality="high"; tc.drawImage(cur,0,0,nw,nh);
-          cur=t;
-        }
-        ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; ctx.drawImage(cur,0,0,W,H);
-      }
-    });
-    // HUD on the front view
-    ctx.fillStyle="rgba(0,0,0,0.65)"; ctx.fillRect(0,0,W,24);
-    ctx.fillStyle="#f59e0b"; ctx.font="bold 12px monospace";
-    ctx.fillText(`f/${fstop}  ${focal}mm  focus ${distance}m  ·  DoF ${dofM===Infinity?"∞":dofM.toFixed(2)+"m"}`,10,16);
+    const prepare=async()=>{
+      if(dataRef.current.busy) return; dataRef.current.busy=true;
+      try{
+        const [cimg,dimg]=await Promise.all([loadImg(sceneColor),loadImg(sceneDepth)]);
+        const mk=()=>{ const t=document.createElement("canvas"); t.width=W; t.height=H; return t; };
+        const scv=mk(), sx2=scv.getContext("2d"); sx2.drawImage(cimg,0,0,W,H);
+        const sharp=sx2.getImageData(0,0,W,H).data;
+        let cur=scv; for(let k=0;k<4;k++){ const nw=Math.max(2,cur.width>>1),nh=Math.max(2,cur.height>>1); const t=document.createElement("canvas");t.width=nw;t.height=nh;const tc=t.getContext("2d");tc.imageSmoothingEnabled=true;tc.imageSmoothingQuality="high";tc.drawImage(cur,0,0,nw,nh);cur=t; }
+        const bcv=mk(), bx=bcv.getContext("2d"); bx.imageSmoothingEnabled=true; bx.imageSmoothingQuality="high"; bx.drawImage(cur,0,0,W,H);
+        const blur=bx.getImageData(0,0,W,H).data;
+        const dcv=mk(), dx=dcv.getContext("2d"); dx.drawImage(dimg,0,0,W,H);
+        const dd=dx.getImageData(0,0,W,H).data; const depth=new Float32Array(W*H);
+        for(let i=0,p=0;i<W*H;i++,p+=4){ depth[i]=SCENE_NEAR+((dd[p]*256+dd[p+1])/65535)*(SCENE_FAR-SCENE_NEAR); }
+        dataRef.current={ W, ready:true, busy:false, sharp, blur, depth, out:ctx.createImageData(W,H) };
+        renderFront();
+      }catch(e){ dataRef.current.busy=false; ctx.fillStyle="#1c1d23";ctx.fillRect(0,0,W,H); ctx.fillStyle="#9ca3af";ctx.font="12px monospace";ctx.fillText("scene unavailable",12,20); }
+    };
+    if(dataRef.current.ready && dataRef.current.W===W) renderFront();
+    else { ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H); prepare(); }
 
     // SIDE VIEW — depth cross-section with the in-focus "force field"
     const sc=sideRef.current; if(!sc) return;
@@ -1398,7 +1405,7 @@ function ModuleDepthOfField() {
     sx.strokeStyle="rgba(148,163,184,0.22)"; sx.beginPath();sx.moveTo(x1,groundY-7);sx.lineTo(dfX,20);sx.moveTo(x1,groundY-7);sx.lineTo(dfX,groundY);sx.stroke();
     // distance ticks
     sx.textAlign="center"; sx.font="9px monospace";
-    [1,2,5,10,20,40].forEach(d=>{ const x=dmap(d); sx.strokeStyle="#374151"; sx.beginPath();sx.moveTo(x,groundY);sx.lineTo(x,groundY+4);sx.stroke(); sx.fillStyle="#4b5563"; sx.fillText(d+"m",x,groundY+15); });
+    [1,2,3,4,6,10].forEach(d=>{ const x=dmap(d); sx.strokeStyle="#374151"; sx.beginPath();sx.moveTo(x,groundY);sx.lineTo(x,groundY+4);sx.stroke(); sx.fillStyle="#4b5563"; sx.fillText(d+"m",x,groundY+15); });
     sx.fillStyle="#4b5563"; sx.fillText("∞",x2,groundY+15);
     // focus plane
     const fX=dmap(distance);
@@ -1408,7 +1415,7 @@ function ModuleDepthOfField() {
     sx.fillStyle="#9ca3af"; sx.fillRect(x1-15,groundY-13,15,13);
     sx.beginPath();sx.moveTo(x1,groundY-10);sx.lineTo(x1+7,groundY-6.5);sx.lineTo(x1,groundY-3);sx.closePath();sx.fill();
     // element markers (lit green when inside the DoF band)
-    [["bush",1.8,"#2c4a22"],["subject",5,"#c0563d"],["tree",8,"#3f6a3c"],["house",16,"#8a5a3c"]].forEach(([lbl,d,col])=>{
+    [["table",3.3,"#8a5a3c"],["sofa",4.65,"#6b5a7a"],["back wall",6.0,"#555b66"]].forEach(([lbl,d,col])=>{
       const x=dmap(d), sharp = d>=Dn/1000 && d<=(farInf?1e9:Df/1000);
       sx.fillStyle=col; sx.fillRect(x-4,groundY-22,8,22);
       sx.strokeStyle=sharp?"#34d399":"rgba(255,255,255,0.18)"; sx.lineWidth=sharp?2:1; sx.strokeRect(x-4,groundY-22,8,22);
@@ -1421,7 +1428,7 @@ function ModuleDepthOfField() {
   return (
     <div>
       <InfoBox>
-        <strong>Depth of Field (DoF)</strong> is the range of distances that appears acceptably sharp. It depends on <em>aperture</em> (smaller f-stop = wider = shallower DoF), <em>focal length</em> (longer = shallower), and <em>focus distance</em> (closer = shallower). Here the <strong>scene elements at different distances</strong> (foreground bush ~1.8 m, subject ~5 m, tree ~8 m, house ~16 m, hills/mountains far away) blur according to a thin-lens <strong>Circle of Confusion</strong> model (0.03 mm, 35 mm format). Open the aperture or move focus and watch which planes fall out of focus. The <strong>side view</strong> below is a bird's-eye cross-section: the camera on the left, distance running right, and the green <strong>in-focus zone</strong> (the depth of field) as a band that moves with the focus plane and <em>widens</em> as you stop down or shorten the lens — elements light up green when they fall inside it. Beyond the <em>hyperfocal distance</em> everything to infinity is sharp. Shallow DoF isolates the subject; deep DoF holds context.
+        <strong>Depth of Field (DoF)</strong> is the range of distances that appears acceptably sharp. It depends on <em>aperture</em> (smaller f-stop = wider = shallower DoF), <em>focal length</em> (longer = shallower), and <em>focus distance</em> (closer = shallower). Here the <strong>scene elements at different distances</strong> (the coffee table ~3.3 m, the sofa ~4.7 m, the back wall ~6 m) blur per pixel according to their real depth, following a thin-lens <strong>Circle of Confusion</strong> model (0.03 mm, 35 mm format). Open the aperture or move focus and watch which planes fall out of focus. The <strong>side view</strong> below is a bird's-eye cross-section: the camera on the left, distance running right, and the green <strong>in-focus zone</strong> (the depth of field) as a band that moves with the focus plane and <em>widens</em> as you stop down or shorten the lens — elements light up green when they fall inside it. Beyond the <em>hyperfocal distance</em> everything to infinity is sharp. Shallow DoF isolates the subject; deep DoF holds context.
       </InfoBox>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:12}}>
         <label style={styles.label}>
