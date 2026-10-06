@@ -68,7 +68,6 @@ const STRINGS = {
       storageCalc: { title: "Storage Calculator", desc: "Resolution × bitrate × codec × time → disk space" },
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
       cableReach: { title: "Cable Reach Calculator", desc: "How far SDI runs by cable type & resolution (Percon)" },
-      portraitLight: { title: "Portrait Lighting", desc: "Three-point (key/fill/back) & patterns — Rembrandt, butterfly, split" },
       lightingStudio: { title: "3D Lighting Studio", desc: "Light a 3D subject with movable lights — exposure, DoF, challenges" },
       lensDistortion: { title: "Lens Distortion", desc: "Barrel & pincushion — when straight lines bend" },
       interlacing: { title: "Interlacing & Combing", desc: "Fields, comb teeth on motion, deinterlacing" },
@@ -128,7 +127,7 @@ const CATEGORIES = [
   },
   {
     id: "lighting", label: T.categories.lighting,
-    modules: ["portraitLight","lightingStudio"],
+    modules: ["lightingStudio"],
   },
   {
     id: "audio", label: T.categories.audio,
@@ -4760,7 +4759,6 @@ const MODULE_COMPONENTS = {
   storageCalc: ModuleStorageCalc,
   signals: ModuleSignals,
   cableReach: ModuleCableReach,
-  portraitLight: ModulePortraitLight,
   lightingStudio: LightingStudio3D,
   lensDistortion: ModuleLensDistortion,
   interlacing: ModuleInterlacing,

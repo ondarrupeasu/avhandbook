@@ -26,6 +26,8 @@ const asset = (name) => new URL(`./assets/${name}.glb`, import.meta.url).href;
 /** Subjects bundled with the module. `target` = the point lights and camera aim at (m). */
 const SUBJECTS = {
   bust: { name: 'Marble bust', target: [0, 1.25, 0], view: { az: 0, el: 3, dist: 3.2, focal: 85 }, credit: 'Marble Bust 01 — Poly Haven (CC0)' },
+  'living-room-figure': { name: 'Film set + figure', target: [-0.55, 1.45, 0.25], view: { az: 10, el: 2, dist: 3.4, focal: 50 },
+    credit: 'Figure of a Dancer, Agathon Léonard, c. 1900 — Cooper Hewitt, Smithsonian (CC0); living room as below' },
   'living-room': { name: 'Film set: living room', target: [0, 0.75, -0.95], view: { az: 12, el: 8, dist: 4.6, focal: 35 },
     credit: 'Sofa, armchair, coffee table, side table, oil lamp, shelves, frame, plant, vase, nightstand — Poly Haven (CC0); rug texture: Floral Jacquard, Poly Haven (CC0)' },
 };
@@ -245,7 +247,7 @@ export async function createLightingStudio(container, opts = {}) {
       const bust = (await loadGlb('marble_bust_01')).clone();
       bust.position.y = 0.87;
       g.add(bust);
-    } else if (id === 'living-room') {
+    } else if (id === 'living-room' || id === 'living-room-figure') {
       // a corner of a film set: a painted flat behind, rug, sofa, armchair, practical lamp…
       const names = ['Sofa_01', 'ArmChair_01', 'CoffeeTable_01', 'side_table_01', 'vintage_oil_lamp', 'wooden_display_shelves_01',
         'hanging_picture_frame_02', 'potted_plant_04', 'ClassicNightstand_01', 'ceramic_vase_01'];
@@ -259,8 +261,8 @@ export async function createLightingStudio(container, opts = {}) {
         g.add(c); return c;
       };
       const wallMat = new THREE.MeshStandardMaterial({ color: '#5d6b62', roughness: 0.9 });
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(9, 2.9, 0.08), wallMat);
-      wall.position.set(0, 1.45, -1.55); g.add(wall);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(9, 4.2, 0.08), wallMat);
+      wall.position.set(0, 2.1, -1.55); g.add(wall);
       const skirting = new THREE.Mesh(new THREE.BoxGeometry(9, 0.12, 0.1), new THREE.MeshStandardMaterial({ color: '#e8e2d6', roughness: 0.6 }));
       skirting.position.set(0, 0.06, -1.5); g.add(skirting);
       const floor = new THREE.Mesh(new THREE.BoxGeometry(9, 0.02, 5), new THREE.MeshStandardMaterial({ color: '#6b4a32', roughness: 0.55 }));
@@ -269,9 +271,10 @@ export async function createLightingStudio(container, opts = {}) {
       rugTex.colorSpace = THREE.SRGBColorSpace; rugTex.wrapS = rugTex.wrapT = THREE.RepeatWrapping; rugTex.repeat.set(2.5, 1.7);
       const rug = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.012, 1.8), new THREE.MeshStandardMaterial({ map: rugTex, roughness: 0.95 }));
       rug.position.set(0, 0.026, -0.2); g.add(rug);
-      place(m.Sofa_01, 0, -1.05, 0, 0.032);
-      place(m.ArmChair_01, 1.45, -0.25, -1.0, 0.032);
-      place(m.CoffeeTable_01, 0, 0.05, 0, 0.032).scale.setScalar(0.8);
+      // layers for 2D effects (exportLayers): what is in front, the subject (sofa), the room behind
+      place(m.Sofa_01, 0, -1.05, 0, 0.032).userData.layer = 'midground';
+      place(m.ArmChair_01, 1.45, -0.25, -1.0, 0.032).userData.layer = 'foreground';
+      const ct = place(m.CoffeeTable_01, 0, 0.05, 0, 0.032); ct.scale.setScalar(0.8); ct.userData.layer = 'foreground';
       place(m.side_table_01, -1.2, -1.15, 0);
       place(m.vintage_oil_lamp, -1.2, -1.15, 0.3, 0.548);
       place(m.wooden_display_shelves_01, 2.15, -1.3, -Math.PI / 2);
@@ -288,6 +291,15 @@ export async function createLightingStudio(container, opts = {}) {
       const ptex = new THREE.CanvasTexture(pc); ptex.colorSpace = THREE.SRGBColorSpace;
       const painting = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.42), new THREE.MeshStandardMaterial({ map: ptex, roughness: 0.8 }));
       painting.position.set(0, 1.65 - 0.028, -1.51 + 0.018); g.add(painting);
+      if (id === 'living-room-figure') {
+        // a life-size statue (scanned porcelain figurine, mm → 1.75 m), standing in front of the sofa
+        const fig = (await loadGlb('figure_dancer')).clone();
+        fig.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.color?.set('#ece8e1'); o.material.roughness = 0.45; } });
+        const raw = new THREE.Box3().setFromObject(fig).getSize(new THREE.Vector3());
+        fig.scale.multiplyScalar(1.75 / raw.y);
+        const f = place(fig, -0.55, 0.25, 0, 0.032);
+        f.userData.layer = 'subject'; f.name = 'figure';
+      }
     } else if (id === 'custom' && customGroup) {
       g.add(customGroup.clone());
     } else throw new Error(`Unknown subject "${id}"`);
@@ -1265,6 +1277,125 @@ export async function createLightingStudio(container, opts = {}) {
     return withPngText(blob, 'lightstudio', JSON.stringify(getState()));
   }
 
+  /** Layer of an object for exportLayers: its own tag or its parent's; untagged = background. */
+  const layerOf = (o) => { for (; o; o = o.parent) if (o.userData?.layer) return o.userData.layer; return 'background'; };
+  /**
+   * Export the photo as material for 2D effects (parallax, depth of field) in a host without 3D:
+   * - color: the photo (no DoF), PNG
+   * - depth: distance along the lens in metres, 16 bit packed in R (high) + G (low) of a PNG:
+   *          z = near + (R·256 + G) / 65535 · (far − near)
+   * - depthPreview: the same as an 8-bit grey picture (white = near)
+   * - layers: one RGBA PNG per layer, each rendered ALONE, so what a nearer layer hides is still there
+   *   behind it (no holes when layers move apart). By object tags (foreground / midground / background,
+   *   set by the subject) — or, with `cuts` (metres), by depth slabs with clipping planes ⟂ the lens.
+   * - meta: camera, near/far, slabs with their mean depth.
+   */
+  async function exportLayers({ width = 1920, cuts = [] } = {}) {
+    const was = view;
+    view = 'camera';
+    const h = Math.round(width / photoAspect);
+    renderer.setPixelRatio(1); renderer.setSize(width, h, false); composer.setPixelRatio(1); composer.setSize(width, h);
+    camera.aspect = photoAspect; camera.updateProjectionMatrix(); camera.lookAt(targets.camera);
+    content.updateMatrixWorld(true);
+    const dofWas = dof.on; dof.on = false;
+    const toBlob = (c) => new Promise((res) => c.toBlob(res, 'image/png'));
+    const grab = () => { const c = document.createElement('canvas'); c.width = width; c.height = h; c.getContext('2d').drawImage(canvas, 0, 0); return c; };
+    // 1. colour
+    draw(camera, { handles: false });
+    const color = await toBlob(grab());
+    // 2. depth: render the depth texture, linearise and pack it on the GPU, read it back
+    const bg = scene.background;
+    const fwd = camera.getWorldDirection(new THREE.Vector3());
+    const box = new THREE.Box3().setFromObject(content), corners = [];
+    for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) corners.push(new THREE.Vector3(x, y, z).sub(camera.position).dot(fwd));
+    const near = Math.max(camera.near, Math.min(...corners)), far = Math.max(...corners);
+    /** Depth of what is visible now → { z (metres per pixel, top-down rows), cover (has geometry), blob (packed), preview } */
+    async function depthMap() {
+      if (depthRT.width !== width || depthRT.height !== h) depthRT.setSize(width, h);
+      scene.background = null; scene.overrideMaterial = depthOnly; overlay.visible = false;
+      renderer.setRenderTarget(depthRT); renderer.clear(); renderer.render(scene, camera);
+      scene.overrideMaterial = null; scene.background = bg;
+      const packRT = new THREE.WebGLRenderTarget(width, h);
+      const pack = new FullScreenQuad(new THREE.ShaderMaterial({
+        uniforms: { tDepth: { value: depthRT.depthTexture }, cn: { value: camera.near }, cf: { value: camera.far }, zn: { value: near }, zf: { value: far } },
+        vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: `#include <packing>
+          uniform sampler2D tDepth; uniform float cn, cf, zn, zf; varying vec2 vUv;
+          void main() { float d = texture2D(tDepth, vUv).x;
+            float z = d >= 1.0 ? zf : -perspectiveDepthToViewZ(d, cn, cf);
+            float v = clamp((z - zn) / (zf - zn), 0.0, 1.0) * 65535.0;
+            float hi = floor(v / 256.0), lo = v - hi * 256.0;
+            gl_FragColor = vec4(hi / 255.0, lo / 255.0, 1.0 - v / 65535.0, d >= 1.0 ? 0.0 : 1.0); }`,
+      }));
+      renderer.setRenderTarget(packRT); pack.render(renderer); renderer.setRenderTarget(null);
+      const px = new Uint8Array(width * h * 4);
+      renderer.readRenderTargetPixels(packRT, 0, 0, width, h, px);
+      packRT.dispose(); pack.material.dispose();
+      const dc = document.createElement('canvas'); dc.width = width; dc.height = h;
+      const pc = document.createElement('canvas'); pc.width = width; pc.height = h;
+      const di = dc.getContext('2d').createImageData(width, h), pi = pc.getContext('2d').createImageData(width, h);
+      const z = new Float32Array(width * h), cover = new Uint8Array(width * h);
+      for (let y = 0; y < h; y++) for (let x = 0; x < width; x++) {
+        const s = ((h - 1 - y) * width + x) * 4, d = (y * width + x) * 4;   // WebGL rows are bottom-up
+        di.data[d] = px[s]; di.data[d + 1] = px[s + 1]; di.data[d + 2] = 0; di.data[d + 3] = 255;
+        pi.data[d] = pi.data[d + 1] = pi.data[d + 2] = px[s + 2]; pi.data[d + 3] = 255;
+        z[y * width + x] = near + ((px[s] * 256 + px[s + 1]) / 65535) * (far - near);
+        cover[y * width + x] = px[s + 3] > 127 ? 1 : 0;
+      }
+      dc.getContext('2d').putImageData(di, 0, 0); pc.getContext('2d').putImageData(pi, 0, 0);
+      return { z, cover, blob: await toBlob(dc), preview: await toBlob(pc) };
+    }
+    const full = await depthMap();
+    const depth = full.blob, depthPreview = full.preview;
+    // 3. layers: each slab alone (clipping planes ⟂ the lens), alpha by difference matting (over black / white)
+    const layers = [];
+    const ORDER = ['foreground', 'subject', 'midground', 'background'];
+    const tagged = new Set();
+    content.traverse((o) => { if (o.isMesh) tagged.add(layerOf(o)); });
+    const byObjects = !cuts.length && tagged.size > 1;
+    const slabs = byObjects ? ORDER.filter((t) => tagged.has(t)).map((t) => ({ name: t }))
+      : (() => { const e = [near - 0.01, ...cuts.filter((c) => c > near && c < far).sort((x, y) => x - y), far + 0.01];
+        return e.slice(0, -1).map((a, i) => ({ name: `slab${i}`, a, b: e[i + 1] })); })();
+    const pNear = new THREE.Plane(), pFar = new THREE.Plane();
+    for (const sl of slabs) {
+      const hidden = [];
+      if (byObjects) content.traverse((o) => { if (o.isMesh && o.visible && layerOf(o) !== sl.name) { o.visible = false; hidden.push(o); } });
+      else {
+        pNear.setFromNormalAndCoplanarPoint(fwd, camera.position.clone().addScaledVector(fwd, sl.a));                     // keep z ≥ a
+        pFar.setFromNormalAndCoplanarPoint(fwd.clone().negate(), camera.position.clone().addScaledVector(fwd, sl.b));     // keep z ≤ b
+        renderer.clippingPlanes = [pNear, pFar];
+      }
+      // (shadow maps are not redrawn: a hidden sofa still shades the wall — right for a background plate)
+      const shots = [];
+      for (const c of ['#000000', '#ffffff']) { scene.background = new THREE.Color(c); draw(camera, { handles: false }); shots.push(grab()); }
+      const own = await depthMap();          // this layer's own depth (the others hidden / clipped)
+      scene.background = bg; renderer.clippingPlanes = [];
+      hidden.forEach((o) => { o.visible = true; });
+      const [k, w2] = shots.map((c) => c.getContext('2d').getImageData(0, 0, width, h).data);
+      const lc = document.createElement('canvas'); lc.width = width; lc.height = h;
+      const li = lc.getContext('2d').createImageData(width, h);
+      let zs = 0, n = 0, zmin = Infinity, zmax = -Infinity; const zl = [];
+      // depth of THIS layer's own pixels (from the full depth map where the layer is what you see)
+      for (let j = 0; j < k.length; j += 4) {
+        const al = 1 - ((w2[j] - k[j]) + (w2[j + 1] - k[j + 1]) + (w2[j + 2] - k[j + 2])) / (3 * 255);
+        const A = Math.max(0, Math.min(1, al));
+        li.data[j + 3] = Math.round(A * 255);
+        for (let c = 0; c < 3; c++) li.data[j + c] = A > 0.004 ? Math.min(255, Math.round(k[j + c] / A)) : 0;
+        if (A > 0.5 && own.cover[j / 4]) { const z = own.z[j / 4]; zs += z; n++; zmin = Math.min(zmin, z); zmax = Math.max(zmax, z); zl.push(z); }
+      }
+      lc.getContext('2d').putImageData(li, 0, 0);
+      zl.sort((x, y) => x - y);
+      layers.push({ name: sl.name, near: byObjects ? zmin : sl.a, far: byObjects ? zmax : sl.b, depth: n ? zs / n : 0,
+        median: zl.length ? zl[zl.length >> 1] : 0, blob: await toBlob(lc), depthBlob: own.blob });
+    }
+    dof.on = dofWas; view = was; resize(); invalidate();
+    const cam = getCamera();
+    const meta = { width, height: h, near, far, depthEncoding: 'z = near + (R*256 + G)/65535 * (far - near), metres along the lens',
+      camera: { focalMm: cam.focalMm, sensorMm: cam.sensorMm, fovH: cam.fovH, fovV: cam.fovV, position: cam.position, target: cam.target },
+      layers: layers.map((l, i) => ({ index: i, name: l.name, near: +l.near.toFixed(3), far: +l.far.toFixed(3), depth: +l.median.toFixed(3), mean: +l.depth.toFixed(3) })) };
+    return { color, depth, depthPreview, layers, meta };
+  }
+
   // ---- state -------------------------------------------------------------------------------------------
   function getState() {
     const c = getCamera();
@@ -1349,7 +1480,7 @@ export async function createLightingStudio(container, opts = {}) {
     // events: 'select' | 'lightmove' | 'camera' | 'change' | 'focuspick' | 'challenge' → returns an unsubscribe function
     on(name, cb) { if (!listeners.has(name)) listeners.set(name, []); listeners.get(name).push(cb); return () => { const a = listeners.get(name); if (a) a.splice(a.indexOf(cb), 1); }; },
     resize, dispose,
-    snapshot, snapshotInfo, readSnapshot,
+    snapshot, snapshotInfo, readSnapshot, exportLayers,
     // your own models (optional — everything else works without downloading anything)
     importModel,
     // challenge: recreate a reference
