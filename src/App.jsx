@@ -308,6 +308,15 @@ const RATIOS = [
   { label:"21:9", w:21, h:9, note:"Ultrawide monitor" },
 ];
 
+// Size a canvas so it fits BOTH the container width and the viewport height (no page scroll).
+// ar = height/width of the canvas (0.5625 = 16:9); chrome = px reserved for header + title + controls.
+function fitW(p, cap, ar=0.5625, chrome=400){
+  const cw=((p&&p.clientWidth)||cap)-28;
+  const vh=(typeof window!=="undefined"?window.innerHeight:900);
+  const hw=(vh-chrome)/ar;
+  return Math.round(Math.max(320, Math.min(cw, hw, cap)));
+}
+
 function ModuleAspectRatio({ image }) {
   const [sel, setSel] = useState(2);
   const canvasRef = useRef();
@@ -315,7 +324,7 @@ function ModuleAspectRatio({ image }) {
     const img = new Image();
     img.onload = () => {
       const c = canvasRef.current; if(!c)return;
-      const cw = Math.min(c.parentElement.clientWidth - 32, 900);
+      const cw = fitW(c.parentElement, 1100, img.height/img.width);
       const imgA = img.width/img.height;
       const ch = Math.round(cw/imgA);
       c.width=cw; c.height=ch;
@@ -357,8 +366,8 @@ function ModuleAspectRatio({ image }) {
           </button>
         ))}
       </div>
-      <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
-        <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%"}}/>
+      <div style={{textAlign:"center"}}>
+        <canvas ref={canvasRef} style={{display:"inline-block",maxWidth:"100%",borderRadius:8,border:"1px solid #2a2b32"}}/>
       </div>
       <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>{RATIOS[sel].note}</p>
     </div>
@@ -386,7 +395,7 @@ function ModuleResolution({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||860,1500);
+      const W=fitW(c.parentElement,1500);
       c.width=W; c.height=Math.round(W*9/16); const H=c.height;
       const ctx=c.getContext("2d");
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H);
@@ -618,7 +627,7 @@ function ModuleChromaSubsampling() {
       // magnified edge comparison: 4:4:4 vs selected
       const mc=magRef.current;
       if(mc){
-        const W=Math.min(mc.parentElement?.clientWidth-24||880,1500), gap=10, top=22;
+        const W=fitW(mc.parentElement,1500,0.62,680), gap=10, top=22;
         const panelW=Math.floor((W-gap)/2), panelH=Math.round(panelW*region.h/region.w);
         mc.width=W; mc.height=panelH+top;
         const ctx=mc.getContext("2d");
@@ -660,7 +669,7 @@ function ModuleChromaSubsampling() {
         </div>
         <div style={{flex:"1 1 420px",minWidth:300,background:"#16171c",borderRadius:8,padding:10}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>LOUPE — the green / subject edge (pixel level)</div>
-          <canvas ref={magRef} style={{display:"block",width:"100%"}}/>
+          <canvas ref={magRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
         </div>
       </div>
       <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,marginTop:12,display:"block",maxWidth:"100%",overflowX:"auto"}}>
@@ -992,7 +1001,7 @@ function ModuleRollingShutter() {
         </button>
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
-        <canvas ref={canvasRef} style={{display:"block",width:"100%",maxWidth:720}}/>
+        <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",maxWidth:720}}/>
       </div>
       <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>At high speeds, the yellow bar visibly leans (skews) due to the sequential line readout. This is rolling shutter. Blue line shows the sensor's current read row.</p>
     </div>
@@ -1054,7 +1063,7 @@ function ModuleMoire() {
         </button>
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:16,display:"block",maxWidth:"100%"}}>
-        <canvas ref={canvasRef} style={{display:"block",width:"100%",maxWidth:720}}/>
+        <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",maxWidth:720}}/>
       </div>
       <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>Move Grid A and B to similar values to see moiré intensify. Enable AA to see how filtering reduces the artifact (at the cost of some sharpness).</p>
     </div>
@@ -1070,7 +1079,7 @@ function ModuleBanding() {
   const canvasRef = useRef();
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||840,1500);
+    const W=fitW(c.parentElement,1500);
     c.width=W; c.height=Math.round(W*0.42);
     const ctx=c.getContext("2d");
     const gradH=c.height-30;
@@ -1136,7 +1145,7 @@ function ModuleNoise({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,1500);
+      c.width=fitW(c.parentElement,1500);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,c.width,c.height);
@@ -1210,7 +1219,7 @@ function ModuleShotTypes() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c) return;
-    const W=Math.min(c.parentElement?.clientWidth-24||900,1500); c.width=W; c.height=Math.round(W*9/16);
+    const W=fitW(c.parentElement,1500); c.width=W; c.height=Math.round(W*9/16);
     const ctx=c.getContext("2d");
     const paint=(im)=>{
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,c.width,c.height);
@@ -1243,7 +1252,7 @@ function ModuleShotTypes() {
         <button onClick={()=>setGuides(g=>!g)} style={{...(guides?styles.btnActive:styles.btnChip),marginLeft:"auto"}}>{guides?"Guides: ON":"Framing guides"}</button>
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:12}}>
-        <canvas ref={canvasRef} style={{display:"block",width:"100%"}}/>
+        <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
         <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10,color:"#9ca3af",fontSize:12,fontFamily:"monospace"}}>
           <span><strong style={{color:"#f3f4f6"}}>{S.name}</strong></span>
           <span>{S.focalMm} mm</span><span>f/{S.fstop}</span><span>{S.shutter}s</span><span>ISO {S.iso}</span><span>subject {S.distance} m</span>
@@ -1351,7 +1360,7 @@ function ModuleDepthOfField() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||840,1500);
+    const W=fitW(c.parentElement,1500);
     c.width=W; c.height=Math.round(W*9/16); const H=c.height;
     const ctx=c.getContext("2d");
     liveRef.current={ fstop, focal, distance, dofM };
@@ -1456,10 +1465,10 @@ function ModuleDepthOfField() {
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:12,display:"block",maxWidth:"100%",marginBottom:10}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>FRONT VIEW (what the lens sees)</div>
-        <canvas ref={canvasRef} style={{display:"block",width:"100%",borderRadius:4}}/>
+        <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
       </div>
       <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,display:"block",maxWidth:"100%"}}>
-        <canvas ref={sideRef} style={{display:"block",width:"100%"}}/>
+        <canvas ref={sideRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
       </div>
     </div>
   );
@@ -1476,7 +1485,7 @@ function ModuleVignetting({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,1500);
+      c.width=fitW(c.parentElement,1500);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,c.width,c.height);
@@ -1526,7 +1535,7 @@ function ModuleChromaticAberration({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,1500);
+      c.width=fitW(c.parentElement,1500);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       // Draw R, G, B channels with offset
@@ -1724,7 +1733,7 @@ function ModuleColorTemp() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||560,1500); c.width=W; c.height=Math.round(W*9/16);
+    const W=fitW(c.parentElement,1500); c.width=W; c.height=Math.round(W*9/16);
     const ctx=c.getContext("2d");
     const paint=(im)=>{
       if(im && im.complete && im.naturalWidth) ctx.drawImage(im,0,0,c.width,c.height);
@@ -1769,7 +1778,7 @@ function ModuleColorTemp() {
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"1 1 360px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
-          <canvas ref={canvasRef} style={{display:"block",width:"100%",borderRadius:4}}/>
+          <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
           <div style={{marginTop:8,color:verdict[1],fontSize:13,fontWeight:"bold"}}>{verdict[0]}</div>
         </div>
         <div style={{flex:"0 1 auto",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
@@ -1865,7 +1874,7 @@ function ModuleRAW() {
 
   useEffect(()=>{
     const ic=imgRef.current, wc=wfRef.current; if(!ic||!wc) return;
-    const W=Math.min(ic.parentElement?.clientWidth-24||440,900);
+    const W=fitW(ic.parentElement,900);
     const IW=Math.round(W), IH=Math.round(W*9/16);
     ic.width=IW; ic.height=IH;
     if(!_linScene){ const g0=ic.getContext("2d"); g0.fillStyle="#07090d"; g0.fillRect(0,0,IW,IH); g0.fillStyle="#9ca3af"; g0.font="12px monospace"; g0.fillText("loading scene…",12,24); return; }
@@ -1931,11 +1940,11 @@ function ModuleRAW() {
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"1 1 300px",minWidth:260,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>IMAGE</div>
-          <canvas ref={imgRef} style={{display:"block",width:"100%",borderRadius:4}}/>
+          <canvas ref={imgRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
         </div>
         <div style={{flex:"1 1 260px",minWidth:220,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:mode==="RAW"?"#34d399":"#f87171",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.08em"}}>WAVEFORM (luma, IRE)</div>
-          <canvas ref={wfRef} style={{display:"block",width:"100%"}}/>
+          <canvas ref={wfRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
         </div>
       </div>
     </div>
@@ -2286,7 +2295,7 @@ function ModuleScopes({ image }) {
     const img=new Image();
     img.onload=()=>{
       const pv=previewRef.current; if(!pv) return;
-      const IW=Math.min(pv.parentElement?.clientWidth-24||640,1500);
+      const IW=fitW(pv.parentElement,1500);
       const IH=Math.round(IW*9/16);
       pv.width=IW; pv.height=IH;
       const pctx=pv.getContext("2d");
@@ -2334,7 +2343,7 @@ function ModuleScopes({ image }) {
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12,display:"block",maxWidth:"100%"}}>
         <canvas ref={previewRef} onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp} onMouseLeave={onUp}
-          style={{display:"block",width:"100%",borderRadius:4,cursor:"grab"}}/>
+          style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4,cursor:"grab"}}/>
       </div>
       <div style={{background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:"12px 16px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
@@ -2523,7 +2532,7 @@ function ExposureDial({ values, index, format, onChange, accent="#f59e0b" }){
     return ()=>{ cancelAnimationFrame(s.raf); c.removeEventListener("pointerdown",onDown); c.removeEventListener("pointermove",onMove); c.removeEventListener("pointerup",onUp); c.removeEventListener("pointercancel",onUp); c.removeEventListener("keydown",onKey); window.removeEventListener("resize",onResize); };
   },[values,format,accent]);
   return <canvas ref={cRef} tabIndex={0} role="slider" aria-label="exposure dial"
-    style={{display:"block",width:"100%",height:64,borderRadius:8,cursor:"grab",touchAction:"none",outline:"none",border:`1px solid ${accent}44`,background:"#0a0d12"}}/>;
+    style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",height:64,borderRadius:8,cursor:"grab",touchAction:"none",outline:"none",border:`1px solid ${accent}44`,background:"#0a0d12"}}/>;
 }
 function ModuleExposureTriangle({ image }) {
   const [sh,setSh]=useState(6);   // index → 1/50
@@ -2557,7 +2566,7 @@ function ModuleExposureTriangle({ image }) {
     const v=videoRef.current, c=ref.current; if(!v||!c) return; v.play().catch(()=>{});
     let raf=0, alive=true;
     const draw=()=>{ if(!alive)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||600,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       if(c.width!==W){ c.width=W; c.height=H; } const ctx=c.getContext("2d");
       if(v.readyState>=2){ ctx.drawImage(v,0,0,W,H);
         const L=liveRef.current, id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -2579,7 +2588,7 @@ function ModuleExposureTriangle({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||760,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W; c.height=H; const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,W,H);
       const gain=Math.pow(2,stops);
@@ -2618,7 +2627,7 @@ function ModuleExposureTriangle({ image }) {
             <source src="footage/exposure.mp4" type="video/mp4"/>
           </video>
           <div style={{position:"relative"}}>
-            <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
+            <canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
             <div style={{position:"absolute",left:8,right:8,bottom:8,display:"flex",gap:6}}>
               {["sh","ap","iso"].map(k=>{ const P=PARAMS[k], on=active===k; return (
                 <button key={k} onClick={()=>setActive(k)} style={{flex:"1 1 0",background:on?"rgba(245,158,11,0.20)":"rgba(0,0,0,0.5)",border:`1px solid ${on?"#f59e0b":"rgba(255,255,255,0.16)"}`,borderRadius:6,padding:"5px 4px",cursor:"pointer",backdropFilter:"blur(4px)",WebkitBackdropFilter:"blur(4px)"}}>
@@ -2710,7 +2719,7 @@ function ModuleFalseColor({ image }) {
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"3 1 520px",minWidth:320,background:"#16171c",borderRadius:8,padding:12}}>
-          <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
+          <canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
         </div>
         <div style={{flex:"1 1 200px",minWidth:190,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:8,letterSpacing:"0.08em"}}>IRE LEGEND</div>
@@ -2747,7 +2756,7 @@ function ModuleLUT({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||760,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W; c.height=H; const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,W,H);
       const id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -2781,7 +2790,7 @@ function ModuleLUT({ image }) {
         <span style={{color:"#6b7280",fontSize:12}}>{active.kind!=="—" && <><strong style={{color:active.kind==="technical"?"#60a5fa":"#f59e0b"}}>{active.kind}</strong> · {active.note}</>}</span>
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:12}}>
-        <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
+        <canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
       </div>
     </div>
   );
@@ -2801,7 +2810,7 @@ const CODEC_TABLE=[
   {name:"Camera RAW (BRAW/R3D)", type:"Intra", comp:"Wavelet / proprietary", depth:"12–16 log", chroma:"CFA (pre-debayer)", alpha:"No", lic:"Proprietary", use:"Acquisition · max latitude"},
 ];
 function drawGOP(canvas, mode){
-  const W=Math.min(canvas.parentElement?.clientWidth-24||640,1500), H=150; canvas.width=W; canvas.height=H;
+  const W=fitW(canvas.parentElement,1500), H=150; canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,W,H);
   const seq = mode==="intra" ? ["I","I","I","I","I","I","I","I"] : ["I","B","B","P","B","B","P","B","B","I"];
   const n=seq.length, m=24, fw=(W-m*2)/n, fh=46, cy=H*0.52, col={I:"#f59e0b",P:"#60a5fa",B:"#a78bfa"};
@@ -2835,7 +2844,7 @@ function ModuleCodecs({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=imgRef.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||600,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
       if(q<100){
         const id=ctx.getImageData(0,0,W,H), d=id.data, blk=8;
@@ -2866,7 +2875,7 @@ function ModuleCodecs({ image }) {
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start",marginBottom:16}}>
         <div style={{flex:"1 1 300px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>SPATIAL — bitrate vs blocking</div>
-          <canvas ref={imgRef} style={{display:"block",width:"100%",borderRadius:4}}/>
+          <canvas ref={imgRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
           <label style={{...styles.label,marginTop:10}}>
             Bitrate / quality: <strong style={{color:"#ff5a4d"}}>{q}%</strong>
             <input type="range" min={3} max={100} step={1} value={q} onChange={e=>setQ(+e.target.value)} style={{...styles.slider,width:"100%"}}/>
@@ -2874,7 +2883,7 @@ function ModuleCodecs({ image }) {
         </div>
         <div style={{flex:"1 1 300px",minWidth:280,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>TEMPORAL — GOP structure</div>
-          <canvas ref={gopRef} style={{display:"block",width:"100%"}}/>
+          <canvas ref={gopRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
           <div style={{display:"flex",gap:8,marginTop:10}}>
             {[["Intra-only","intra"],["Long-GOP","long"]].map(([lbl,v])=>(
               <button key={v} onClick={()=>setGop(v)} style={gop===v?styles.btnActive:styles.btnChip}>{lbl}</button>
@@ -3069,7 +3078,7 @@ function ModuleLensDistortion({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const src=document.createElement("canvas"); src.width=W;src.height=H; const sctx=src.getContext("2d");
       sctx.drawImage(img,0,0,W,H);
@@ -3104,7 +3113,7 @@ function ModuleLensDistortion({ image }) {
         </label>
         <button onClick={()=>setGrid(g=>!g)} style={grid?styles.btnActive:styles.btnChip}>{grid?"Grid: ON":"Grid: OFF"}</button>
       </div>
-      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3120,7 +3129,7 @@ function ModuleInterlacing({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       // field 1 (even lines) at position 0, field 2 (odd lines) shifted by motion (captured 1/50s later)
       const fA=document.createElement("canvas"); fA.width=W;fA.height=H; fA.getContext("2d").drawImage(img,0,0,W,H);
@@ -3160,7 +3169,7 @@ function ModuleInterlacing({ image }) {
           <input type="range" min={0} max={30} step={1} value={motion} onChange={e=>setMotion(+e.target.value)} style={{...styles.slider,width:180}}/>
         </label>
       </div>
-      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3177,7 +3186,7 @@ function ModuleHalation({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
       // extract highlights above threshold
       const id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -3214,7 +3223,7 @@ function ModuleHalation({ image }) {
           <input type="range" min={0} max={1} step={0.01} value={amt} onChange={e=>setAmt(+e.target.value)} style={{...styles.slider,width:160}}/></label>
         <button onClick={()=>setHalo(h=>!h)} style={halo?styles.btnActive:styles.btnChip}>{halo?"Halation (red)":"Bloom (neutral)"}</button>
       </div>
-      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3231,7 +3240,7 @@ function ModuleFlicker({ image }) {
     const img=new Image(); let raf=0,t0=null,alive=true;
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const depth=0.42*(1-shutter/360)+0.12;               // shorter shutter → deeper bands
       const cycles=freq/25;                                 // 50Hz≈2, 60Hz≈2.4 bands over the frame at 25fps
@@ -3263,7 +3272,7 @@ function ModuleFlicker({ image }) {
           <input type="range" min={45} max={360} step={5} value={shutter} onChange={e=>setShutter(+e.target.value)} style={{...styles.slider,width:180}}/></label>
         <button onClick={()=>setAnimate(a=>!a)} style={animate?styles.btnActive:styles.btnChip}>{animate?"Roll: ON":"Roll: OFF"}</button>
       </div>
-      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3280,7 +3289,7 @@ function ModuleFocusBreathing({ image }) {
     const img=new Image(); let raf=0,t0=null,alive=true;
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
+      const W=fitW(c.parentElement,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const draw=(fv)=>{
         const scale=1+amount*0.16*(fv-0.5)*2;              // focus near → FOV narrows (image grows)
@@ -3312,7 +3321,7 @@ function ModuleFocusBreathing({ image }) {
           <input type="range" min={0} max={1} step={0.01} value={amount} onChange={e=>setAmount(+e.target.value)} style={{...styles.slider,width:160}}/></label>
         <button onClick={()=>setAnimate(a=>!a)} style={animate?styles.btnActive:styles.btnChip}>{animate?"Auto rack: ON":"Auto rack: OFF"}</button>
       </div>
-      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/></div>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}><canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/></div>
     </div>
   );
 }
@@ -3451,14 +3460,14 @@ function ModulePortraitLight() {
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"1 1 300px",minWidth:260,background:"#1c1d23",borderRadius:8,padding:12,textAlign:"center"}}>
-          <canvas ref={frontRef} style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto",borderRadius:4}}/>
+          <canvas ref={frontRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",maxWidth:360,margin:"0 auto",borderRadius:4}}/>
         </div>
         <div style={{flex:"1 1 260px",minWidth:240,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,textAlign:"center"}}>
           <canvas ref={topRef}
             onPointerDown={e=>{ e.currentTarget.setPointerCapture(e.pointerId); onTop(e,true); }}
             onPointerMove={e=>{ if(dragRef.current>=0) onTop(e,false); }}
             onPointerUp={()=>{dragRef.current=-1;}}
-            style={{display:"block",width:"100%",maxWidth:300,margin:"0 auto",cursor:"grab",touchAction:"none"}}/>
+            style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",maxWidth:300,margin:"0 auto",cursor:"grab",touchAction:"none"}}/>
         </div>
       </div>
       {/* light selector */}
@@ -3612,7 +3621,7 @@ function ModulePolarPatterns() {
           <canvas ref={ref}
             onPointerDown={e=>{dragRef.current=true; e.currentTarget.setPointerCapture(e.pointerId); onMove(e);}}
             onPointerMove={onMove} onPointerUp={()=>{dragRef.current=false;}}
-            style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto",cursor:"grab",touchAction:"none"}}/>
+            style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",maxWidth:360,margin:"0 auto",cursor:"grab",touchAction:"none"}}/>
         </div>
         <div style={{flex:"1 1 240px",minWidth:220}}>
           <div style={{background:"#16171c",borderRadius:8,padding:14,marginBottom:12}}>
@@ -3689,14 +3698,14 @@ function ModuleLevels() {
         <input type="range" min={-12} max={24} step={0.5} value={gain} onChange={e=>setGain(+e.target.value)} style={{...styles.slider,width:280}}/></label>
       <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>WAVEFORM</div>
-        <canvas ref={wfRef} style={{display:"block",width:"100%"}}/>
+        <canvas ref={wfRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:12}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
           <span style={{color:"#6b7280",fontSize:10,fontFamily:"monospace"}}>METER (dBFS) · amber = headroom zone</span>
           <span style={{fontFamily:"monospace",fontSize:11}}><span style={{color:"#9ca3af"}}>peak </span><strong style={{color:peakDB>-0.1?"#f87171":"#e5e7eb"}}>{peakDB<=-0.05?peakDB.toFixed(1):"0.0"} </strong><span style={{color:"#9ca3af"}}> RMS </span><strong style={{color:"#22c55e"}}>{rmsDB.toFixed(1)}</strong></span>
         </div>
-        <canvas ref={meterRef} style={{display:"block",width:"100%"}}/>
+        <canvas ref={meterRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
       </div>
     </div>
   );
@@ -3751,7 +3760,7 @@ function ModuleLoudness() {
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>LOUDNESS OVER TIME (LUFS)</div>
-        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+        <canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
       </div>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
         <label style={styles.label}>Gain offset: <strong style={{color:"#ff5a4d"}}>{offset>0?"+":""}{offset.toFixed(1)} LU</strong>
@@ -3824,7 +3833,7 @@ function ModuleMicTypes() {
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"1 1 300px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>FREQUENCY RESPONSE ({place}, {dist.toFixed(2)} m)</div>
-          <canvas ref={curveRef} style={{display:"block",width:"100%"}}/>
+          <canvas ref={curveRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
           <div style={{marginTop:8,display:"flex",gap:10,flexWrap:"wrap"}}>
             <StatBadge label="Level" value={`${level>0?"+":""}${level.toFixed(1)} dB`}/>
             <StatBadge label="Proximity" value={prox>0.05?`+${(prox*7).toFixed(1)} dB bass`:"none"}/>
@@ -3965,7 +3974,7 @@ function ModuleBalancedAudio() {
                   </div>
                 </div>
                 <div style={{flex:"1 1 260px",minWidth:240}}>
-                  <canvas ref={el=>refs.current[i]=el} style={{display:"block",width:"100%",borderRadius:4}}/>
+                  <canvas ref={el=>refs.current[i]=el} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
                 </div>
               </div>
               {i<stages.length-1 && !stages[i+1]?.flip && <div style={{textAlign:"center",color:"#374151",fontSize:14,lineHeight:0.6}}>↓</div>}
@@ -4027,7 +4036,7 @@ function ModuleProdSound() {
         <button onClick={()=>setRoomTone(r=>!r)} style={roomTone?styles.btnActive:styles.btnChip}>Room tone</button>
       </div>
       <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
-        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+        <canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
       </div>
       {active.length>0 ? active.map(p=>(
         <div key={p.id} style={{padding:"10px 14px",background:"#1c1d23",border:`1px solid ${p.col}44`,borderRadius:8,color:"#d1d5db",fontSize:13,lineHeight:1.6,marginBottom:8}}>
@@ -4082,7 +4091,7 @@ function ModuleSyncTimecode() {
         In <strong>double-system</strong> sound, picture and audio are recorded on <em>separate</em> devices, so they must be brought back together. The oldest, most reliable sync point is the <strong>slate</strong> (clapperboard): the instant the clap closes gives one frame in picture and one sharp spike in the sound — line them up and the take is synced. Professionally, both camera and recorder run <strong>timecode</strong>: at the start of the day they're <strong>jam-synced</strong> to the same clock so every file is stamped with matching time and the NLE aligns them automatically. Production audio is <strong>48 kHz</strong> (the A/V standard) and carries metadata inside the file — <strong>BWF/iXML</strong> holds scene/take, timecode and track names. Slide the sound until the clap spike meets the clap frame. <strong>Your QRClappeR/ClapTag works exactly this metadata — QR slate, timecode and iXML.</strong>
       </InfoBox>
       <div style={{background:"#16171c",borderRadius:8,padding:12,marginBottom:12}}>
-        <canvas ref={ref} style={{display:"block",width:"100%"}}/>
+        <canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
       </div>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center",marginBottom:12}}>
         <label style={styles.label}>Sound offset: <strong style={{color:inSync?"#34d399":"#f59e0b"}}>{off>0?"+":""}{off} frames ({ms>0?"+":""}{ms} ms)</strong>
@@ -4194,7 +4203,7 @@ function ModuleStereoSurround() {
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"1 1 300px",minWidth:280,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12,textAlign:"center"}}>
-          <canvas ref={ref} style={{display:"block",width:"100%",maxWidth:360,margin:"0 auto"}}/>
+          <canvas ref={ref} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",maxWidth:360,margin:"0 auto"}}/>
         </div>
         <div style={{flex:"1 1 240px",minWidth:220}}>
           <label style={{...styles.label,marginBottom:10}}>Pan: <strong style={{color:"#ff5a4d"}}>{pan===0?"centre":pan<0?`L ${Math.round(-pan*100)}%`:`R ${Math.round(pan*100)}%`}</strong>
@@ -4287,9 +4296,9 @@ function CreditPane({ name, frameRef, magRef, rd, idk }){
         <span style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",letterSpacing:"0.06em"}}>{name}</span>
         <strong ref={el=>rd.current["badge"+idk]=el} style={{fontFamily:"monospace",fontSize:11,fontWeight:"bold",whiteSpace:"nowrap"}}/>
       </div>
-      <canvas ref={frameRef} style={{display:"block",width:"100%",borderRadius:4,background:"#050506"}}/>
+      <canvas ref={frameRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4,background:"#050506"}}/>
       <div style={{color:"#6b7280",fontSize:9,fontFamily:"monospace",margin:"8px 0 4px"}}>LOUPE 8× — one letter, held still</div>
-      <canvas ref={magRef} style={{display:"block",width:"100%",borderRadius:4,imageRendering:"pixelated",background:"#050506"}}/>
+      <canvas ref={magRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4,imageRendering:"pixelated",background:"#050506"}}/>
       <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
         <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>offset <strong ref={el=>rd.current["off"+idk]=el} style={{color:"#e5e7eb"}}/></span>
         <span style={{color:"#6b7280",fontSize:11,fontFamily:"monospace"}}>phase <strong ref={el=>rd.current["ph"+idk]=el} style={{color:"#ff5a4d"}}/></span>
@@ -4400,7 +4409,7 @@ function ModuleHDR(){
     // ---- scene (linear, with window/sun headroom) ----
     const c=imgRef.current;
     if(c){
-      const W=Math.min(c.parentElement?.clientWidth-24||460,900), IW=Math.round(W), IH=Math.round(W*9/16);
+      const W=fitW(c.parentElement,900,0.5625,520), IW=Math.round(W), IH=Math.round(W*9/16);
       c.width=IW;c.height=IH; const ctx=c.getContext("2d");
       const scene=sampleLinearScene(IW,IH), id=ctx.createImageData(IW,IH), d=id.data; let peakLin=0;
       for(let p=0,i=0;p<IW*IH;p++,i+=4){ let anyClip=false;
@@ -4468,16 +4477,16 @@ function ModuleHDR(){
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
         <div style={{flex:"1 1 300px",minWidth:280,background:"#16171c",borderRadius:8,padding:12}}>
-          <canvas ref={imgRef} style={{display:"block",width:"100%",borderRadius:4}}/>
+          <canvas ref={imgRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:4}}/>
         </div>
         <div style={{flex:"1 1 200px",minWidth:190,background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
           <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.06em"}}>BRIGHTNESS LADDER</div>
-          <canvas ref={ladRef} style={{display:"block",width:"100%"}}/>
+          <canvas ref={ladRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
         </div>
       </div>
       <div style={{marginTop:16,background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
         <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.06em"}}>TRANSFER FUNCTION (EOTF) — code value → absolute nits</div>
-        <canvas ref={eotfRef} style={{display:"block",width:"100%"}}/>
+        <canvas ref={eotfRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto"}}/>
         <div style={{marginTop:6,color:"#8a8a92",fontSize:11,lineHeight:1.5}}>SDR gamma tops out at 100 nits (relative). <strong style={{color:"#34d399"}}>PQ</strong> assigns every code an <em>absolute</em> nit value up to 10000. <strong style={{color:"#a78bfa"}}>HLG</strong> is scene-relative (shown approximate). The electrical/voltage side of signal levels lives in <VoltLink to="n5/video">Volt → video as voltage</VoltLink>.</div>
       </div>
     </div>
@@ -4651,7 +4660,7 @@ function ModuleAudioWiring(){
           <select value={ins} onChange={e=>setIns(e.target.value)} style={{...selStyle,width:160}}><option value="ts">2× TS (mono jack)</option><option value="xlr">2× XLR</option></select></label>}
       </div>
       <div style={{background:"#0d1117",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
-        <svg viewBox="0 0 560 210" style={{display:"block",width:"100%",maxWidth:560,margin:"0 auto"}}>
+        <svg viewBox="0 0 560 210" style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",maxWidth:560,margin:"0 auto"}}>
           {mode!=="insert" ? (<>
             <AudioConnector ck={a} x={LX} side="L" ymap={la}/>
             <AudioConnector ck={connB} x={RX} side="R" ymap={lb}/>
@@ -4794,7 +4803,7 @@ function ModuleSpectrum(){
   const canvasRef=useRef();
   useEffect(()=>{
     const c=canvasRef.current; if(!c) return;
-    const W=Math.min(c.parentElement?.clientWidth-24||1000,1500); c.width=W; const H=Math.round(W*0.4); c.height=H;
+    const W=fitW(c.parentElement,1500); c.width=W; const H=Math.round(W*0.4); c.height=H;
     const ctx=c.getContext("2d");
     ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
     const padX=18, barY=42, barH=44, x0=padX, x1=W-padX, L0=3, L1=-13;
@@ -4831,11 +4840,11 @@ function ModuleSpectrum(){
       <InfoBox>
         The <strong>electromagnetic spectrum</strong> runs from radio waves (wavelengths of kilometres) to gamma rays (picometres). <strong>Visible light</strong> — the only part the eye and a camera sensor turn into an image — is a razor-thin slice from about <strong>380 nm</strong> (violet) to <strong>740 nm</strong> (red). Shorter wavelength means higher <em>frequency</em> and more <em>energy per photon</em> (E = 1240/λ in eV). Drag the marker to read the wavelength, frequency and photon energy, and the colour your eye assigns to that single pure wavelength. A camera samples this band through three filters peaking roughly in the <span style={{color:"#60a5fa"}}>blue (~450 nm)</span>, <span style={{color:"#34d399"}}>green (~540 nm)</span> and <span style={{color:"#f87171"}}>red (~600 nm)</span>; an <strong>IR-cut filter</strong> blocks the near-infrared (e.g. a ~940 nm remote) the silicon would otherwise record. The mix of wavelengths a hot source emits is its <strong>colour temperature</strong> (see Color Temperature).
       </InfoBox>
-      <canvas ref={canvasRef} style={{display:"block",width:"100%",borderRadius:8}}/>
+      <canvas ref={canvasRef} style={{display:"block",maxWidth:"100%",marginLeft:"auto",marginRight:"auto",borderRadius:8}}/>
       <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"center",marginTop:14}}>
         <label style={{...styles.label,flex:"1 1 320px"}}>
           Wavelength: <strong style={{color:"#ff5a4d"}}>{nm} nm</strong>
-          <input type="range" min={380} max={740} step={1} value={nm} onChange={e=>setNm(+e.target.value)} style={{width:"100%",accentColor:`rgb(${r},${g},${b})`}}/>
+          <input type="range" min={380} max={740} step={1} value={nm} onChange={e=>setNm(+e.target.value)} style={{width:"100%",accentColor:"#ff5a4d"}}/>
         </label>
         <div style={{display:"flex",gap:12,alignItems:"center"}}>
           <div style={{width:56,height:56,borderRadius:10,background:`rgb(${r},${g},${b})`,border:"1px solid #2a2b32"}}/>
@@ -4957,6 +4966,9 @@ export default function AVHandbook() {
   // recompute to the new width (modules size their canvas once per render, not on every resize).
   const [rk,setRk]=useState(0);
   useEffect(()=>{ let t; const on=()=>{ clearTimeout(t); t=setTimeout(()=>setRk(k=>k+1),180); }; window.addEventListener("resize",on); return ()=>{ window.removeEventListener("resize",on); clearTimeout(t); }; },[]);
+  // Remember the hub scroll position so returning from a module lands where you left off.
+  const hubScroll = useRef(0);
+  useEffect(()=>{ if(activeModule) window.scrollTo(0,0); else { const y=hubScroll.current; requestAnimationFrame(()=>window.scrollTo(0,y)); } },[activeModule]);
 
   useEffect(()=>{
     setDefaultImage(heroScene);
@@ -5110,7 +5122,7 @@ export default function AVHandbook() {
                 gap:14,
               }}>
                 {cat.modules.map(id=>(
-                  <HubCard key={id} id={id} catColor={CATEGORY_COLORS[cat.id]} onClick={()=>setActiveModule(id)}/>
+                  <HubCard key={id} id={id} catColor={CATEGORY_COLORS[cat.id]} onClick={()=>{ hubScroll.current=window.scrollY; setActiveModule(id); }}/>
                 ))}
               </div>
             </div>

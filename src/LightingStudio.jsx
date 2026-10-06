@@ -160,7 +160,7 @@ export default function LightingStudio3D(){
     <div ref={rootRef} style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-start",...(fs?{height:"100vh",background:"#0e0f12",padding:12,overflow:"auto",alignContent:"flex-start"}:{})}}>
       {/* LEFT: 3D view on top + the bar you watch while lighting */}
       <div style={{flex:"1 1 560px",minWidth:300,display:"flex",flexDirection:"column",gap:10}}>
-        <div ref={viewRef} style={{position:"relative",width:"100%",height:narrow?"46vh":(fs?"58vh":"min(50vh,440px)"),background:"#08080a",borderRadius:10,overflow:"hidden",border:`1px solid ${C.line}`,touchAction:"none"}}>
+        <div ref={viewRef} style={{position:"relative",width:"100%",height:narrow?"46vh":(fs?"62vh":"min(58vh,600px)"),background:"#08080a",borderRadius:10,overflow:"hidden",border:`1px solid ${C.line}`,touchAction:"none"}}>
           <button onClick={toggleFs} title="Fullscreen (great for projecting)" style={{position:"absolute",right:8,top:8,zIndex:4,...sBtn(false),padding:"4px 10px"}}>{fs?"✕ Exit":"⛶ Fullscreen"}</button>
           {phase!=="ready" && (
             <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center",padding:24,color:phase==="error"?"#fca5a5":C.muted,fontSize:13}}>
