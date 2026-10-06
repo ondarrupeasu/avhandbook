@@ -4854,26 +4854,27 @@ export default function AVHandbook() {
     }}>
       {/* Header */}
       <div style={{
-        borderBottom:"1px solid #2a2b32",padding:"16px 24px",
-        display:"flex",alignItems:"center",gap:16,flexWrap:"wrap",
+        borderBottom:"1px solid #2a2b32",padding:"14px 24px",
         background:"rgba(14,15,18,.72)",backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)",
         position:"sticky",top:0,zIndex:100,
       }}>
-        <div style={{flex:1,minWidth:200}}>
-          <div style={{
-            fontSize:22,fontWeight:"bold",letterSpacing:"0.05em",
-            background:"linear-gradient(90deg,#ff5a4d,#ff8a63)",
-            WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
-          }}>
-            AVHandbook
-          </div>
-          <div style={{color:"#4b5563",fontSize:11,fontFamily:"monospace"}}>Interactive Audiovisual Reference</div>
-        </div>
+       <div style={{maxWidth:1680,margin:"0 auto",width:"100%",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
         {activeModule && (
           <button onClick={()=>setActiveModule(null)} style={{...styles.btnSecondary,fontSize:12,display:"inline-flex",alignItems:"center",gap:7}}>
             <Icon name="arrowLeft" size={14}/> All Modules
           </button>
         )}
+        <div style={{flex:1,minWidth:180}}>
+          <div style={{
+            fontSize:22,fontWeight:"bold",letterSpacing:"0.05em",
+            background:"linear-gradient(90deg,#ff5a4d,#ff8a63)",
+            WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+            display:"inline-block",
+          }}>
+            AVHandbook
+          </div>
+          <div style={{color:"#4b5563",fontSize:11,fontFamily:"monospace"}}>Interactive Audiovisual Reference</div>
+        </div>
         {!activeModule && (
           <div style={{position:"relative",display:"flex",alignItems:"center"}}>
             <Icon name="search" size={14} style={{position:"absolute",left:10,color:"#6b7280",pointerEvents:"none"}}/>
@@ -4907,11 +4908,12 @@ export default function AVHandbook() {
             </button>
           )}
         </div>
+       </div>
       </div>
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div key={activeModule} className="avh-fade" style={{maxWidth:1080,margin:"0 auto",padding:"24px 20px"}}>
+        <div key={activeModule} className="avh-fade" style={{maxWidth:1200,margin:"0 auto",padding:"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}
@@ -4922,7 +4924,7 @@ export default function AVHandbook() {
           <ActiveComp image={image} userImage={userImage}/>
         </div>
       ) : (
-        <div className="avh-fade" style={{maxWidth:1280,margin:"0 auto",padding:"24px 20px"}}>
+        <div className="avh-fade" style={{maxWidth:1680,margin:"0 auto",padding:"24px 20px"}}>
           {/* Hero */}
           {!search && (
             <div style={{
@@ -4957,8 +4959,8 @@ export default function AVHandbook() {
               </div>
               <div style={{
                 display:"grid",
-                gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",
-                gap:10,
+                gridTemplateColumns:"repeat(auto-fill,minmax(230px,1fr))",
+                gap:14,
               }}>
                 {cat.modules.map(id=>(
                   <HubCard key={id} id={id} catColor={CATEGORY_COLORS[cat.id]} onClick={()=>setActiveModule(id)}/>
