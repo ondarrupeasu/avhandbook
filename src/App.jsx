@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import LightingStudio3D from "./LightingStudio.jsx";
+import DepthOfField3D from "./DepthOfField3D.jsx";
 import heroScene from "./assets/shots/ls.jpg";
 import sceneColor from "./assets/scene/color.png";
 import sceneDepth from "./assets/scene/depth16.png";
@@ -4909,7 +4910,7 @@ const MODULE_COMPONENTS = {
   noise: ModuleNoise,
   vignetting: ModuleVignetting,
   chromaticAberration: ModuleChromaticAberration,
-  depthOfField: ModuleDepthOfField,
+  depthOfField: DepthOfField3D,
   shotTypes: ModuleShotTypes,
   cameraMovement: ModuleCameraMovement,
   timecode: ModuleTimecode,
@@ -5072,7 +5073,7 @@ export default function AVHandbook() {
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div key={activeModule==="lightingStudio"?activeModule:activeModule+"-"+rk} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1680,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
+        <div key={(activeModule==="lightingStudio"||activeModule==="depthOfField")?activeModule:activeModule+"-"+rk} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1680,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}
