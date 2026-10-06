@@ -26,6 +26,8 @@ const asset = (name) => new URL(`./assets/${name}.glb`, import.meta.url).href;
 /** Subjects bundled with the module. `target` = the point lights and camera aim at (m). */
 const SUBJECTS = {
   bust: { name: 'Marble bust', target: [0, 1.25, 0], view: { az: 0, el: 3, dist: 3.2, focal: 85 }, credit: 'Marble Bust 01 — Poly Haven (CC0)' },
+  'dof-test': { name: 'Depth of field test', target: [-0.45, 1.65, -1.0], view: { position: [0.25, 1.3, 3.0], look: [0, 0.6, -4], focal: 50 },
+    credit: 'Objects at 2 · 4 · 6 · 8 · 11 m from the camera (floor markers) — Garfield (Smithsonian, CC0) + Poly Haven props (CC0)' },
   'living-room-figure': { name: 'Film set + figure', target: [-1.05, 1.6, 0.55], view: { az: 10, el: 2, dist: 3.4, focal: 50 },
     credit: 'James Garfield, bronze statuette by J. Q. A. Ward — National Portrait Gallery, Smithsonian (CC0); living room as below' },
   'living-room': { name: 'Film set: living room', target: [0, 0.75, -0.95], view: { az: 12, el: 8, dist: 4.6, focal: 35 },
@@ -86,6 +88,12 @@ const PRESETS = {
     en: ['Under light (horror)', 'Light from below: shadows go upwards, an unnatural, sinister look.'],
     lights: [{ role: 'key', ...KEY_HARD, az: 10, el: -40, dist: 1.5, intensity: 1 }],
     world: { ambient: 0.02, backdrop: '#3a3b3f' } },
+  'dof-even': { es: ['Uniforme (prueba de foco)', 'Luz suave y pareja a lo largo de todo el set, para ver la profundidad de campo sin sombras que despisten.'],
+    en: ['Even (focus test)', 'Soft, even light along the whole set, so depth of field is seen without distracting shadows.'],
+    lights: [{ role: 'key', type: 'area', position: [-1.5, 3.0, 2.5], target: [0, 0.8, -1], intensity: 1.2, size: 2.5, shadow: { on: true, softness: 0.8 } },
+      { role: 'fill', type: 'area', position: [1.6, 3.0, -2.5], target: [0, 0.8, -5], intensity: 1.4, size: 2.5, shadow: { on: false } },
+      { role: 'background', type: 'area', position: [0, 3.2, -7], target: [0, 1.2, -11.5], intensity: 1.6, size: 3, shadow: { on: false } }],
+    world: { ambient: 0.25 } },
   silhouette: { es: ['Silueta', 'Solo se ilumina el fondo; el sujeto queda como una forma oscura recortada.'],
     en: ['Silhouette', 'Only the background is lit; the subject stays a dark shape against it.'],
     lights: [{ role: 'background', type: 'spot', az: 0, el: 25, dist: 1.8, target: [0, 1.4, -3.4], intensity: 1.6, cone: 90, softness: 0.9, shadow: { on: false } }],
@@ -332,6 +340,56 @@ export async function createLightingStudio(container, opts = {}) {
         const f = place(fig, FIGURE_AT[0], FIGURE_AT[1], 0, 0.032);
         f.userData.layer = 'subject'; f.name = 'figure';
       }
+    } else if (id === 'dof-test') {
+      // a long floor with things at known distances along the lens: 2 · 4 · 6 · 8 · 11 m from the camera
+      // (camera at z = 3, looking down −Z), staggered left/right so none hides the next
+      const CAMZ = 3;
+      const names = ['side_table_01', 'ceramic_vase_01', 'figure_garfield', 'ArmChair_01', 'vintage_oil_lamp', 'wooden_display_shelves_01', 'potted_plant_04', 'hanging_picture_frame_02'];
+      const m = {}; (await Promise.all(names.map(loadGlb))).forEach((o, i) => { m[names[i]] = o; });
+      const place = (o, x, z, rotY = 0, y = 0) => {
+        const c = o.clone(); c.rotation.y = rotY; c.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(c, true), ctr = box.getCenter(new THREE.Vector3());
+        c.position.set(x - ctr.x, y - box.min.y, z - ctr.z); g.add(c); return c;
+      };
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(14, 0.02, 17), new THREE.MeshStandardMaterial({ color: '#5a3d29', roughness: 0.6 }));
+      floor.position.set(0, -0.01, -4.5); g.add(floor);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(14, 5, 0.1), new THREE.MeshStandardMaterial({ color: '#4f5e56', roughness: 0.9 }));
+      wall.position.set(0, 2.5, -11.6); g.add(wall);
+      const at = (d) => CAMZ - d;
+      const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.17, 1.0, 40), plaster); ped.position.set(0.5, 0.5, at(2)); g.add(ped);
+      place(m.ceramic_vase_01, 0.5, at(2), 0.4, 1.0);
+      const fig = new THREE.Group(); {
+        const scan = m.figure_garfield.clone();
+        scan.quaternion.setFromUnitVectors(new THREE.Vector3(0.905, 0.009, 0.426).normalize(), new THREE.Vector3(0, 1, 0));
+        levelOnBase(scan);
+        const t = new THREE.Group(); t.add(scan); scan.updateMatrixWorld(true);
+        const sb = new THREE.Box3().setFromObject(scan, true), sc = sb.getCenter(new THREE.Vector3());
+        scan.position.set(-sc.x, -sb.min.y, -sc.z); t.rotation.y = FIGURE_YAW; fig.add(t); fig.updateMatrixWorld(true);
+        fig.scale.setScalar(1.95 / new THREE.Box3().setFromObject(fig, true).getSize(new THREE.Vector3()).y);
+      }
+      place(fig, -0.45, at(4)).name = 'figure';
+      place(m.ArmChair_01, 0.75, at(6), -0.5);
+      place(m.side_table_01, -0.75, at(8));
+      const lamp = place(m.vintage_oil_lamp, -0.75, at(8), 0.3, 0.548);
+      const lb = new THREE.Box3().setFromObject(lamp, true);
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 12), new THREE.MeshStandardMaterial({ color: '#000000', emissive: '#ffb45c', emissiveIntensity: 40 }));
+      flame.scale.set(1, 1.8, 1); flame.position.set(-0.75, lb.min.y + (lb.max.y - lb.min.y) * 0.56, at(8)); flame.userData.noShadow = true; g.add(flame);
+      place(m.wooden_display_shelves_01, 0.5, at(11), -Math.PI / 2);
+      place(m.potted_plant_04, 0.5, at(11), 0, 1.17);
+      const frame = m.hanging_picture_frame_02.clone(); frame.position.set(-0.6, 1.7, -11.54); g.add(frame);
+      // distance signs: a small card on a thin stand beside each object, facing the camera
+      const sign = (d, x, h) => {
+        const cv = Object.assign(document.createElement('canvas'), { width: 256, height: 128 }), c2 = cv.getContext('2d');
+        c2.fillStyle = '#f2efe8'; c2.fillRect(0, 0, 256, 128); c2.strokeStyle = '#1b1b1f'; c2.lineWidth = 8; c2.strokeRect(4, 4, 248, 120);
+        c2.fillStyle = '#1b1b1f'; c2.font = 'bold 78px sans-serif'; c2.textAlign = 'center'; c2.textBaseline = 'middle'; c2.fillText(`${d} m`, 128, 68);
+        const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
+        const w = 0.16 + d * 0.025;                   // a little bigger further away, still readable
+        const card = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }));
+        card.position.set(x, h, at(d)); card.lookAt(0.25, h, CAMZ); g.add(card);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, h, 8), new THREE.MeshStandardMaterial({ color: '#2a2a2e', roughness: 0.5 }));
+        pole.position.set(x, h / 2, at(d) - 0.01); g.add(pole);
+      };
+      sign(2, 0.18, 0.8); sign(4, -0.05, 0.75); sign(6, 0.2, 0.7); sign(8, -0.3, 0.75); sign(11, 0.0, 0.8);
     } else if (id === 'custom' && customGroup) {
       g.add(customGroup.clone());
     } else throw new Error(`Unknown subject "${id}"`);
@@ -407,6 +465,7 @@ export async function createLightingStudio(container, opts = {}) {
     const g = await buildSubject(id);
     subjectRoot.clear();
     subjectRoot.add(g);
+    cove.visible = id !== 'dof-test';      // the DoF set brings its own long floor and far wall
     subjectRoot.updateMatrixWorld(true);   // raycasts (auto focus) may run before the next frame
     subjectId = id;
     const prev = subjectTarget.clone();
@@ -414,11 +473,11 @@ export async function createLightingStudio(container, opts = {}) {
     const d = subjectTarget.clone().sub(prev);
     const v = subjects[id].view;
     if (v && !opts.keepCamera) {           // each subject has a natural shot
-      targets.camera.copy(subjectTarget);
-      camera.position.copy(sph(v.az, v.el, v.dist, subjectTarget));
+      if (v.position) { targets.camera.fromArray(v.look); camera.position.fromArray(v.position); }   // a fixed camera spot
+      else { targets.camera.copy(subjectTarget); camera.position.copy(sph(v.az, v.el, v.dist, subjectTarget)); }
       if (v.focal) camera.setFocalLength(v.focal);
       targets.studio.copy(subjectTarget);
-      studioCam.position.copy(sph(v.az + 30, v.el + 20, v.dist * 1.8, subjectTarget));
+      studioCam.position.copy(v.position ? new THREE.Vector3(v.position[0] + 4, v.position[1] + 3, v.position[2] + 2) : sph(v.az + 30, v.el + 20, v.dist * 1.8, subjectTarget));
     } else {                               // keep the view of the subject: move by the change of aim point
       camera.position.add(d); targets.camera.add(d); studioCam.position.add(d); targets.studio.add(d);
     }
