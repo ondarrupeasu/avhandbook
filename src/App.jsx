@@ -4859,22 +4859,25 @@ export default function AVHandbook() {
         position:"sticky",top:0,zIndex:100,
       }}>
        <div style={{maxWidth:1680,margin:"0 auto",width:"100%",display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
-        {activeModule && (
-          <button onClick={()=>setActiveModule(null)} style={{...styles.btnSecondary,fontSize:12,display:"inline-flex",alignItems:"center",gap:7}}>
-            <Icon name="arrowLeft" size={14}/> All Modules
-          </button>
-        )}
-        <div style={{flex:1,minWidth:180}}>
-          <div style={{
-            fontSize:22,fontWeight:"bold",letterSpacing:"0.05em",
-            background:"linear-gradient(90deg,#ff5a4d,#ff8a63)",
-            WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
-            display:"inline-block",
-          }}>
-            AVHandbook
+        <div style={{display:"flex",alignItems:"center",gap:14,minWidth:180}}>
+          <div>
+            <div style={{
+              fontSize:22,fontWeight:"bold",letterSpacing:"0.05em",
+              background:"linear-gradient(90deg,#ff5a4d,#ff8a63)",
+              WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",
+              display:"inline-block",
+            }}>
+              AVHandbook
+            </div>
+            <div style={{color:"#4b5563",fontSize:11,fontFamily:"monospace"}}>Interactive Audiovisual Reference</div>
           </div>
-          <div style={{color:"#4b5563",fontSize:11,fontFamily:"monospace"}}>Interactive Audiovisual Reference</div>
+          {activeModule && (
+            <button onClick={()=>setActiveModule(null)} style={{...styles.btnSecondary,fontSize:12,display:"inline-flex",alignItems:"center",gap:7}}>
+              <Icon name="arrowLeft" size={14}/> All Modules
+            </button>
+          )}
         </div>
+        <div style={{display:"flex",alignItems:"center",gap:16,marginLeft:"auto",flexWrap:"wrap"}}>
         {!activeModule && (
           <div style={{position:"relative",display:"flex",alignItems:"center"}}>
             <Icon name="search" size={14} style={{position:"absolute",left:10,color:"#6b7280",pointerEvents:"none"}}/>
@@ -4907,6 +4910,7 @@ export default function AVHandbook() {
               <Icon name="x" size={14}/> Reset
             </button>
           )}
+        </div>
         </div>
        </div>
       </div>
