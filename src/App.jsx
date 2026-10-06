@@ -15,6 +15,7 @@ import s_ms from "./assets/shots/ms.jpg";
 import s_mls from "./assets/shots/mls.jpg";
 import s_ls from "./assets/shots/ls.jpg";
 import s_ws from "./assets/shots/ws.jpg";
+import greenScreenImg from "./assets/green_screen.jpg";
 
 // ─────────────────────────────────────────────
 // i18n — centralised strings (add ES/EU here)
@@ -383,7 +384,7 @@ function ModuleResolution({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||860,860);
+      const W=Math.min(c.parentElement?.clientWidth-32||860,1100);
       c.width=W; c.height=Math.round(W*9/16); const H=c.height;
       const ctx=c.getContext("2d");
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H);
@@ -576,7 +577,7 @@ function drawChromaGrid(canvas, scheme){
   ctx.textAlign="left"; ctx.fillStyle="#f59e0b"; ctx.font="bold 11px monospace";
   ctx.fillText(`chroma samples kept: ${kept} of ${N*N}   ·   luma still ${N*N}`,pad,H-6);
 }
-const CHROMA_IW=260, CHROMA_IH=146, CHROMA_REGION={x:96,y:4,w:74,h:60};
+const CHROMA_IW=260, CHROMA_IH=146, CHROMA_REGION={x:88,y:14,w:78,h:62};
 function ModuleChromaSubsampling() {
   const [sel, setSel] = useState(2);
   const [chromaOnly, setChromaOnly] = useState(false);
@@ -584,48 +585,54 @@ function ModuleChromaSubsampling() {
   const sceneRef = useRef();
   const magRef = useRef();
   const gridRef = useRef();
+  const imgRef = useRef(null);
   useEffect(()=>{
     if(gridRef.current) drawChromaGrid(gridRef.current, S.label);
     const IW=CHROMA_IW, IH=CHROMA_IH, region=CHROMA_REGION;
-    const src=document.createElement("canvas"); src.width=IW; src.height=IH;
-    greenScreenScene(src.getContext("2d"), IW, IH);
-    const srcData=src.getContext("2d").getImageData(0,0,IW,IH).data;
-    const subData=new Uint8ClampedArray(srcData);
-    chromaSubsample(subData, IW, IH, S.label);
-    // full scene (rendered at the selected subsampling) with the loupe rectangle
-    const sc=sceneRef.current;
-    if(sc){
-      const W=Math.min(sc.parentElement?.clientWidth-24||520,560), H=Math.round(W*IH/IW);
-      sc.width=W; sc.height=H;
-      const ctx=sc.getContext("2d");
-      const disp=document.createElement("canvas"); disp.width=IW; disp.height=IH;
-      const dd=disp.getContext("2d").createImageData(IW,IH); dd.data.set(subData); disp.getContext("2d").putImageData(dd,0,0);
-      ctx.imageSmoothingEnabled=true; ctx.drawImage(disp,0,0,W,H);
-      const rx=region.x/IW*W, ry=region.y/IH*H, rw=region.w/IW*W, rh=region.h/IH*H;
-      ctx.strokeStyle="#22d3ee"; ctx.lineWidth=2; ctx.setLineDash([5,4]); ctx.strokeRect(rx,ry,rw,rh); ctx.setLineDash([]);
-      ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(0,0,W,20); ctx.fillStyle="#9ca3af"; ctx.font="11px monospace"; ctx.fillText(`model on green screen · ${S.label}${chromaOnly?" · chroma only":""}`,8,14);
-    }
-    // magnified edge comparison: 4:4:4 vs selected
-    const mc=magRef.current;
-    if(mc){
-      const W=Math.min(mc.parentElement?.clientWidth-24||880,920), gap=10, top=22;
-      const panelW=Math.floor((W-gap)/2), panelH=Math.round(panelW*region.h/region.w);
-      mc.width=W; mc.height=panelH+top;
-      const ctx=mc.getContext("2d");
-      ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,mc.height);
-      drawLoupe(ctx, srcData, IW, region, 0, top, panelW, panelH, chromaOnly);
-      drawLoupe(ctx, subData, IW, region, panelW+gap, top, panelW, panelH, chromaOnly);
-      if(S.label!=="4:4:4"){
-        const bw=S.label==="4:1:1"?4:2, bh=S.label==="4:2:0"?2:1;
-        const sx=panelW/region.w, sy=panelH/region.h;
-        ctx.strokeStyle="rgba(255,255,255,0.14)"; ctx.lineWidth=1;
-        for(let x=0;x<=region.w;x+=bw){ const px=Math.round(panelW+gap+x*sx)+0.5; ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,top+panelH);ctx.stroke(); }
-        if(bh>1) for(let y=0;y<=region.h;y+=bh){ const py=Math.round(top+y*sy)+0.5; ctx.beginPath();ctx.moveTo(panelW+gap,py);ctx.lineTo(W,py);ctx.stroke(); }
+    const render=(img)=>{
+      const src=document.createElement("canvas"); src.width=IW; src.height=IH;
+      const sctx=src.getContext("2d"); sctx.drawImage(img,0,0,IW,IH);
+      const srcData=sctx.getImageData(0,0,IW,IH).data;
+      const subData=new Uint8ClampedArray(srcData);
+      chromaSubsample(subData, IW, IH, S.label);
+      // full scene (rendered at the selected subsampling) with the loupe rectangle
+      const sc=sceneRef.current;
+      if(sc){
+        const W=Math.min(sc.parentElement?.clientWidth-24||520,560), H=Math.round(W*IH/IW);
+        sc.width=W; sc.height=H;
+        const ctx=sc.getContext("2d");
+        const disp=document.createElement("canvas"); disp.width=IW; disp.height=IH;
+        const dd=disp.getContext("2d").createImageData(IW,IH); dd.data.set(subData); disp.getContext("2d").putImageData(dd,0,0);
+        ctx.imageSmoothingEnabled=true; ctx.drawImage(disp,0,0,W,H);
+        const rx=region.x/IW*W, ry=region.y/IH*H, rw=region.w/IW*W, rh=region.h/IH*H;
+        ctx.strokeStyle="#22d3ee"; ctx.lineWidth=2; ctx.setLineDash([5,4]); ctx.strokeRect(rx,ry,rw,rh); ctx.setLineDash([]);
+        ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(0,0,W,20); ctx.fillStyle="#9ca3af"; ctx.font="11px monospace"; ctx.fillText(`green screen · ${S.label}${chromaOnly?" · chroma only":""}`,8,14);
       }
-      ctx.textAlign="left"; ctx.font="bold 12px monospace";
-      ctx.fillStyle="#9ca3af"; ctx.fillText(`4:4:4  (original)`,4,15);
-      ctx.fillStyle="#f59e0b"; ctx.fillText(`${S.label}${S.label!=="4:4:4"?"  — invented edge colours":""}`,panelW+gap+4,15);
-    }
+      // magnified edge comparison: 4:4:4 vs selected
+      const mc=magRef.current;
+      if(mc){
+        const W=Math.min(mc.parentElement?.clientWidth-24||880,1100), gap=10, top=22;
+        const panelW=Math.floor((W-gap)/2), panelH=Math.round(panelW*region.h/region.w);
+        mc.width=W; mc.height=panelH+top;
+        const ctx=mc.getContext("2d");
+        ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,mc.height);
+        drawLoupe(ctx, srcData, IW, region, 0, top, panelW, panelH, chromaOnly);
+        drawLoupe(ctx, subData, IW, region, panelW+gap, top, panelW, panelH, chromaOnly);
+        if(S.label!=="4:4:4"){
+          const bw=S.label==="4:1:1"?4:2, bh=S.label==="4:2:0"?2:1;
+          const sx=panelW/region.w, sy=panelH/region.h;
+          ctx.strokeStyle="rgba(255,255,255,0.14)"; ctx.lineWidth=1;
+          for(let x=0;x<=region.w;x+=bw){ const px=Math.round(panelW+gap+x*sx)+0.5; ctx.beginPath();ctx.moveTo(px,top);ctx.lineTo(px,top+panelH);ctx.stroke(); }
+          if(bh>1) for(let y=0;y<=region.h;y+=bh){ const py=Math.round(top+y*sy)+0.5; ctx.beginPath();ctx.moveTo(panelW+gap,py);ctx.lineTo(W,py);ctx.stroke(); }
+        }
+        ctx.textAlign="left"; ctx.font="bold 12px monospace";
+        ctx.fillStyle="#9ca3af"; ctx.fillText(`4:4:4  (original)`,4,15);
+        ctx.fillStyle="#f59e0b"; ctx.fillText(`${S.label}${S.label!=="4:4:4"?"  — invented edge colours":""}`,panelW+gap+4,15);
+      }
+    };
+    let img=imgRef.current;
+    if(!img){ img=new Image(); imgRef.current=img; img.src=greenScreenImg; }
+    if(img.complete && img.naturalWidth) render(img); else img.onload=()=>render(img);
   },[sel,chromaOnly]);
   return (
     <div>
@@ -1056,7 +1063,7 @@ function ModuleBanding() {
   const canvasRef = useRef();
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||840,840);
+    const W=Math.min(c.parentElement?.clientWidth-32||840,1100);
     c.width=W; c.height=Math.round(W*0.42);
     const ctx=c.getContext("2d");
     const gradH=c.height-30;
@@ -1122,7 +1129,7 @@ function ModuleNoise({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,840);
+      c.width=Math.min(c.parentElement?.clientWidth-32||840,1100);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,c.width,c.height);
@@ -1196,7 +1203,7 @@ function ModuleShotTypes() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c) return;
-    const W=Math.min(c.parentElement?.clientWidth-24||900,960); c.width=W; c.height=Math.round(W*9/16);
+    const W=Math.min(c.parentElement?.clientWidth-24||900,1100); c.width=W; c.height=Math.round(W*9/16);
     const ctx=c.getContext("2d");
     const paint=(im)=>{
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,c.width,c.height);
@@ -1337,7 +1344,7 @@ function ModuleDepthOfField() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||840,840);
+    const W=Math.min(c.parentElement?.clientWidth-32||840,1100);
     c.width=W; c.height=Math.round(W*9/16); const H=c.height;
     const ctx=c.getContext("2d");
     liveRef.current={ fstop, focal, distance, dofM };
@@ -1462,7 +1469,7 @@ function ModuleVignetting({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,840);
+      c.width=Math.min(c.parentElement?.clientWidth-32||840,1100);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,c.width,c.height);
@@ -1512,7 +1519,7 @@ function ModuleChromaticAberration({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,840);
+      c.width=Math.min(c.parentElement?.clientWidth-32||840,1100);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       // Draw R, G, B channels with offset
@@ -1710,7 +1717,7 @@ function ModuleColorTemp() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||560,600); c.width=W; c.height=Math.round(W*9/16);
+    const W=Math.min(c.parentElement?.clientWidth-32||560,1100); c.width=W; c.height=Math.round(W*9/16);
     const ctx=c.getContext("2d");
     const paint=(im)=>{
       if(im && im.complete && im.naturalWidth) ctx.drawImage(im,0,0,c.width,c.height);
@@ -2260,7 +2267,7 @@ function ModuleScopes({ image }) {
     const img=new Image();
     img.onload=()=>{
       const pv=previewRef.current; if(!pv) return;
-      const IW=Math.min(pv.parentElement?.clientWidth-24||640,820);
+      const IW=Math.min(pv.parentElement?.clientWidth-24||640,1100);
       const IH=Math.round(IW*9/16);
       pv.width=IW; pv.height=IH;
       const pctx=pv.getContext("2d");
@@ -2531,7 +2538,7 @@ function ModuleExposureTriangle({ image }) {
     const v=videoRef.current, c=ref.current; if(!v||!c) return; v.play().catch(()=>{});
     let raf=0, alive=true;
     const draw=()=>{ if(!alive)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||600,600), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||600,1100), H=Math.round(W*9/16);
       if(c.width!==W){ c.width=W; c.height=H; } const ctx=c.getContext("2d");
       if(v.readyState>=2){ ctx.drawImage(v,0,0,W,H);
         const L=liveRef.current, id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -2553,7 +2560,7 @@ function ModuleExposureTriangle({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||760,760), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||760,1100), H=Math.round(W*9/16);
       c.width=W; c.height=H; const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,W,H);
       const gain=Math.pow(2,stops);
@@ -2721,7 +2728,7 @@ function ModuleLUT({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||760,760), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||760,1100), H=Math.round(W*9/16);
       c.width=W; c.height=H; const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,W,H);
       const id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -2775,7 +2782,7 @@ const CODEC_TABLE=[
   {name:"Camera RAW (BRAW/R3D)", type:"Intra", comp:"Wavelet / proprietary", depth:"12–16 log", chroma:"CFA (pre-debayer)", alpha:"No", lic:"Proprietary", use:"Acquisition · max latitude"},
 ];
 function drawGOP(canvas, mode){
-  const W=Math.min(canvas.parentElement?.clientWidth-24||640,640), H=150; canvas.width=W; canvas.height=H;
+  const W=Math.min(canvas.parentElement?.clientWidth-24||640,1100), H=150; canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,W,H);
   const seq = mode==="intra" ? ["I","I","I","I","I","I","I","I"] : ["I","B","B","P","B","B","P","B","B","I"];
   const n=seq.length, m=24, fw=(W-m*2)/n, fh=46, cy=H*0.52, col={I:"#f59e0b",P:"#60a5fa",B:"#a78bfa"};
@@ -2809,7 +2816,7 @@ function ModuleCodecs({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=imgRef.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||600,600), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||600,1100), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
       if(q<100){
         const id=ctx.getImageData(0,0,W,H), d=id.data, blk=8;
@@ -3043,7 +3050,7 @@ function ModuleLensDistortion({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,640), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const src=document.createElement("canvas"); src.width=W;src.height=H; const sctx=src.getContext("2d");
       sctx.drawImage(img,0,0,W,H);
@@ -3094,7 +3101,7 @@ function ModuleInterlacing({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,640), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       // field 1 (even lines) at position 0, field 2 (odd lines) shifted by motion (captured 1/50s later)
       const fA=document.createElement("canvas"); fA.width=W;fA.height=H; fA.getContext("2d").drawImage(img,0,0,W,H);
@@ -3151,7 +3158,7 @@ function ModuleHalation({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,640), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
       // extract highlights above threshold
       const id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -3205,7 +3212,7 @@ function ModuleFlicker({ image }) {
     const img=new Image(); let raf=0,t0=null,alive=true;
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,640), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const depth=0.42*(1-shutter/360)+0.12;               // shorter shutter → deeper bands
       const cycles=freq/25;                                 // 50Hz≈2, 60Hz≈2.4 bands over the frame at 25fps
@@ -3254,7 +3261,7 @@ function ModuleFocusBreathing({ image }) {
     const img=new Image(); let raf=0,t0=null,alive=true;
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,640), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const draw=(fv)=>{
         const scale=1+amount*0.16*(fv-0.5)*2;              // focus near → FOV narrows (image grows)
