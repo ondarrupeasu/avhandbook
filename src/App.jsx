@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import LightingStudio3D from "./LightingStudio.jsx";
+import heroScene from "./assets/hero-scene.jpg";
 
 // ─────────────────────────────────────────────
 // i18n — centralised strings (add ES/EU here)
@@ -4823,7 +4824,7 @@ export default function AVHandbook() {
   const [search, setSearch] = useState("");
 
   useEffect(()=>{
-    setDefaultImage(generateDefaultImageDataURL());
+    setDefaultImage(heroScene);
   },[]);
 
   // keep the URL in sync with the open module (shareable deep links)

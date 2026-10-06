@@ -259,12 +259,12 @@ export async function createLightingStudio(container, opts = {}) {
         g.add(c); return c;
       };
       const wallMat = new THREE.MeshStandardMaterial({ color: '#5d6b62', roughness: 0.9 });
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.9, 0.08), wallMat);
+      const wall = new THREE.Mesh(new THREE.BoxGeometry(9, 2.9, 0.08), wallMat);
       wall.position.set(0, 1.45, -1.55); g.add(wall);
-      const skirting = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.12, 0.1), new THREE.MeshStandardMaterial({ color: '#e8e2d6', roughness: 0.6 }));
+      const skirting = new THREE.Mesh(new THREE.BoxGeometry(9, 0.12, 0.1), new THREE.MeshStandardMaterial({ color: '#e8e2d6', roughness: 0.6 }));
       skirting.position.set(0, 0.06, -1.5); g.add(skirting);
-      const floor = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.02, 3.4), new THREE.MeshStandardMaterial({ color: '#6b4a32', roughness: 0.55 }));
-      floor.position.set(0, 0.01, 0.15); g.add(floor);
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(9, 0.02, 5), new THREE.MeshStandardMaterial({ color: '#6b4a32', roughness: 0.55 }));
+      floor.position.set(0, 0.01, 0.95); g.add(floor);
       const rugTex = await new THREE.TextureLoader().loadAsync(new URL('./assets/rug_diff.jpg', import.meta.url).href);
       rugTex.colorSpace = THREE.SRGBColorSpace; rugTex.wrapS = rugTex.wrapT = THREE.RepeatWrapping; rugTex.repeat.set(2.5, 1.7);
       const rug = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.012, 1.8), new THREE.MeshStandardMaterial({ map: rugTex, roughness: 0.95 }));
@@ -1228,9 +1228,14 @@ export async function createLightingStudio(container, opts = {}) {
    * `info: true` adds a card under the picture with the camera, lights and studio settings, so snapshots
    * can be compared. The full state is always embedded in the PNG (readable with readSnapshot()).
    */
-  async function snapshot({ info = false, title = '' } = {}) {
+  async function snapshot({ info = false, title = '', width = 0 } = {}) {
     const was = view;
     if (was !== 'camera') { view = 'camera'; resize(); }
+    if (width) {                                         // a fixed output size (e.g. 1920 → 1920×1080 at 16:9)
+      const h = Math.round(width / photoAspect);
+      renderer.setPixelRatio(1); renderer.setSize(width, h, false);
+      composer.setPixelRatio(1); composer.setSize(width, h);
+    }
     content.updateMatrixWorld(true);
     camera.lookAt(targets.camera);
     draw(camera, { handles: false });
@@ -1254,7 +1259,8 @@ export async function createLightingStudio(container, opts = {}) {
       x.font = `${Math.round(10 * k)}px -apple-system, "Segoe UI", sans-serif`; x.fillStyle = '#5c5c66'; x.textAlign = 'right'; x.fillText(inf.date, w - pad, h + pad);
     }
     const blob = await new Promise((res) => out.toBlob(res, 'image/png'));
-    if (was !== 'camera') { view = was; resize(); }
+    if (was !== 'camera') view = was;
+    if (width || was !== 'camera') resize();
     invalidate();
     return withPngText(blob, 'lightstudio', JSON.stringify(getState()));
   }
