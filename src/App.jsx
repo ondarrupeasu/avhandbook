@@ -608,10 +608,14 @@ function ModuleChromaSubsampling() {
       const my=Math.round(IH*0.45); let edgeX=Math.round(IW*0.44);
       for(let xx=Math.round(IW*0.25);xx<Math.round(IW*0.70);xx++){ const sp=(my*IW+xx)*4, r=srcData[sp],g=srcData[sp+1],b=srcData[sp+2]; if(!(g>70&&g>r*1.25&&g>b*1.25)){ edgeX=xx; break; } }
       const region={ x:Math.max(0,Math.min(IW-72,edgeX-28)), y:Math.round(IH*0.30), w:72, h:88 };
-      // 8×8 pixel grid sampled from that real green → subject edge
-      if(gridRef.current){ const base=[]; const sx=region.w/8, sy=region.h/8;
-        for(let j=0;j<8;j++){ base[j]=[]; for(let i=0;i<8;i++){ const px=Math.round(region.x+i*sx), py=Math.round(region.y+j*sy), sp=(py*IW+px)*4; base[j][i]=[srcData[sp],srcData[sp+1],srcData[sp+2]]; } }
-        drawChromaGrid(gridRef.current, S.label, base); }
+      // 8×8 diagram: a SLANTED green → subject edge built from the REAL colours either side of the edge,
+      // so chroma blocks straddle the edge and invent colours (the reconstruction degrades 4:4:4→4:1:1).
+      if(gridRef.current){
+        const gp=(my*IW+Math.max(0,edgeX-22))*4, s2=(my*IW+Math.min(IW-1,edgeX+22))*4;
+        const GREEN=[srcData[gp],srcData[gp+1],srcData[gp+2]], SUBJ=[srcData[s2],srcData[s2+1],srcData[s2+2]];
+        const base=[]; for(let j=0;j<8;j++){ base[j]=[]; for(let i=0;i<8;i++){ const e=2.2+j*0.5; base[j][i]= i<e?GREEN:SUBJ; } }
+        drawChromaGrid(gridRef.current, S.label, base);
+      }
       // full scene (rendered at the selected subsampling) with the loupe rectangle
       const sc=sceneRef.current;
       if(sc){
