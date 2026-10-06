@@ -61,9 +61,14 @@ export default function DepthOfField3D(){
     const dmap=d=> x1+Math.min(1,d/MAXD)*(x2-x1);   // linear scale — spreads the staggered markers evenly
     x.strokeStyle=C.line; x.lineWidth=1; x.beginPath();x.moveTo(x1,groundY);x.lineTo(x2,groundY);x.stroke();
     const dn=dmap(near), df=far===Infinity?x2:dmap(far);
-    const g=x.createLinearGradient(dn,0,df,0); g.addColorStop(0,"rgba(52,211,153,.07)");g.addColorStop(.5,"rgba(52,211,153,.32)");g.addColorStop(1,"rgba(52,211,153,.07)");
-    x.fillStyle=g; x.fillRect(dn,24,Math.max(2,df-dn),groundY-24);
-    x.strokeStyle="rgba(52,211,153,.6)"; x.setLineDash([4,3]); x.beginPath();x.moveTo(dn,24);x.lineTo(dn,groundY);x.moveTo(df,24);x.lineTo(df,groundY);x.stroke(); x.setLineDash([]);
+    // Soft sharpness gradient — matches the gradual blur you see in 3D (bright at the focus plane,
+    // fading with defocus) instead of a hard-edged band. Defocus ∝ |1/focus − 1/d| (thin lens).
+    const df0=Math.max(1e-6, Math.abs(1/focus - 1/Math.max(0.2,near)));
+    for(let px=x1; px<x2; px++){ const d=(px-x1)/(x2-x1)*MAXD; if(d<0.15) continue;
+      const def=Math.abs(1/focus - 1/d), s=1/(1+(def/df0)**2);
+      if(s>0.02){ x.fillStyle=`rgba(52,211,153,${(s*0.8).toFixed(3)})`; x.fillRect(px,24,1,groundY-24); } }
+    // dashed lines = the "acceptably sharp" limits (near / far)
+    x.strokeStyle="rgba(52,211,153,.7)"; x.setLineDash([4,3]); x.beginPath();x.moveTo(dn,24);x.lineTo(dn,groundY);x.moveTo(df,24);x.lineTo(df,groundY);x.stroke(); x.setLineDash([]);
     x.textAlign="center"; x.font="11px monospace";
     [2,4,6,8,10,12,14].forEach(d=>{const px=dmap(d);x.strokeStyle="#374151";x.beginPath();x.moveTo(px,groundY);x.lineTo(px,groundY+5);x.stroke();x.fillStyle="#6b7280";x.fillText(d+" m",px,groundY+17);});
     const fx=dmap(focus); x.strokeStyle=C.accent;x.lineWidth=2;x.beginPath();x.moveTo(fx,16);x.lineTo(fx,groundY);x.stroke();
@@ -75,7 +80,7 @@ export default function DepthOfField3D(){
       x.strokeStyle=sharp?C.green:"rgba(255,255,255,.2)";x.lineWidth=sharp?2:1;x.strokeRect(px-5,groundY-26,10,26);
       x.fillStyle=sharp?C.green:"#9ca3af";x.font="bold 10.5px monospace";x.fillText(lbl,px,groundY-30);
     });
-    x.textAlign="left"; x.fillStyle=C.cyan; x.font="bold 11px monospace"; x.fillText("TOP VIEW — green zone = in focus",10,15);
+    x.textAlign="left"; x.fillStyle=C.cyan; x.font="bold 11px monospace"; x.fillText("TOP VIEW — brighter = sharper · dashed = sharp limits",10,15);
   },[near,far,focus]);
 
   const set=(patch)=>{ S.setCamera(patch); bump(); };
