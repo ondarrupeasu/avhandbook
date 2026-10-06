@@ -1697,6 +1697,7 @@ function ModuleColorTemp() {
   const [wb, setWb] = useState(2);   // Daylight
   const [src, setSrc] = useState(5); // Midday sun
   const canvasRef = useRef();
+  const heroImgRef = useRef(null);
   const wbK=CAMERA_WB[wb].K, srcK=LIGHT_SOURCES[src].K;
   // White-balance cast: light colour corrected by the camera's assumed white → tint on neutrals
   const s=kelvinToRGB(srcK), w=kelvinToRGB(wbK);
@@ -1713,12 +1714,18 @@ function ModuleColorTemp() {
     const c=canvasRef.current; if(!c)return;
     const W=Math.min(c.parentElement?.clientWidth-32||560,600); c.width=W; c.height=Math.round(W*9/16);
     const ctx=c.getContext("2d");
-    drawScene(ctx,c.width,c.height);
-    ctx.globalCompositeOperation="multiply"; ctx.fillStyle=castCss; ctx.fillRect(0,0,c.width,c.height);
-    ctx.globalCompositeOperation="source-over";
-    ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(0,0,c.width,24);
-    ctx.fillStyle="#f59e0b"; ctx.font="bold 12px monospace";
-    ctx.fillText(`WB ${wbK}K  ·  light ${srcK}K  ·  ${dK>0?"+":""}${dK}K`,10,16);
+    const paint=(im)=>{
+      if(im && im.complete && im.naturalWidth) ctx.drawImage(im,0,0,c.width,c.height);
+      else { ctx.fillStyle="#15171c"; ctx.fillRect(0,0,c.width,c.height); }
+      ctx.globalCompositeOperation="multiply"; ctx.fillStyle=castCss; ctx.fillRect(0,0,c.width,c.height);
+      ctx.globalCompositeOperation="source-over";
+      ctx.fillStyle="rgba(0,0,0,0.6)"; ctx.fillRect(0,0,c.width,24);
+      ctx.fillStyle="#f59e0b"; ctx.font="bold 12px monospace";
+      ctx.fillText(`WB ${wbK}K  ·  light ${srcK}K  ·  ${dK>0?"+":""}${dK}K`,10,16);
+    };
+    let im=heroImgRef.current;
+    if(!im){ im=new Image(); heroImgRef.current=im; im.src=heroScene; }
+    if(im.complete && im.naturalWidth) paint(im); else im.onload=()=>paint(im);
   },[wb,src,castCss]);
 
   const Row=({items,active,onPick,swatchK})=>(
