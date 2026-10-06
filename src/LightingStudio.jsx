@@ -191,7 +191,7 @@ export default function LightingStudio3D(){
       </div>
 
       {/* RIGHT: panel */}
-      <aside style={{flex:narrow?"1 1 100%":"0 0 350px",maxWidth:"100%",minWidth:0,background:C.panel,border:`1px solid ${C.line}`,borderRadius:10,padding:"12px 14px",maxHeight:narrow?"none":(fs?"94vh":"min(92vh,900px)"),overflow:narrow?"visible":"auto"}}>
+      <aside style={{flex:narrow?"1 1 100%":"0 0 400px",maxWidth:"100%",minWidth:0,background:C.panel,border:`1px solid ${C.line}`,borderRadius:10,padding:"12px 14px",maxHeight:narrow?"none":(fs?"94vh":"min(92vh,900px)"),overflow:narrow?"visible":"auto"}}>
         {!ready ? <Muted>Preparing controls…</Muted> : <>
           <H style={{marginTop:0}}>View</H>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"4px 0"}}>
