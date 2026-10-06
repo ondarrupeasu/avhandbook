@@ -51,6 +51,7 @@ const STRINGS = {
       aces: { title: "ACES Pipeline", desc: "IDT → RRT → ODT — the color management framework" },
       hdr: { title: "SDR vs HDR", desc: "Nits, PQ/HLG transfer functions and highlight headroom" },
       colorTemp: { title: "Color Temperature", desc: "From candle to daylight — Kelvin scale" },
+      spectrum: { title: "Light Spectrum", desc: "The EM spectrum & visible light — wavelength, frequency, energy, colour" },
       rollingShutter: { title: "Rolling Shutter", desc: "Skew, wobble and jello — CMOS sensor artifacts" },
       moire: { title: "Moiré & Aliasing", desc: "Frequency interference and anti-aliasing" },
       banding: { title: "Banding & Bit Depth", desc: "8-bit vs 10-bit — tonal steps and posterization" },
@@ -105,7 +106,7 @@ const CATEGORIES = [
   },
   {
     id: "color", label: T.categories.color,
-    modules: ["colorTemp","pictureProfiles","colorSpaces","lut","aces","hdr"],
+    modules: ["colorTemp","spectrum","pictureProfiles","colorSpaces","lut","aces","hdr"],
   },
   {
     id: "defects", label: T.categories.defects,
@@ -385,7 +386,7 @@ function ModuleResolution({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||860,1100);
+      const W=Math.min(c.parentElement?.clientWidth-32||860,1500);
       c.width=W; c.height=Math.round(W*9/16); const H=c.height;
       const ctx=c.getContext("2d");
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H);
@@ -544,14 +545,12 @@ function hslToRgb(h,s,l){
   return [Math.round(f(0)*255),Math.round(f(8)*255),Math.round(f(4)*255)];
 }
 // Pixel-level chroma sampling grid: original → samples kept → reconstructed (interpolation)
-function drawChromaGrid(canvas, scheme){
+function drawChromaGrid(canvas, scheme, base){
   const N=8, cell=24, pad=8, labelH=22, gap=26, gw=N*cell;
   const W=gw*3+gap*2+pad*2, H=labelH+gw+22; canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext("2d"); ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H);
   const cl=v=>Math.max(0,Math.min(255,Math.round(v)));
-  // the model's own edge: green screen → skin (a slanted silhouette edge)
-  const GREEN=[22,178,66], SKIN=[228,180,138];
-  const base=[]; for(let j=0;j<N;j++){ base[j]=[]; for(let i=0;i<N;i++){ const edge=2.4+j*0.55; base[j][i]= i<edge?GREEN:SKIN; } }
+  // base = 8×8 RGB sampled from the real green→subject edge of the photo
   const bw=scheme==="4:1:1"?4:scheme==="4:4:4"?1:2, bh=scheme==="4:2:0"?2:1;
   const YC=(r,g,b)=>[0.2126*r+0.7152*g+0.0722*b, 128-0.168736*r-0.331264*g+0.5*b, 128+0.5*r-0.418688*g-0.081312*b];
   const RGB=(Y,cb,cr)=>[Y+1.5748*(cr-128), Y-0.1873*(cb-128)-0.4681*(cr-128), Y+1.8556*(cb-128)];
@@ -570,7 +569,7 @@ function drawChromaGrid(canvas, scheme){
     ctx.strokeStyle="rgba(255,255,255,0.08)"; ctx.lineWidth=1; ctx.strokeRect(ox,labelH,gw,gw);
   };
   ctx.font="11px monospace"; ctx.textAlign="center"; ctx.fillStyle="#9ca3af";
-  ctx.fillText("model edge (green→skin)",pad+gw/2,14);
+  ctx.fillText("edge (green → subject)",pad+gw/2,14);
   ctx.fillText("chroma kept",pad+gw+gap+gw/2,14);
   ctx.fillText("reconstructed",pad+2*(gw+gap)+gw/2,14);
   grid(pad,"orig"); grid(pad+gw+gap,"kept"); grid(pad+2*(gw+gap),"recon");
@@ -578,7 +577,7 @@ function drawChromaGrid(canvas, scheme){
   ctx.textAlign="left"; ctx.fillStyle="#f59e0b"; ctx.font="bold 11px monospace";
   ctx.fillText(`chroma samples kept: ${kept} of ${N*N}   ·   luma still ${N*N}`,pad,H-6);
 }
-const CHROMA_IW=260, CHROMA_IH=146, CHROMA_REGION={x:88,y:14,w:78,h:62};
+const CHROMA_IW=720, CHROMA_IH=405, CHROMA_REGION={x:288,y:48,w:88,h:74};
 function ModuleChromaSubsampling() {
   const [sel, setSel] = useState(2);
   const [chromaOnly, setChromaOnly] = useState(false);
@@ -588,14 +587,21 @@ function ModuleChromaSubsampling() {
   const gridRef = useRef();
   const imgRef = useRef(null);
   useEffect(()=>{
-    if(gridRef.current) drawChromaGrid(gridRef.current, S.label);
-    const IW=CHROMA_IW, IH=CHROMA_IH, region=CHROMA_REGION;
+    const IW=CHROMA_IW, IH=CHROMA_IH;
     const render=(img)=>{
       const src=document.createElement("canvas"); src.width=IW; src.height=IH;
       const sctx=src.getContext("2d"); sctx.drawImage(img,0,0,IW,IH);
       const srcData=sctx.getImageData(0,0,IW,IH).data;
       const subData=new Uint8ClampedArray(srcData);
       chromaSubsample(subData, IW, IH, S.label);
+      // locate the green → subject edge and centre a small loupe window on it
+      const my=Math.round(IH*0.45); let edgeX=Math.round(IW*0.44);
+      for(let xx=Math.round(IW*0.25);xx<Math.round(IW*0.70);xx++){ const sp=(my*IW+xx)*4, r=srcData[sp],g=srcData[sp+1],b=srcData[sp+2]; if(!(g>70&&g>r*1.25&&g>b*1.25)){ edgeX=xx; break; } }
+      const region={ x:Math.max(0,Math.min(IW-72,edgeX-28)), y:Math.round(IH*0.30), w:72, h:88 };
+      // 8×8 pixel grid sampled from that real green → subject edge
+      if(gridRef.current){ const base=[]; const sx=region.w/8, sy=region.h/8;
+        for(let j=0;j<8;j++){ base[j]=[]; for(let i=0;i<8;i++){ const px=Math.round(region.x+i*sx), py=Math.round(region.y+j*sy), sp=(py*IW+px)*4; base[j][i]=[srcData[sp],srcData[sp+1],srcData[sp+2]]; } }
+        drawChromaGrid(gridRef.current, S.label, base); }
       // full scene (rendered at the selected subsampling) with the loupe rectangle
       const sc=sceneRef.current;
       if(sc){
@@ -612,7 +618,7 @@ function ModuleChromaSubsampling() {
       // magnified edge comparison: 4:4:4 vs selected
       const mc=magRef.current;
       if(mc){
-        const W=Math.min(mc.parentElement?.clientWidth-24||880,1100), gap=10, top=22;
+        const W=Math.min(mc.parentElement?.clientWidth-24||880,1500), gap=10, top=22;
         const panelW=Math.floor((W-gap)/2), panelH=Math.round(panelW*region.h/region.w);
         mc.width=W; mc.height=panelH+top;
         const ctx=mc.getContext("2d");
@@ -1064,7 +1070,7 @@ function ModuleBanding() {
   const canvasRef = useRef();
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||840,1100);
+    const W=Math.min(c.parentElement?.clientWidth-32||840,1500);
     c.width=W; c.height=Math.round(W*0.42);
     const ctx=c.getContext("2d");
     const gradH=c.height-30;
@@ -1130,7 +1136,7 @@ function ModuleNoise({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,1100);
+      c.width=Math.min(c.parentElement?.clientWidth-32||840,1500);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,c.width,c.height);
@@ -1204,7 +1210,7 @@ function ModuleShotTypes() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c) return;
-    const W=Math.min(c.parentElement?.clientWidth-24||900,1100); c.width=W; c.height=Math.round(W*9/16);
+    const W=Math.min(c.parentElement?.clientWidth-24||900,1500); c.width=W; c.height=Math.round(W*9/16);
     const ctx=c.getContext("2d");
     const paint=(im)=>{
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,c.width,c.height);
@@ -1345,7 +1351,7 @@ function ModuleDepthOfField() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||840,1100);
+    const W=Math.min(c.parentElement?.clientWidth-32||840,1500);
     c.width=W; c.height=Math.round(W*9/16); const H=c.height;
     const ctx=c.getContext("2d");
     liveRef.current={ fstop, focal, distance, dofM };
@@ -1470,7 +1476,7 @@ function ModuleVignetting({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,1100);
+      c.width=Math.min(c.parentElement?.clientWidth-32||840,1500);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,c.width,c.height);
@@ -1520,7 +1526,7 @@ function ModuleChromaticAberration({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=canvasRef.current; if(!c)return;
-      c.width=Math.min(c.parentElement?.clientWidth-32||840,1100);
+      c.width=Math.min(c.parentElement?.clientWidth-32||840,1500);
       c.height=Math.round(c.width*9/16);
       const ctx=c.getContext("2d");
       // Draw R, G, B channels with offset
@@ -1718,7 +1724,7 @@ function ModuleColorTemp() {
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
-    const W=Math.min(c.parentElement?.clientWidth-32||560,1100); c.width=W; c.height=Math.round(W*9/16);
+    const W=Math.min(c.parentElement?.clientWidth-32||560,1500); c.width=W; c.height=Math.round(W*9/16);
     const ctx=c.getContext("2d");
     const paint=(im)=>{
       if(im && im.complete && im.naturalWidth) ctx.drawImage(im,0,0,c.width,c.height);
@@ -1859,7 +1865,7 @@ function ModuleRAW() {
 
   useEffect(()=>{
     const ic=imgRef.current, wc=wfRef.current; if(!ic||!wc) return;
-    const W=Math.min(ic.parentElement?.clientWidth-24||440,480);
+    const W=Math.min(ic.parentElement?.clientWidth-24||440,900);
     const IW=Math.round(W), IH=Math.round(W*9/16);
     ic.width=IW; ic.height=IH;
     if(!_linScene){ const g0=ic.getContext("2d"); g0.fillStyle="#07090d"; g0.fillRect(0,0,IW,IH); g0.fillStyle="#9ca3af"; g0.font="12px monospace"; g0.fillText("loading scene…",12,24); return; }
@@ -2280,7 +2286,7 @@ function ModuleScopes({ image }) {
     const img=new Image();
     img.onload=()=>{
       const pv=previewRef.current; if(!pv) return;
-      const IW=Math.min(pv.parentElement?.clientWidth-24||640,1100);
+      const IW=Math.min(pv.parentElement?.clientWidth-24||640,1500);
       const IH=Math.round(IW*9/16);
       pv.width=IW; pv.height=IH;
       const pctx=pv.getContext("2d");
@@ -2551,7 +2557,7 @@ function ModuleExposureTriangle({ image }) {
     const v=videoRef.current, c=ref.current; if(!v||!c) return; v.play().catch(()=>{});
     let raf=0, alive=true;
     const draw=()=>{ if(!alive)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||600,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||600,1500), H=Math.round(W*9/16);
       if(c.width!==W){ c.width=W; c.height=H; } const ctx=c.getContext("2d");
       if(v.readyState>=2){ ctx.drawImage(v,0,0,W,H);
         const L=liveRef.current, id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -2573,7 +2579,7 @@ function ModuleExposureTriangle({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||760,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||760,1500), H=Math.round(W*9/16);
       c.width=W; c.height=H; const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,W,H);
       const gain=Math.pow(2,stops);
@@ -2741,7 +2747,7 @@ function ModuleLUT({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||760,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||760,1500), H=Math.round(W*9/16);
       c.width=W; c.height=H; const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,W,H);
       const id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -2795,7 +2801,7 @@ const CODEC_TABLE=[
   {name:"Camera RAW (BRAW/R3D)", type:"Intra", comp:"Wavelet / proprietary", depth:"12–16 log", chroma:"CFA (pre-debayer)", alpha:"No", lic:"Proprietary", use:"Acquisition · max latitude"},
 ];
 function drawGOP(canvas, mode){
-  const W=Math.min(canvas.parentElement?.clientWidth-24||640,1100), H=150; canvas.width=W; canvas.height=H;
+  const W=Math.min(canvas.parentElement?.clientWidth-24||640,1500), H=150; canvas.width=W; canvas.height=H;
   const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,W,H);
   const seq = mode==="intra" ? ["I","I","I","I","I","I","I","I"] : ["I","B","B","P","B","B","P","B","B","I"];
   const n=seq.length, m=24, fw=(W-m*2)/n, fh=46, cy=H*0.52, col={I:"#f59e0b",P:"#60a5fa",B:"#a78bfa"};
@@ -2829,7 +2835,7 @@ function ModuleCodecs({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=imgRef.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||600,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||600,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
       if(q<100){
         const id=ctx.getImageData(0,0,W,H), d=id.data, blk=8;
@@ -3063,7 +3069,7 @@ function ModuleLensDistortion({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const src=document.createElement("canvas"); src.width=W;src.height=H; const sctx=src.getContext("2d");
       sctx.drawImage(img,0,0,W,H);
@@ -3114,7 +3120,7 @@ function ModuleInterlacing({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       // field 1 (even lines) at position 0, field 2 (odd lines) shifted by motion (captured 1/50s later)
       const fA=document.createElement("canvas"); fA.width=W;fA.height=H; fA.getContext("2d").drawImage(img,0,0,W,H);
@@ -3171,7 +3177,7 @@ function ModuleHalation({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,W,H);
       // extract highlights above threshold
       const id=ctx.getImageData(0,0,W,H), d=id.data;
@@ -3225,7 +3231,7 @@ function ModuleFlicker({ image }) {
     const img=new Image(); let raf=0,t0=null,alive=true;
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const depth=0.42*(1-shutter/360)+0.12;               // shorter shutter → deeper bands
       const cycles=freq/25;                                 // 50Hz≈2, 60Hz≈2.4 bands over the frame at 25fps
@@ -3274,7 +3280,7 @@ function ModuleFocusBreathing({ image }) {
     const img=new Image(); let raf=0,t0=null,alive=true;
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||640,1100), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||640,1500), H=Math.round(W*9/16);
       c.width=W;c.height=H; const ctx=c.getContext("2d");
       const draw=(fv)=>{
         const scale=1+amount*0.16*(fv-0.5)*2;              // focus near → FOV narrows (image grows)
@@ -4394,13 +4400,14 @@ function ModuleHDR(){
     // ---- scene (linear, with window/sun headroom) ----
     const c=imgRef.current;
     if(c){
-      const W=Math.min(c.parentElement?.clientWidth-24||460,480), IW=Math.round(W), IH=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-24||460,900), IW=Math.round(W), IH=Math.round(W*9/16);
       c.width=IW;c.height=IH; const ctx=c.getContext("2d");
       const scene=sampleLinearScene(IW,IH), id=ctx.createImageData(IW,IH), d=id.data; let peakLin=0;
       for(let p=0,i=0;p<IW*IH;p++,i+=4){ let anyClip=false;
         for(let ch=0;ch<3;ch++){ let lin=scene[p*3+ch]; if(lin>peakLin)peakLin=lin;
           let disp; if(mode==="sdr"){ if(lin>1){disp=1;anyClip=true;} else disp=lin; }
-          else { disp = lin<=1? lin : 1-0.24*Math.exp(-(lin-1)*2/peakRel); }   // HDR: roll off highlights (keep texture)
+          else { const Hw=Math.max(2,peakRel*0.16);   // HDR: diffuse white stays bright; highlights keep detail up to the peak (raise nits → the window/outside resolves instead of clipping)
+            disp = lin<=1 ? lin*0.82 : (lin>=Hw ? 1 : 0.82 + 0.18*Math.log(lin)/Math.log(Hw)); }
           d[i+ch]=Math.max(0,Math.min(255,Math.round(enc(disp)*255))); }
         d[i+3]=255; if(mode==="sdr"&&anyClip){ const x=p%IW,y=(p/IW)|0; if((x+y)%6<3){d[i]=255;d[i+1]=45;d[i+2]=45;} }
       }
@@ -4758,6 +4765,96 @@ function ModuleCableReach(){
 // ─────────────────────────────────────────────
 // Module registry map
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// MODULE: Light Spectrum (EM spectrum + visible light)
+// ─────────────────────────────────────────────
+function wavelengthToRGB(wl){
+  let r=0,g=0,b=0;
+  if(wl<440){ r=-(wl-440)/60; b=1; }
+  else if(wl<490){ g=(wl-440)/50; b=1; }
+  else if(wl<510){ g=1; b=-(wl-510)/20; }
+  else if(wl<580){ r=(wl-510)/70; g=1; }
+  else if(wl<645){ r=1; g=-(wl-645)/65; }
+  else { r=1; }
+  let f=1; if(wl<420) f=0.3+0.7*(wl-380)/40; else if(wl>700) f=0.3+0.7*(780-wl)/80;
+  const C=v=>Math.round(255*Math.pow(Math.max(0,Math.min(1,v))*Math.max(0,Math.min(1,f)),0.8));
+  return [C(r),C(g),C(b)];
+}
+const EM_BANDS=[
+  {n:"Radio",     a:3,     b:0,     c:"#39405a"},
+  {n:"Microwave", a:0,     b:-3,    c:"#46406a"},
+  {n:"Infrared",  a:-3,    b:-6.13, c:"#6e2f2f"},
+  {n:"Visible",   a:-6.13, b:-6.42, c:null},
+  {n:"UV",        a:-6.42, b:-8,    c:"#5a3a8a"},
+  {n:"X-ray",     a:-8,    b:-11,   c:"#2f6a7a"},
+  {n:"Gamma",     a:-11,   b:-13,   c:"#7a2f5a"},
+];
+function ModuleSpectrum(){
+  const [nm,setNm]=useState(550);
+  const canvasRef=useRef();
+  useEffect(()=>{
+    const c=canvasRef.current; if(!c) return;
+    const W=Math.min(c.parentElement?.clientWidth-24||1000,1500); c.width=W; const H=Math.round(W*0.4); c.height=H;
+    const ctx=c.getContext("2d");
+    ctx.fillStyle="#0a0d12"; ctx.fillRect(0,0,W,H);
+    const padX=18, barY=42, barH=44, x0=padX, x1=W-padX, L0=3, L1=-13;
+    const X=l=> x0 + (L0-l)/(L0-L1)*(x1-x0);
+    EM_BANDS.forEach(bd=>{
+      const xa=X(bd.a), xb=X(bd.b);
+      if(bd.c){ ctx.fillStyle=bd.c; ctx.fillRect(xa,barY,xb-xa,barH); }
+      else { for(let x=Math.floor(xa);x<Math.ceil(xb);x++){ const l=L0-(x-x0)/(x1-x0)*(L0-L1); const wl=Math.pow(10,l)*1e9; const [r,g,b]=wavelengthToRGB(wl); ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(x,barY,1.5,barH); } }
+      ctx.fillStyle="#cbd5e1"; ctx.font="10px ui-monospace, monospace"; ctx.textAlign="center";
+      ctx.fillText(bd.n,(xa+xb)/2,barY-7);
+    });
+    ctx.strokeStyle="#2a2b32"; ctx.lineWidth=1; ctx.strokeRect(x0,barY,x1-x0,barH);
+    ctx.font="9px ui-monospace, monospace";
+    [["1 km",3],["1 m",0],["1 mm",-3],["1 µm",-6],["1 nm",-9],["1 pm",-12]].forEach(([lbl,l])=>{ const x=X(l); ctx.strokeStyle="#374151"; ctx.beginPath();ctx.moveTo(x,barY+barH);ctx.lineTo(x,barY+barH+4);ctx.stroke(); ctx.fillStyle="#6b7280"; ctx.textAlign="center"; ctx.fillText(lbl,x,barY+barH+15); });
+    const vA=X(-6.13), vB=X(-6.42);
+    const bigY=H*0.64, bigH=H*0.24, bx0=padX, bx1=W-padX;
+    ctx.strokeStyle="rgba(148,163,184,.5)"; ctx.setLineDash([3,3]); ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(vA,barY+barH);ctx.lineTo(bx0,bigY-2);ctx.moveTo(vB,barY+barH);ctx.lineTo(bx1,bigY-2);ctx.stroke(); ctx.setLineDash([]);
+    for(let x=bx0;x<bx1;x++){ const wl=380+(x-bx0)/(bx1-bx0)*(740-380); const [r,g,b]=wavelengthToRGB(wl); ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(x,bigY,1,bigH); }
+    ctx.strokeStyle="#2a2b32"; ctx.strokeRect(bx0,bigY,bx1-bx0,bigH);
+    ctx.fillStyle="#6b7280"; ctx.font="9px ui-monospace, monospace"; ctx.textAlign="center";
+    [400,450,500,550,600,650,700].forEach(w=>{ const x=bx0+(w-380)/(740-380)*(bx1-bx0); ctx.strokeStyle="#374151"; ctx.beginPath();ctx.moveTo(x,bigY+bigH);ctx.lineTo(x,bigY+bigH+4);ctx.stroke(); ctx.fillStyle="#6b7280"; ctx.fillText(w+" nm",x,bigY+bigH+15); });
+    const mk=(w,lbl,col)=>{ const x=bx0+(w-380)/(740-380)*(bx1-bx0); ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,bigY-2);ctx.lineTo(x,bigY-11);ctx.stroke(); ctx.fillStyle=col;ctx.font="9px ui-monospace, monospace";ctx.textAlign="center";ctx.fillText(lbl,x,bigY-13); };
+    mk(450,"B","#60a5fa"); mk(540,"G","#34d399"); mk(600,"R","#f87171");
+    const mx=bx0+(nm-380)/(740-380)*(bx1-bx0);
+    ctx.strokeStyle="#fff"; ctx.lineWidth=2; ctx.beginPath();ctx.moveTo(mx,bigY-3);ctx.lineTo(mx,bigY+bigH+3);ctx.stroke();
+    ctx.fillStyle="#fff"; ctx.beginPath();ctx.moveTo(mx,bigY+bigH+3);ctx.lineTo(mx-5,bigY+bigH+11);ctx.lineTo(mx+5,bigY+bigH+11);ctx.closePath();ctx.fill();
+  },[nm]);
+  const freqTHz=(299792458/(nm*1e-9))/1e12;
+  const energyEV=1239.84/nm;
+  const [r,g,b]=wavelengthToRGB(nm);
+  return (
+    <div>
+      <InfoBox>
+        The <strong>electromagnetic spectrum</strong> runs from radio waves (wavelengths of kilometres) to gamma rays (picometres). <strong>Visible light</strong> — the only part the eye and a camera sensor turn into an image — is a razor-thin slice from about <strong>380 nm</strong> (violet) to <strong>740 nm</strong> (red). Shorter wavelength means higher <em>frequency</em> and more <em>energy per photon</em> (E = 1240/λ in eV). Drag the marker to read the wavelength, frequency and photon energy, and the colour your eye assigns to that single pure wavelength. A camera samples this band through three filters peaking roughly in the <span style={{color:"#60a5fa"}}>blue (~450 nm)</span>, <span style={{color:"#34d399"}}>green (~540 nm)</span> and <span style={{color:"#f87171"}}>red (~600 nm)</span>; an <strong>IR-cut filter</strong> blocks the near-infrared (e.g. a ~940 nm remote) the silicon would otherwise record. The mix of wavelengths a hot source emits is its <strong>colour temperature</strong> (see Color Temperature).
+      </InfoBox>
+      <canvas ref={canvasRef} style={{display:"block",width:"100%",borderRadius:8}}/>
+      <div style={{display:"flex",gap:20,flexWrap:"wrap",alignItems:"center",marginTop:14}}>
+        <label style={{...styles.label,flex:"1 1 320px"}}>
+          Wavelength: <strong style={{color:"#ff5a4d"}}>{nm} nm</strong>
+          <input type="range" min={380} max={740} step={1} value={nm} onChange={e=>setNm(+e.target.value)} style={{width:"100%",accentColor:`rgb(${r},${g},${b})`}}/>
+        </label>
+        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:56,height:56,borderRadius:10,background:`rgb(${r},${g},${b})`,border:"1px solid #2a2b32"}}/>
+          <div style={{fontFamily:"monospace",fontSize:13,color:"#d1d5db",lineHeight:1.8}}>
+            <div><strong style={{color:"#f3f4f6"}}>{nm} nm</strong> — perceived colour</div>
+            <div style={{color:"#9ca3af"}}>{freqTHz.toFixed(0)} THz · {energyEV.toFixed(2)} eV</div>
+          </div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
+        {[["Violet",420],["Blue",470],["Cyan",500],["Green",530],["Yellow",580],["Orange",610],["Red",660]].map(([l,w])=>(
+          <button key={l} onClick={()=>setNm(w)} style={styles.btnChip}>{l}</button>
+        ))}
+      </div>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>Perceived colours are an approximation — a monitor can only show wavelengths inside its own gamut, so pure spectral colours (e.g. deep violet) can't be reproduced exactly.</p>
+    </div>
+  );
+}
+
 const MODULE_COMPONENTS = {
   aspectRatio: ModuleAspectRatio,
   audioChain: ModuleAudioChain,
@@ -4796,6 +4893,7 @@ const MODULE_COMPONENTS = {
   aces: ModuleACES,
   hdr: ModuleHDR,
   colorTemp: ModuleColorTemp,
+  spectrum: ModuleSpectrum,
   rollingShutter: ModuleRollingShutter,
   moire: ModuleMoire,
   banding: ModuleBanding,
@@ -4855,6 +4953,10 @@ export default function AVHandbook() {
   const [userImage, setUserImage] = useState(null);
   const [defaultImage, setDefaultImage] = useState(null);
   const [search, setSearch] = useState("");
+  // Responsive: remount the active module when the window settles after a resize, so its canvases
+  // recompute to the new width (modules size their canvas once per render, not on every resize).
+  const [rk,setRk]=useState(0);
+  useEffect(()=>{ let t; const on=()=>{ clearTimeout(t); t=setTimeout(()=>setRk(k=>k+1),180); }; window.addEventListener("resize",on); return ()=>{ window.removeEventListener("resize",on); clearTimeout(t); }; },[]);
 
   useEffect(()=>{
     setDefaultImage(heroScene);
@@ -4958,7 +5060,7 @@ export default function AVHandbook() {
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div key={activeModule} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1480,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
+        <div key={activeModule==="lightingStudio"?activeModule:activeModule+"-"+rk} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1680,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}
