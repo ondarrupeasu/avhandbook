@@ -1,8 +1,20 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import LightingStudio3D from "./LightingStudio.jsx";
-import heroScene from "./assets/hero-scene.jpg";
+import heroScene from "./assets/shots/ls.jpg";
 import sceneColor from "./assets/scene/color.png";
 import sceneDepth from "./assets/scene/depth16.png";
+import sceneBg from "./assets/scene/layer_3_background.png";
+import sceneMid from "./assets/scene/layer_2_midground.png";
+import sceneFg from "./assets/scene/layer_0_foreground.png";
+import sceneSubj from "./assets/scene/layer_1_subject.png";
+import shotsMeta from "./assets/shots/shots.json";
+import s_ecu from "./assets/shots/ecu.jpg";
+import s_cu from "./assets/shots/cu.jpg";
+import s_mcu from "./assets/shots/mcu.jpg";
+import s_ms from "./assets/shots/ms.jpg";
+import s_mls from "./assets/shots/mls.jpg";
+import s_ls from "./assets/shots/ls.jpg";
+import s_ws from "./assets/shots/ws.jpg";
 
 // ─────────────────────────────────────────────
 // i18n — centralised strings (add ES/EU here)
@@ -1174,77 +1186,57 @@ const SHOTS = [
   { label:"EWS", name:"Extreme Wide Shot", cx:0.50, cy:0.50, s:1.00, note:"Establishing shot. Tiny figure in vast landscape. Pure environment statement." },
 ];
 
+const SHOT_IMG = { ecu:s_ecu, cu:s_cu, mcu:s_mcu, ms:s_ms, mls:s_mls, ls:s_ls, ws:s_ws };
+const SHOT_LIST = shotsMeta.shots.map(s=>({ ...s, src:SHOT_IMG[s.id] }));
 function ModuleShotTypes() {
-  const [sel, setSel] = useState(4);
-  const sceneRef = useRef();
-  const frameRef = useRef();
-  const resultRef = useRef();
-  const S = SHOTS[sel];
+  const [sel, setSel] = useState(5);          // LS (full figure) by default
+  const [guides, setGuides] = useState(false);
+  const canvasRef = useRef();
+  const imgRef = useRef({});
+  const S = SHOT_LIST[sel];
 
   useEffect(()=>{
-    if(!sceneRef.current){
-      const s=document.createElement("canvas"); s.width=960; s.height=540;
-      drawScene(s.getContext("2d"),960,540); sceneRef.current=s;
-    }
-    const scene=sceneRef.current;
-    const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-    const half=S.s/2;
-    const cx=clamp(S.cx,half,1-half), cy=clamp(S.cy,half,1-half);
-    const crop={x:cx-half,y:cy-half,w:S.s,h:S.s};
-
-    // LEFT — full scene with the frame marked
-    const fc=frameRef.current;
-    if(fc){
-      const FW=Math.min(fc.parentElement?.clientWidth-24||640,760);
-      fc.width=FW; fc.height=Math.round(FW*9/16);
-      const fx=fc.getContext("2d");
-      fx.drawImage(scene,0,0,fc.width,fc.height);
-      const rx=crop.x*fc.width, ry=crop.y*fc.height, rw=crop.w*fc.width, rh=crop.h*fc.height;
-      // Frame outline only (no dim overlay → no hard contrast line at the crop edge).
-      // Dark backing stroke keeps the amber frame readable on both sky and ground.
-      fx.strokeStyle="rgba(0,0,0,0.55)"; fx.lineWidth=4; fx.strokeRect(rx,ry,rw,rh);
-      fx.strokeStyle="#f59e0b"; fx.lineWidth=2; fx.strokeRect(rx,ry,rw,rh);
-      // corner ticks
-      fx.strokeStyle="#f59e0b"; fx.lineWidth=2; const tk=Math.min(rw,rh)*0.12;
-      [[rx,ry,1,1],[rx+rw,ry,-1,1],[rx,ry+rh,1,-1],[rx+rw,ry+rh,-1,-1]].forEach(([px,py,sx,sy])=>{
-        fx.beginPath(); fx.moveTo(px+sx*tk,py); fx.lineTo(px,py); fx.lineTo(px,py+sy*tk); fx.stroke();
-      });
-      fx.fillStyle="rgba(0,0,0,0.7)"; fx.fillRect(0,0,fc.width,26);
-      fx.fillStyle="#f59e0b"; fx.font="bold 13px monospace";
-      fx.fillText(`${S.label} — ${S.name}`,10,18);
-    }
-    // RIGHT — the resulting frame
-    const rc=resultRef.current;
-    if(rc){
-      const RW=Math.min(rc.parentElement?.clientWidth-24||340,380);
-      rc.width=RW; rc.height=Math.round(RW*9/16);
-      const rx=rc.getContext("2d");
-      rx.drawImage(scene, crop.x*scene.width, crop.y*scene.height, crop.w*scene.width, crop.h*scene.height, 0,0,rc.width,rc.height);
-      rx.strokeStyle="#2a2b32"; rx.lineWidth=1; rx.strokeRect(0.5,0.5,rc.width-1,rc.height-1);
-    }
-  },[sel]);
+    const c=canvasRef.current; if(!c) return;
+    const W=Math.min(c.parentElement?.clientWidth-24||900,960); c.width=W; c.height=Math.round(W*9/16);
+    const ctx=c.getContext("2d");
+    const paint=(im)=>{
+      ctx.fillStyle="#07090d"; ctx.fillRect(0,0,c.width,c.height);
+      if(im&&im.complete&&im.naturalWidth) ctx.drawImage(im,0,0,c.width,c.height);
+      if(guides){
+        const drawBox=(b,col,lbl)=>{ if(!b)return; const x=b.x*c.width,y=b.y*c.height,w=b.w*c.width,h=b.h*c.height;
+          ctx.lineWidth=2; ctx.setLineDash(b.cropped?[6,4]:[]); ctx.strokeStyle="rgba(0,0,0,0.5)"; ctx.strokeRect(x+1,y+1,w,h);
+          ctx.strokeStyle=col; ctx.strokeRect(x,y,w,h); ctx.setLineDash([]);
+          ctx.fillStyle=col; ctx.font="bold 11px monospace"; ctx.fillText(lbl+(b.cropped?" · cropped":""), x+4, y+14); };
+        drawBox(S.body,"#22d3ee","body"); drawBox(S.face,"#ff5a4d","face");
+      }
+      ctx.fillStyle="rgba(0,0,0,0.7)"; ctx.fillRect(0,0,c.width,26);
+      ctx.fillStyle="#f59e0b"; ctx.font="bold 13px monospace";
+      ctx.fillText(`${S.id.toUpperCase()} — ${S.name}`,10,18);
+    };
+    let im=imgRef.current[S.id];
+    if(!im){ im=new Image(); imgRef.current[S.id]=im; im.src=S.src; }
+    if(im.complete&&im.naturalWidth) paint(im); else im.onload=()=>paint(im);
+  },[sel,guides]);
 
   return (
     <div>
       <InfoBox>
-        Shot types define the <strong>field of view</strong> and the <strong>psychological distance</strong> between the camera and the subject — the basic vocabulary of visual language, not mere technical decisions but <em>narrative choices</em>. Here the amber frame on the left shows what each shot captures of the <strong>same staged scene</strong>; the right panel is the resulting image. Note how tighter shots isolate the subject emotionally while wider shots emphasise environment and scale. In multicamera production the director assigns shot types per camera in the rundown to ensure coverage variety and editorial rhythm.
+        Shot types define the <strong>field of view</strong> and the <strong>psychological distance</strong> between camera and subject — the basic vocabulary of visual language. Each button reframes the <strong>same staged scene</strong> (a life-size figure in the living-room set) with a realistic <em>focal length and aperture</em> per shot, keeping the exposure constant (as the iris closes for the tighter shots, the shutter compensates). Tighter shots isolate the subject; wider shots emphasise environment and scale. Turn on <em>framing guides</em> to see the <span style={{color:"#ff5a4d"}}>face</span> and <span style={{color:"#22d3ee"}}>body</span> boxes (dashed = the box runs past the frame). <span style={{display:"block",marginTop:6,color:"#6b7280"}}>Honest note: the set is a room corner, so the widest here is a <strong>wide shot</strong>, not a true extreme-wide / establishing shot — there's no landscape.</span>
       </InfoBox>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
-        {SHOTS.map((s,i)=>(
-          <button key={s.label} onClick={()=>setSel(i)} style={i===sel?styles.btnActive:styles.btnChip}>{s.label}</button>
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10,alignItems:"center"}}>
+        {SHOT_LIST.map((s,i)=>(
+          <button key={s.id} onClick={()=>setSel(i)} style={i===sel?styles.btnActive:styles.btnChip}>{s.id.toUpperCase()}</button>
         ))}
+        <button onClick={()=>setGuides(g=>!g)} style={{...(guides?styles.btnActive:styles.btnChip),marginLeft:"auto"}}>{guides?"Guides: ON":"Framing guides"}</button>
       </div>
-      <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 380px",minWidth:260,background:"#16171c",borderRadius:8,padding:12}}>
-          <div style={{color:"#6b7280",fontSize:10,fontFamily:"monospace",marginBottom:6}}>FRAMING ON SCENE</div>
-          <canvas ref={frameRef} style={{display:"block",width:"100%"}}/>
-        </div>
-        <div style={{flex:"0 1 auto",background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
-          <div style={{color:"#a78bfa",fontSize:10,fontFamily:"monospace",marginBottom:6,letterSpacing:"0.08em"}}>RESULTING SHOT</div>
-          <canvas ref={resultRef} style={{display:"block",maxWidth:"100%"}}/>
+      <div style={{background:"#16171c",borderRadius:8,padding:12}}>
+        <canvas ref={canvasRef} style={{display:"block",width:"100%"}}/>
+        <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10,color:"#9ca3af",fontSize:12,fontFamily:"monospace"}}>
+          <span><strong style={{color:"#f3f4f6"}}>{S.name}</strong></span>
+          <span>{S.focalMm} mm</span><span>f/{S.fstop}</span><span>{S.shutter}s</span><span>ISO {S.iso}</span><span>subject {S.distance} m</span>
         </div>
       </div>
-      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>{S.note}</p>
+      <p style={styles.noteText}><Icon name="info" size={12} style={{marginRight:5,verticalAlign:"-0.1em",opacity:.7}}/>Subject: Figure of a Dancer (Agathon Léonard, c. 1900) — Cooper Hewitt, Smithsonian Design Museum (CC0).</p>
     </div>
   );
 }
@@ -1325,7 +1317,7 @@ function ModuleACES() {
 // ─────────────────────────────────────────────
 // Photoreal reference scene (render of the 3D studio's living-room set, from SetFrameR).
 const loadImg = src => new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=src; });
-const SCENE_NEAR=0.05, SCENE_FAR=8.33193;   // depth16 encoding: z = near + (R*256+G)/65535 * (far-near)
+const SCENE_NEAR=0.05, SCENE_FAR=8.25791;   // depth16 encoding: z = near + (R*256+G)/65535 * (far-near)
 
 function ModuleDepthOfField() {
   const [fstop, setFstop] = useState(2.8);
@@ -1955,7 +1947,11 @@ function ModuleCameraMovement() {
   const [sel, setSel] = useState(3); // dolly — the headline demo
   const canvasRef = useRef();
   const animRef = useRef();
+  const imgsRef = useRef(null);
   const M = MOVES[sel];
+
+  // The scene as 3 photoreal layers at known depths (render of the 3D set, SetFrameR), back → front.
+  useEffect(()=>{ let alive=true; Promise.all([loadImg(sceneBg),loadImg(sceneMid),loadImg(sceneFg),loadImg(sceneSubj)]).then(a=>{ if(alive) imgsRef.current=a; }).catch(()=>{}); return ()=>{ alive=false; }; },[]);
 
   useEffect(()=>{
     const c=canvasRef.current; if(!c)return;
@@ -1969,13 +1965,17 @@ function ModuleCameraMovement() {
       if(t0===null) t0=now;
       const t=(now-t0)/1000, osc=Math.sin(t*0.9);
       ctx.fillStyle="#07090d"; ctx.fillRect(0,0,W,H);
-      SCENE_LAYERS.forEach(l=>{
-        const {dx,dy,rot,sc}=moveTransform(move,osc,t,parallax(l.depth),W,H);
-        ctx.save();
-        ctx.translate(W/2+dx, H/2+dy); ctx.rotate(rot); ctx.scale(O*sc,O*sc); ctx.translate(-W/2,-H/2);
-        l.draw(ctx,W,H);
-        ctx.restore();
-      });
+      const imgs=imgsRef.current;
+      if(imgs){
+        const LD=[5.60,5.17,3.82,3.80];   // background, midground, foreground, subject — back → front
+        imgs.forEach((img,li)=>{
+          const {dx,dy,rot,sc}=moveTransform(move,osc,t,parallax(LD[li]),W,H);
+          ctx.save();
+          ctx.translate(W/2+dx, H/2+dy); ctx.rotate(rot); ctx.scale(O*sc,O*sc); ctx.translate(-W/2,-H/2);
+          ctx.drawImage(img,0,0,W,H);
+          ctx.restore();
+        });
+      } else { ctx.fillStyle="#9ca3af"; ctx.font="12px monospace"; ctx.fillText("loading scene…",14,40); }
       ctx.fillStyle="rgba(0,0,0,0.65)"; ctx.fillRect(0,0,W,26);
       ctx.fillStyle=M.color; ctx.font="bold 13px monospace";
       const tag = move==="dolly"?"DOLLY — background relationship CHANGES (parallax)":move==="zoom"?"ZOOM — uniform magnify, NO parallax":M.label.toUpperCase();
@@ -2378,7 +2378,7 @@ function InfoBox({ children }) {
         {open?"Hide explanation":"Show explanation"}
       </button>
       {open && (
-        <div className="avh-fade" style={{marginTop:8,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:"12px 16px",color:"#d1d5db",fontSize:13,lineHeight:1.7}}>
+        <div className="avh-fade" style={{marginTop:8,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:"12px 16px",color:"#d1d5db",fontSize:13,lineHeight:1.7,maxWidth:920}}>
           {children}
         </div>
       )}
@@ -2654,7 +2654,7 @@ function ModuleFalseColor({ image }) {
     const img=new Image();
     img.onload=()=>{
       const c=ref.current; if(!c)return;
-      const W=Math.min(c.parentElement?.clientWidth-32||760,760), H=Math.round(W*9/16);
+      const W=Math.min(c.parentElement?.clientWidth-32||760,1200), H=Math.round(W*9/16);
       c.width=W; c.height=H; const ctx=c.getContext("2d");
       ctx.drawImage(img,0,0,W,H);
       if(on){
@@ -2684,7 +2684,7 @@ function ModuleFalseColor({ image }) {
         ))}
       </div>
       <div style={{display:"flex",gap:16,flexWrap:"wrap",alignItems:"flex-start"}}>
-        <div style={{flex:"1 1 340px",minWidth:300,background:"#16171c",borderRadius:8,padding:12}}>
+        <div style={{flex:"3 1 520px",minWidth:320,background:"#16171c",borderRadius:8,padding:12}}>
           <canvas ref={ref} style={{display:"block",width:"100%",borderRadius:4}}/>
         </div>
         <div style={{flex:"1 1 200px",minWidth:190,background:"#1c1d23",border:"1px solid #2a2b32",borderRadius:8,padding:12}}>
@@ -4939,7 +4939,7 @@ export default function AVHandbook() {
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div key={activeModule} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1200,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
+        <div key={activeModule} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1480,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}

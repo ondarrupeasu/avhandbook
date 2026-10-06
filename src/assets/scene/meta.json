@@ -2,55 +2,65 @@
  "width": 1920,
  "height": 1080,
  "near": 0.05,
- "far": 8.33193040798681,
+ "far": 8.25791300409522,
  "depthEncoding": "z = near + (R*256 + G)/65535 * (far - near), metres along the lens",
  "camera": {
-  "focalMm": 32,
+  "focalMm": 35,
   "sensorMm": 36,
-  "fovH": 58.71550708558255,
-  "fovV": 35.115393689697434,
+  "fovH": 54.432223114614956,
+  "fovV": 32.26880217111643,
   "position": [
-   1.4255362513834964,
-   1.0499528370997389,
-   3.379581098811985
+   0.12430510134261186,
+   0.9700000000000002,
+   4.1699147712337155
   ],
   "target": [
-   0.1,
-   0.75,
-   -0.7
+   -0.566,
+   0.9700000000000002,
+   0.255
   ]
  },
  "layers": [
   {
    "index": 0,
    "name": "foreground",
-   "near": 2.995,
-   "far": 4.14,
-   "depth": 3.311,
-   "mean": 3.362,
+   "near": 3.594,
+   "far": 4.557,
+   "depth": 3.821,
+   "mean": 3.965,
    "file": "layer_0_foreground.png",
    "depthFile": "layer_0_foreground_depth16.png"
   },
   {
    "index": 1,
-   "name": "midground",
-   "near": 4.167,
-   "far": 5.154,
-   "depth": 4.653,
-   "mean": 4.642,
-   "file": "layer_1_midground.png",
-   "depthFile": "layer_1_midground_depth16.png"
+   "name": "subject",
+   "near": 3.611,
+   "far": 4.132,
+   "depth": 3.796,
+   "mean": 3.805,
+   "file": "layer_1_subject.png",
+   "depthFile": "layer_1_subject_depth16.png"
   },
   {
    "index": 2,
+   "name": "midground",
+   "near": 4.717,
+   "far": 5.558,
+   "depth": 5.173,
+   "mean": 5.127,
+   "file": "layer_2_midground.png",
+   "depthFile": "layer_2_midground_depth16.png"
+  },
+  {
+   "index": 3,
    "name": "background",
-   "near": 2.652,
-   "far": 6.351,
-   "depth": 4.794,
-   "mean": 4.681,
-   "file": "layer_2_background.png",
-   "depthFile": "layer_2_background_depth16.png"
+   "near": 3.245,
+   "far": 6.342,
+   "depth": 5.602,
+   "mean": 5.435,
+   "file": "layer_3_background.png",
+   "depthFile": "layer_3_background_depth16.png"
   }
  ],
- "hero": "hero_living_room.jpg (same camera, same frame)"
+ "frame": "same camera/frame as shot_types/ls.jpg (focus on the face at 3.98 m)"
 }

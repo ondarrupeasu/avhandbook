@@ -1,0 +1,283 @@
+{
+ "size": [
+  1920,
+  1080
+ ],
+ "subject": "Figure of a Dancer (Agathon Léonard, c. 1900 — Cooper Hewitt, Smithsonian, CC0), life-size in the living-room set",
+ "boxes": "normalised 0..1, x→right, y→down; cropped=true when the box runs past the frame",
+ "shots": [
+  {
+   "id": "ecu",
+   "name": "Extreme close-up (ECU)",
+   "file": "ecu.jpg",
+   "focalMm": 100,
+   "fstop": 8,
+   "shutter": "1/6",
+   "iso": 400,
+   "distance": 1.086,
+   "focusDist": 1.086,
+   "face": {
+    "x": 0.2283,
+    "y": 0.0136,
+    "w": 0.5475,
+    "h": 0.9864,
+    "cropped": true
+   },
+   "body": {
+    "x": 0,
+    "y": 0,
+    "w": 1,
+    "h": 1,
+    "cropped": true
+   },
+   "camera": {
+    "position": [
+     -0.377,
+     1.565,
+     1.325
+    ],
+    "target": [
+     -0.566,
+     1.565,
+     0.255
+    ],
+    "fovH": 20.41,
+    "fovV": 11.56
+   }
+  },
+  {
+   "id": "cu",
+   "name": "Close-up (CU)",
+   "file": "cu.jpg",
+   "focalMm": 85,
+   "fstop": 5.6,
+   "shutter": "1/13",
+   "iso": 400,
+   "distance": 1.763,
+   "focusDist": 1.763,
+   "face": {
+    "x": 0.3559,
+    "y": 0.1593,
+    "w": 0.2886,
+    "h": 0.5725,
+    "cropped": false
+   },
+   "body": {
+    "x": 0,
+    "y": 0,
+    "w": 1,
+    "h": 1,
+    "cropped": true
+   },
+   "camera": {
+    "position": [
+     -0.26,
+     1.53,
+     1.991
+    ],
+    "target": [
+     -0.566,
+     1.53,
+     0.255
+    ],
+    "fovH": 23.91,
+    "fovV": 13.59
+   }
+  },
+  {
+   "id": "mcu",
+   "name": "Medium close-up (MCU)",
+   "file": "mcu.jpg",
+   "focalMm": 85,
+   "fstop": 4,
+   "shutter": "1/24",
+   "iso": 400,
+   "distance": 3.022,
+   "focusDist": 3.022,
+   "face": {
+    "x": 0.4152,
+    "y": 0.1487,
+    "w": 0.1691,
+    "h": 0.3319,
+    "cropped": false
+   },
+   "body": {
+    "x": 0.1443,
+    "y": 0,
+    "w": 0.737,
+    "h": 1,
+    "cropped": true
+   },
+   "camera": {
+    "position": [
+     -0.041,
+     1.42,
+     3.231
+    ],
+    "target": [
+     -0.566,
+     1.42,
+     0.255
+    ],
+    "fovH": 23.91,
+    "fovV": 13.59
+   }
+  },
+  {
+   "id": "ms",
+   "name": "Medium shot (MS)",
+   "file": "ms.jpg",
+   "focalMm": 50,
+   "fstop": 2.8,
+   "shutter": "1/50",
+   "iso": 400,
+   "distance": 2.593,
+   "focusDist": 2.593,
+   "face": {
+    "x": 0.442,
+    "y": 0.1437,
+    "w": 0.1158,
+    "h": 0.2259,
+    "cropped": false
+   },
+   "body": {
+    "x": 0.2561,
+    "y": 0,
+    "w": 0.5077,
+    "h": 1,
+    "cropped": true
+   },
+   "camera": {
+    "position": [
+     -0.116,
+     1.295,
+     2.808
+    ],
+    "target": [
+     -0.566,
+     1.295,
+     0.255
+    ],
+    "fovH": 39.6,
+    "fovV": 22.9
+   }
+  },
+  {
+   "id": "mls",
+   "name": "Medium long shot / American (MLS)",
+   "file": "mls.jpg",
+   "focalMm": 50,
+   "fstop": 2.8,
+   "shutter": "1/50",
+   "iso": 400,
+   "distance": 3.58,
+   "focusDist": 3.58,
+   "face": {
+    "x": 0.4578,
+    "y": 0.1319,
+    "w": 0.084,
+    "h": 0.1643,
+    "cropped": false
+   },
+   "body": {
+    "x": 0.3233,
+    "y": 0.0199,
+    "w": 0.3644,
+    "h": 0.9801,
+    "cropped": true
+   },
+   "camera": {
+    "position": [
+     0.056,
+     1.135,
+     3.781
+    ],
+    "target": [
+     -0.566,
+     1.135,
+     0.255
+    ],
+    "fovH": 39.6,
+    "fovV": 22.9
+   }
+  },
+  {
+   "id": "ls",
+   "name": "Long shot / full figure (LS)",
+   "file": "ls.jpg",
+   "focalMm": 35,
+   "fstop": 2.8,
+   "shutter": "1/50",
+   "iso": 400,
+   "distance": 3.975,
+   "focusDist": 3.975,
+   "face": {
+    "x": 0.4734,
+    "y": 0.1969,
+    "w": 0.053,
+    "h": 0.1034,
+    "cropped": false
+   },
+   "body": {
+    "x": 0.3886,
+    "y": 0.123,
+    "w": 0.2292,
+    "h": 0.8095,
+    "cropped": false
+   },
+   "camera": {
+    "position": [
+     0.124,
+     0.97,
+     4.17
+    ],
+    "target": [
+     -0.566,
+     0.97,
+     0.255
+    ],
+    "fovH": 54.43,
+    "fovV": 32.27
+   }
+  },
+  {
+   "id": "ws",
+   "name": "Wide shot (WS) — figure in the whole set",
+   "file": "ws.jpg",
+   "focalMm": 21,
+   "fstop": 5.6,
+   "shutter": "1/13",
+   "iso": 400,
+   "distance": 4.3,
+   "focusDist": 3.576,
+   "face": {
+    "x": 0.3365,
+    "y": 0.3876,
+    "w": 0.0356,
+    "h": 0.0698,
+    "cropped": false
+   },
+   "body": {
+    "x": 0.2783,
+    "y": 0.3495,
+    "w": 0.1471,
+    "h": 0.5332,
+    "cropped": false
+   },
+   "camera": {
+    "position": [
+     0.946,
+     1.475,
+     3.629
+    ],
+    "target": [
+     0.2,
+     1.25,
+     -0.6
+    ],
+    "fovH": 81.2,
+    "fovV": 51.48
+   }
+  }
+ ]
+}
