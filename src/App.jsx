@@ -16,6 +16,7 @@ import s_mls from "./assets/shots/mls.jpg";
 import s_ls from "./assets/shots/ls.jpg";
 import s_ws from "./assets/shots/ws.jpg";
 import greenScreenImg from "./assets/green_screen.jpg";
+import linearSceneUrl from "./assets/hdr/linear_scene.bin?url";
 
 // ─────────────────────────────────────────────
 // i18n — centralised strings (add ES/EU here)
@@ -1836,6 +1837,16 @@ function rawSceneLinear(IW,IH){
   return buf;
 }
 
+// Photoreal HDR scene: a small linear-light render of the living-room set (SetFrameR), 512×288 RGB float32.
+// 1.0 = SDR diffuse white (≈100 nits); the lamp flame peaks ≈58× (≈5.9 stops of headroom above white).
+let _linScene=null, _linPromise=null; const LIN_W=512, LIN_H=288;
+function loadLinearScene(){ if(_linScene) return Promise.resolve(_linScene);
+  if(!_linPromise) _linPromise=fetch(linearSceneUrl).then(r=>r.arrayBuffer()).then(b=>{_linScene=new Float32Array(b);return _linScene;}).catch(()=>null);
+  return _linPromise; }
+function sampleLinearScene(IW,IH){ const out=new Float32Array(IW*IH*3); if(!_linScene) return out;
+  for(let y=0;y<IH;y++){ const sy=Math.min(LIN_H-1,(y/IH*LIN_H)|0); for(let x=0;x<IW;x++){ const sx=Math.min(LIN_W-1,(x/IW*LIN_W)|0); const si=(sy*LIN_W+sx)*3, di=(y*IW+x)*3; out[di]=_linScene[si]; out[di+1]=_linScene[si+1]; out[di+2]=_linScene[si+2]; } }
+  return out; }
+
 function ModuleRAW() {
   const [exposure, setExposure] = useState(0);
   const [mode, setMode] = useState("RAW");
@@ -1843,14 +1854,16 @@ function ModuleRAW() {
   const wfRef = useRef();
   const sceneRef = useRef(null);
   const dimRef = useRef({IW:0,IH:0});
+  const [ready,setReady]=useState(!!_linScene);
+  useEffect(()=>{ if(!_linScene) loadLinearScene().then(()=>setReady(true)); },[]);
 
   useEffect(()=>{
     const ic=imgRef.current, wc=wfRef.current; if(!ic||!wc) return;
     const W=Math.min(ic.parentElement?.clientWidth-24||440,480);
     const IW=Math.round(W), IH=Math.round(W*9/16);
     ic.width=IW; ic.height=IH;
-    if(!sceneRef.current || dimRef.current.IW!==IW){ sceneRef.current=rawSceneLinear(IW,IH); dimRef.current={IW,IH}; }
-    const scene=sceneRef.current, gain=Math.pow(2,exposure);
+    if(!_linScene){ const g0=ic.getContext("2d"); g0.fillStyle="#07090d"; g0.fillRect(0,0,IW,IH); g0.fillStyle="#9ca3af"; g0.font="12px monospace"; g0.fillText("loading scene…",12,24); return; }
+    const scene=sampleLinearScene(IW,IH), gain=Math.pow(2,exposure);
     const enc=v=> v<=0.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-0.055;
     const ictx=ic.getContext("2d"); const idata=ictx.createImageData(IW,IH); const d=idata.data;
     const clip=new Uint8Array(IW*IH);
@@ -1890,12 +1903,12 @@ function ModuleRAW() {
     for(let pp=0;pp<=100;pp+=25){ const y=(WH-8)-(pp/100)*(WH-16); wctx.beginPath();wctx.moveTo(18,y);wctx.lineTo(WW,y);wctx.stroke(); wctx.fillText(pp+"",2,y+3); }
     wctx.strokeStyle="rgba(248,113,113,0.55)"; const yc=(WH-8)-(WH-16); wctx.beginPath();wctx.moveTo(18,yc+0.5);wctx.lineTo(WW,yc+0.5);wctx.stroke();
     wctx.fillStyle="rgba(248,113,113,0.9)"; wctx.fillText("clip",WW-26,yc+11);
-  },[exposure,mode]);
+  },[exposure,mode,ready]);
 
   return (
     <div>
       <InfoBox>
-        <strong>RAW</strong> keeps the unprocessed sensor data with <strong>highlight headroom</strong> — several stops of luminance sit <em>above</em> the display clip point, waiting to be pulled back. <strong>Compressed</strong> formats (H.264/H.265) bake the exposure and <em>clip at capture</em>: anything above white is thrown away for good. Here the scene is over-exposed (the sky and sun clip, shown by the red zebras). Now pull <strong>Exposure</strong> down and watch the <strong>waveform</strong>: in <span style={{color:"#34d399"}}>RAW</span> the highlights come back down <em>with detail</em> (the trace spreads out below the clip line — recovered cloud/sun texture). In <span style={{color:"#f87171"}}>H.264</span> the clipped highlights just move down as a <em>flat line</em> — no detail returns, because it was never recorded. LOG to ProRes/BRAW is the middle ground.
+        <strong>RAW</strong> keeps the unprocessed sensor data with <strong>highlight headroom</strong> — several stops of luminance sit <em>above</em> the display clip point, waiting to be pulled back. <strong>Compressed</strong> formats (H.264/H.265) bake the exposure and <em>clip at capture</em>: anything above white is thrown away for good. Here the scene has very bright highlights — the practical lamp and the window clip (shown by the red zebras), with several stops of headroom above them. Now pull <strong>Exposure</strong> down and watch the <strong>waveform</strong>: in <span style={{color:"#34d399"}}>RAW</span> the highlights come back down <em>with detail</em> (the trace spreads out below the clip line — recovered cloud/sun texture). In <span style={{color:"#f87171"}}>H.264</span> the clipped highlights just move down as a <em>flat line</em> — no detail returns, because it was never recorded. LOG to ProRes/BRAW is the middle ground.
       </InfoBox>
       <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:12,flexWrap:"wrap"}}>
         {["RAW","H.264"].map(m=>(
@@ -4373,6 +4386,8 @@ function ModuleHDR(){
   const [mode,setMode]=useState("hdr");   // sdr | hdr
   const [peak,setPeak]=useState(1000);    // HDR peak nits
   const imgRef=useRef(), eotfRef=useRef(), ladRef=useRef(), sceneRef=useRef(null), dimRef=useRef({IW:0});
+  const [ready,setReady]=useState(!!_linScene);
+  useEffect(()=>{ if(!_linScene) loadLinearScene().then(()=>setReady(true)); },[]);
   useEffect(()=>{
     const enc=v=> v<=0.0031308?12.92*v:1.055*Math.pow(Math.max(v,0),1/2.4)-0.055;
     const peakRel=peak/100;
@@ -4381,8 +4396,7 @@ function ModuleHDR(){
     if(c){
       const W=Math.min(c.parentElement?.clientWidth-24||460,480), IW=Math.round(W), IH=Math.round(W*9/16);
       c.width=IW;c.height=IH; const ctx=c.getContext("2d");
-      if(!sceneRef.current||dimRef.current.IW!==IW){ sceneRef.current=rawSceneLinear(IW,IH); dimRef.current={IW}; }
-      const scene=sceneRef.current, id=ctx.createImageData(IW,IH), d=id.data; let peakLin=0;
+      const scene=sampleLinearScene(IW,IH), id=ctx.createImageData(IW,IH), d=id.data; let peakLin=0;
       for(let p=0,i=0;p<IW*IH;p++,i+=4){ let anyClip=false;
         for(let ch=0;ch<3;ch++){ let lin=scene[p*3+ch]; if(lin>peakLin)peakLin=lin;
           let disp; if(mode==="sdr"){ if(lin>1){disp=1;anyClip=true;} else disp=lin; }
@@ -4432,11 +4446,11 @@ function ModuleHDR(){
       x.fillStyle="#60a5fa";x.fillText("SDR γ2.4",padL+4,H-6); x.fillStyle="#34d399";x.fillText("PQ",padL+70,H-6); x.fillStyle="#a78bfa";x.fillText("HLG",padL+100,H-6);
       x.fillStyle="#8a8a92";x.fillText("code →  nits ↑",W-86,padT+10);
     }
-  },[mode,peak]);
+  },[mode,peak,ready]);
   return (
     <div>
       <InfoBox>
-        <strong>SDR</strong> (standard) grades to a <strong>~100-nit</strong> white on a gamma-2.4 display: anything brighter than diffuse white — the sun, a window, a specular glint — simply <strong>clips</strong> to flat white. <strong>HDR</strong> keeps a much larger <em>display</em> range (mastered to <strong>1000–4000 nits</strong>, spec'd to 10000), so those highlights stay <em>bright and detailed</em> instead of blowing out, and shadows hold more depth. Three things change together: <strong>(1) range</strong> — far more headroom above diffuse white; <strong>(2) the transfer function</strong> — SDR's relative gamma is replaced by <strong>PQ (ST.2084)</strong>, which maps each code value to an <em>absolute</em> brightness in nits (so "code 520 = 100 nits" everywhere), or <strong>HLG</strong>, a scene-relative curve that's backwards-compatible for broadcast; <strong>(3) a wider gamut</strong> — usually P3 or Rec.2020 (see <em>Color Spaces &amp; Gamuts</em>). Diffuse white sits near <strong>203 nits</strong> in HDR reference. Toggle SDR/HDR and raise the peak: watch the window and sun clip in SDR but survive in HDR. <em>(Your screen may be SDR — the HDR highlights here are simulated by rolling them off instead of clipping.)</em>
+        <strong>SDR</strong> (standard) grades to a <strong>~100-nit</strong> white on a gamma-2.4 display: anything brighter than diffuse white — the sun, a window, a specular glint — simply <strong>clips</strong> to flat white. <strong>HDR</strong> keeps a much larger <em>display</em> range (mastered to <strong>1000–4000 nits</strong>, spec'd to 10000), so those highlights stay <em>bright and detailed</em> instead of blowing out, and shadows hold more depth. Three things change together: <strong>(1) range</strong> — far more headroom above diffuse white; <strong>(2) the transfer function</strong> — SDR's relative gamma is replaced by <strong>PQ (ST.2084)</strong>, which maps each code value to an <em>absolute</em> brightness in nits (so "code 520 = 100 nits" everywhere), or <strong>HLG</strong>, a scene-relative curve that's backwards-compatible for broadcast; <strong>(3) a wider gamut</strong> — usually P3 or Rec.2020 (see <em>Color Spaces &amp; Gamuts</em>). Diffuse white sits near <strong>203 nits</strong> in HDR reference. Toggle SDR/HDR and raise the peak: watch the lamp and window clip in SDR but survive in HDR. <em>(Your screen may be SDR — the HDR highlights here are simulated by rolling them off instead of clipping.)</em>
       </InfoBox>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",marginBottom:14}}>
         {[["SDR · Rec.709","sdr"],["HDR · PQ/HLG","hdr"]].map(([l,v])=>(

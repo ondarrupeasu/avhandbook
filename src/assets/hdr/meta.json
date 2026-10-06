@@ -1,0 +1,20 @@
+{
+ "w": 512,
+ "h": 288,
+ "channels": "RGB",
+ "layout": "row-major, top-down, Float32 little-endian",
+ "colorSpace": "linear sRGB (Rec.709 primaries)",
+ "whiteLinear": 1,
+ "whiteNote": "1.0 \u2248 diffuse white of this exposure (\u2248 100 nits SDR reference)",
+ "peakLinear": 58.16,
+ "peakStopsOverWhite": 5.86,
+ "camera": {
+  "focalMm": 32,
+  "fstop": 2.8,
+  "shutter": 0.02,
+  "iso": 400,
+  "wb": 4300
+ },
+ "frame": "same camera and lighting as hero_figure.jpg (1920x1080 SDR render)",
+ "file": "linear_512x288_rgb_f32.bin"
+}
