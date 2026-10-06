@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import LightingStudio3D from "./LightingStudio.jsx";
 
 // ─────────────────────────────────────────────
 // i18n — centralised strings (add ES/EU here)
@@ -53,6 +54,7 @@ const STRINGS = {
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
       cableReach: { title: "Cable Reach Calculator", desc: "How far SDI runs by cable type & resolution (Percon)" },
       portraitLight: { title: "Portrait Lighting", desc: "Three-point (key/fill/back) & patterns — Rembrandt, butterfly, split" },
+      lightingStudio: { title: "3D Lighting Studio", desc: "Light a 3D subject with movable lights — exposure, DoF, challenges" },
       lensDistortion: { title: "Lens Distortion", desc: "Barrel & pincushion — when straight lines bend" },
       interlacing: { title: "Interlacing & Combing", desc: "Fields, comb teeth on motion, deinterlacing" },
       halation: { title: "Halation & Bloom", desc: "Highlight glow — the red halo of film" },
@@ -111,7 +113,7 @@ const CATEGORIES = [
   },
   {
     id: "lighting", label: T.categories.lighting,
-    modules: ["portraitLight"],
+    modules: ["portraitLight","lightingStudio"],
   },
   {
     id: "audio", label: T.categories.audio,
@@ -3398,6 +3400,10 @@ function ModulePortraitLight() {
       <InfoBox>
         <strong>Three-point lighting</strong> is the foundation of portrait and interview lighting, built from three roles. The <strong style={{color:"#ff5a4d"}}>Key</strong> is the main light — put it off to one side and above, and the shadow of the nose and brow carves out the classic patterns (<em>butterfly, loop, Rembrandt, split</em>). The <strong style={{color:"#22d3ee"}}>Fill</strong> sits on the <em>opposite</em> side, softer and dimmer, and lifts the shadows — the <strong>key-to-fill ratio</strong> sets how dramatic (low fill) or flat (high fill) the face looks. The <strong style={{color:"#a78bfa"}}>Back</strong> (or rim/hair) light sits <em>behind</em> the subject and rims the edge of the head, separating them from the background. Each light has its own position (azimuth + elevation), <strong>intensity</strong>, <strong>softness</strong> (big soft source vs small hard one) and <strong>colour temperature</strong> — mixing warm and cool lights is a classic look. Pick a preset, then select a light and drag it around the top-down diagram or tune it below. The face is shaded live by all three (N·L + specular).
       </InfoBox>
+      <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",marginBottom:14,padding:"10px 14px",background:"linear-gradient(135deg,#1c1d23,#25262e)",border:"1px solid #2a2b32",borderRadius:10}}>
+        <div style={{flex:"1 1 220px",fontSize:13,color:"#d1d5db"}}>Want to light <strong>in real 3D</strong>? Step into the studio: place spots, soft boxes and daylight on a 3D subject and see the result through a camera with real exposure.</div>
+        <button onClick={()=>{ location.hash="#/lighting-studio"; }} style={{...styles.btnActive,padding:"8px 14px",fontSize:13,whiteSpace:"nowrap"}}>Open the 3D Studio →</button>
+      </div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
         {LIGHT_PRESETS.map(p=>(
           <button key={p.id} onClick={()=>applyPreset(p.id)} style={preset===p.id?styles.btnActive:styles.btnChip}>{p.name}</button>
@@ -4740,6 +4746,7 @@ const MODULE_COMPONENTS = {
   signals: ModuleSignals,
   cableReach: ModuleCableReach,
   portraitLight: ModulePortraitLight,
+  lightingStudio: LightingStudio3D,
   lensDistortion: ModuleLensDistortion,
   interlacing: ModuleInterlacing,
   halation: ModuleHalation,
@@ -4917,7 +4924,7 @@ export default function AVHandbook() {
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div key={activeModule} className="avh-fade" style={{maxWidth:1200,margin:"0 auto",padding:"24px 20px"}}>
+        <div key={activeModule} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1200,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}
