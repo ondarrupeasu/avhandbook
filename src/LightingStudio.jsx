@@ -23,6 +23,17 @@ function Control({label,min,max,step=1,value,onChange,onReset,def}){
   const defRef=useRef(def ?? value); const numRef=useRef(null);
   useEffect(()=>{ const n=numRef.current; if(n && document.activeElement!==n) n.value=r1(value, step<1?2:0); },[value,step]);
   const reset=()=> onReset ? onReset() : onChange(defRef.current);
+  // DaVinci-style scrub: drag the number box to change the value (Shift = fine, Alt = coarse); a plain click focuses it for typing.
+  const onScrub=(e)=>{
+    const n=numRef.current; if(!n || document.activeElement===n) return;
+    e.preventDefault();
+    const x0=e.clientX, v0=(+n.value||value), perPx=Math.max(step,(max-min)/300); let dragged=false;
+    const move=(ev)=>{ const dx=ev.clientX-x0; if(Math.abs(dx)>3) dragged=true; if(!dragged) return;
+      const k=ev.shiftKey?0.1:(ev.altKey?10:1); let v=v0+dx*perPx*k; v=Math.max(min,Math.min(max,v)); v=Math.round(v/step)*step;
+      n.value=r1(v,step<1?2:0); onChange(v); };
+    const up=()=>{ window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); if(!dragged){ n.focus(); n.select(); } };
+    window.addEventListener("pointermove",move); window.addEventListener("pointerup",up);
+  };
   return (
     <div style={{display:"grid",gridTemplateColumns:"80px 1fr 54px 22px",gap:6,alignItems:"center",margin:"4px 0"}}>
       <span style={{color:C.muted,fontSize:11.5}}>{label}</span>
@@ -30,8 +41,9 @@ function Control({label,min,max,step=1,value,onChange,onReset,def}){
         onPointerDown={e=>{ if(e.shiftKey){ e.preventDefault(); reset(); } }}
         onChange={e=>onChange(+e.target.value)} style={{width:"100%",accentColor:C.accent}}/>
       <input ref={numRef} type="number" min={min} max={max} step={step} defaultValue={r1(value,step<1?2:0)}
+        onPointerDown={onScrub} title="Drag to scrub · Shift = fine · Alt = coarse · click to type"
         onChange={e=>{ const v=e.target.value; if(v!=="" && !isNaN(+v)) onChange(+v); }}
-        style={{width:54,textAlign:"right",background:C.card,color:C.text,border:`1px solid ${C.line}`,borderRadius:6,padding:"4px 5px",fontSize:11.5}}/>
+        style={{width:54,textAlign:"right",background:C.card,color:C.text,border:`1px solid ${C.line}`,borderRadius:6,padding:"4px 5px",fontSize:11.5,cursor:"ew-resize"}}/>
       <button onClick={reset} title="Back to default (or Shift+click the slider)"
         style={{width:22,height:24,padding:0,color:C.muted,background:"none",border:"none",cursor:"pointer",fontSize:13}}>↺</button>
     </div>
