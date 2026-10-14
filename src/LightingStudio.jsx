@@ -58,6 +58,7 @@ export default function LightingStudio3D(){
   const [subjects,setSubjects]=useState([]); const [presets,setPresets]=useState([]);
   const [chSel,setChSel]=useState(""); const [challenge,setChallenge]=useState(null); // {name,description,url,out,result}
   const [shots,setShots]=useState([]); const [importMsg,setImportMsg]=useState("");
+  const [cmp,setCmp]=useState(null); const [cmpBusy,setCmpBusy]=useState(false); // {name,ref,mine} object URLs
   const [narrow,setNarrow]=useState(typeof window!=="undefined" && window.innerWidth<860);
 
   useEffect(()=>{ const onR=()=>setNarrow(window.innerWidth<860); window.addEventListener("resize",onR); return ()=>window.removeEventListener("resize",onR); },[]);
@@ -111,6 +112,16 @@ export default function LightingStudio3D(){
     window.open(URL.createObjectURL(new Blob([html],{type:"text/html"}))); };
   const compareShots=()=>{ const pick=shots.filter(x=>x.pick); const html=`<!doctype html><meta charset=utf-8><title>Compare</title><body style="margin:0;background:#0b0b0d"><div style="display:grid;grid-template-columns:repeat(${Math.min(pick.length,3)},1fr);gap:8px;padding:8px">${pick.map(x=>`<img src="${x.url}" style="width:100%">`).join("")}</div></body>`;
     window.open(URL.createObjectURL(new Blob([html],{type:"text/html"}))); };
+  // ---- free practice: the last preset next to the student's own lighting (same camera/subject)
+  const lastPresetId = ready ? S.getLastPreset?.() : null;
+  const lastPresetName = presets.find(p=>p.id===lastPresetId)?.name || lastPresetId;
+  const comparePreset=async()=>{ setCmpBusy(true);
+    try{ const r=await S.comparePreset(); setCmp(o=>{ if(o){ URL.revokeObjectURL(o.ref); URL.revokeObjectURL(o.mine); }
+      return {name:r.name,ref:URL.createObjectURL(r.reference),mine:URL.createObjectURL(r.mine)}; }); bump(); }
+    catch(e){ console.error("[LightingStudio] comparePreset",e); }
+    finally{ setCmpBusy(false); } };
+  const closeCmp=()=>setCmp(o=>{ if(o){ URL.revokeObjectURL(o.ref); URL.revokeObjectURL(o.mine); } return null; });
+  useEffect(()=>{ if(!cmp) return; const k=e=>{ if(e.key==="Escape") closeCmp(); }; window.addEventListener("keydown",k); return ()=>window.removeEventListener("keydown",k); },[cmp]);
   const copyState=()=>{ navigator.clipboard?.writeText(JSON.stringify(S.getState())); };
   const pickCount=shots.filter(x=>x.pick).length;
 
@@ -223,7 +234,12 @@ export default function LightingStudio3D(){
 
           <H>Presets</H>
           <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"4px 0"}}>
-            {presets.map(p=><button key={p.id} style={sBtn(false)} title={p.description} onClick={()=>{ S.applyPreset(p.id); bump(); }}>{p.name}</button>)}
+            {presets.map(p=><button key={p.id} style={sBtn(lastPresetId===p.id)} title={p.description} onClick={()=>{ S.applyPreset(p.id); bump(); }}>{p.name}</button>)}
+          </div>
+          <div style={{display:"flex",gap:8,alignItems:"center",margin:"6px 0 2px"}}>
+            <button style={sBtn(false)} disabled={!lastPresetId||cmpBusy} onClick={comparePreset}
+              title="Free practice: change the lights your way, then see the preset and yours side by side (same camera). Your lights are kept.">⇆ Compare with the preset</button>
+            <span style={{color:C.muted,fontSize:12,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cmpBusy?"Rendering…":(lastPresetId?lastPresetName:"apply a preset first")}</span>
           </div>
 
           <H>Challenge — recreate the reference</H>
@@ -294,6 +310,26 @@ export default function LightingStudio3D(){
           </div>
         </>}
       </aside>
+
+      {cmp && (
+        <div onClick={closeCmp} style={{position:"fixed",inset:0,zIndex:10000,background:"rgba(5,5,8,.88)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:C.panel,border:`1px solid ${C.line}`,borderRadius:12,padding:16,width:"min(1600px,100%)",maxHeight:"100%",overflow:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <strong style={{color:C.text,fontSize:15}}>⇆ {cmp.name} vs yours</strong>
+              <button style={sBtn(false)} onClick={closeCmp} title="Close (Esc)">✕ Close</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:narrow?"1fr":"1fr 1fr",gap:12}}>
+              {[[cmp.ref,`${cmp.name} (preset)`],[cmp.mine,"Yours"]].map(([u,t])=>(
+                <figure key={t} style={{margin:0}}>
+                  <figcaption style={{color:t==="Yours"?C.accent:C.muted,fontSize:12,letterSpacing:".06em",textTransform:"uppercase",marginBottom:6}}>{t}</figcaption>
+                  <img src={u} alt={t} style={{width:"100%",display:"block",borderRadius:6}}/>
+                </figure>
+              ))}
+            </div>
+            <div style={{color:C.muted,fontSize:12,marginTop:10}}>Same camera and subject; your lights were put back exactly as they were. Read the settings under each picture to see what differs.</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -675,6 +675,7 @@ export async function createLightingStudio(container, opts = {}) {
   const listLights = () => [...lights.values()].map(lightInfo);
   function clearLights() { for (const id of [...lights.keys()]) removeLight(id); }
 
+  let lastPreset = null;
   function applyPreset(name) {
     const p = PRESETS[name];
     if (!p) throw new Error(`Unknown preset "${name}" — see listPresets()`);
@@ -682,6 +683,7 @@ export async function createLightingStudio(container, opts = {}) {
     setTurn(p.turn || 0);
     setWorld({ ...DEFAULT_WORLD, ...(p.world || {}) });
     p.lights.forEach((spec) => addLight(spec));
+    lastPreset = name;
     emit('change', { what: 'preset', preset: name });
   }
   const lang = opts.lang === 'es' ? 'es' : 'en';   // English by default (the app's language); 'es' available
@@ -1309,6 +1311,21 @@ export async function createLightingStudio(container, opts = {}) {
     clearLights(); setTurn(challenge.turn); setWorld(challenge.world);
     challenge.lights.forEach((l) => addLight({ ...l, id: undefined }));
   }
+  /**
+   * Free practice: the preset (default: the last one applied) next to the student's own lighting, both shot
+   * with the CURRENT camera and subject. The student's lights are put back exactly as they were.
+   * → { id, name, description, reference: Blob, mine: Blob } (PNGs; `info: true` adds the settings card)
+   */
+  async function comparePreset(id = lastPreset, { info = true } = {}) {
+    if (!id || !PRESETS[id]) throw new Error('No preset to compare with — applyPreset() first or pass an id');
+    const own = getState(), p = presetInfo(id);
+    const mine = await snapshot({ info, title: 'Yours' });
+    applyPreset(id);
+    const reference = await snapshot({ info, title: p.name });
+    await setState({ ...own, camera: undefined });
+    lastPreset = id;
+    return { ...p, reference, mine };
+  }
   function endChallenge() { challenge = null; emit('change', { what: 'challenge' }); }
 
   /** The settings that made the picture, as plain text lines (for the snapshot card or the host's UI). */
@@ -1609,7 +1626,7 @@ export async function createLightingStudio(container, opts = {}) {
     // your own models (optional — everything else works without downloading anything)
     importModel,
     // challenge: recreate a reference
-    startChallenge, checkChallenge, solveChallenge, endChallenge, getChallenge: () => (challenge ? { id: challenge.id, reference: challenge.reference } : null),
+    startChallenge, checkChallenge, solveChallenge, endChallenge, comparePreset, getLastPreset: () => lastPreset, getChallenge: () => (challenge ? { id: challenge.id, reference: challenge.reference } : null),
     three: { THREE, renderer, scene, camera, controls, _post: { dofPass, smoothPass, depthRT, composer } },   // escape hatch (advanced use)
   };
 }
