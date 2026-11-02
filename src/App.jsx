@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import LightingStudio3D from "./LightingStudio.jsx";
 import DepthOfField3D from "./DepthOfField3D.jsx";
+import InverseSquare from "./InverseSquare.jsx";
 import heroScene from "./assets/shots/ls.jpg";
 import sceneColor from "./assets/scene/color.png";
 import sceneDepth from "./assets/scene/depth16.png";
@@ -72,6 +73,7 @@ const STRINGS = {
       storageCalc: { title: "Storage Calculator", desc: "Resolution × bitrate × codec × time → disk space" },
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
       cableReach: { title: "Cable Reach Calculator", desc: "How far SDI runs by cable type & resolution (Percon)" },
+      inverseSquare: { title: "Inverse-Square Law", desc: "How light falls off with distance — lumen, candela, lux, nits and E = I/d²" },
       lightingStudio: { title: "3D Lighting Studio", desc: "Light a 3D subject with movable lights — exposure, DoF, challenges" },
       lensDistortion: { title: "Lens Distortion", desc: "Barrel & pincushion — when straight lines bend" },
       interlacing: { title: "Interlacing & Combing", desc: "Fields, comb teeth on motion, deinterlacing" },
@@ -131,7 +133,7 @@ const CATEGORIES = [
   },
   {
     id: "lighting", label: T.categories.lighting,
-    modules: ["lightingStudio"],
+    modules: ["lightingStudio","inverseSquare"],
   },
   {
     id: "audio", label: T.categories.audio,
@@ -4915,6 +4917,7 @@ const MODULE_COMPONENTS = {
   vignetting: ModuleVignetting,
   chromaticAberration: ModuleChromaticAberration,
   depthOfField: DepthOfField3D,
+  inverseSquare: InverseSquare,
   shotTypes: ModuleShotTypes,
   cameraMovement: ModuleCameraMovement,
   timecode: ModuleTimecode,
@@ -5077,7 +5080,7 @@ export default function AVHandbook() {
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div key={(activeModule==="lightingStudio"||activeModule==="depthOfField")?activeModule:activeModule+"-"+rk} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1680,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
+        <div key={(activeModule==="lightingStudio"||activeModule==="depthOfField"||activeModule==="inverseSquare")?activeModule:activeModule+"-"+rk} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1680,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}

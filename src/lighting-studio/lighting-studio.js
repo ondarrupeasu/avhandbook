@@ -94,6 +94,10 @@ const PRESETS = {
       { role: 'fill', type: 'area', position: [1.6, 3.0, -2.5], target: [0, 0.8, -5], intensity: 1.4, size: 2.5, shadow: { on: false } },
       { role: 'background', type: 'area', position: [0, 3.2, -7], target: [0, 1.2, -11.5], intensity: 1.6, size: 3, shadow: { on: false } }],
     world: { ambient: 0.25 } },
+  falloff: { es: ['Caída de la luz (ley del inverso del cuadrado)', 'Una bombilla desnuda junto a la cámara y nada más: cada vez que se dobla la distancia llega una cuarta parte de luz (−2 pasos). Para el set de profundidad de campo.'],
+    en: ['Fall-off (inverse-square law)', 'One bare bulb next to the camera and nothing else: double the distance, a quarter of the light (−2 stops). Made for the depth of field set.'],
+    lights: [{ role: 'key', type: 'point', position: [0.25, 1.9, 3.0], target: [0.25, 1.0, -8], intensity: 1, shadow: { on: true, softness: 0.2 } }],
+    world: { ambient: 0 } },
   silhouette: { es: ['Silueta', 'Solo se ilumina el fondo; el sujeto queda como una forma oscura recortada.'],
     en: ['Silhouette', 'Only the background is lit; the subject stays a dark shape against it.'],
     lights: [{ role: 'background', type: 'spot', az: 0, el: 25, dist: 1.8, target: [0, 1.4, -3.4], intensity: 1.6, cone: 90, softness: 0.9, shadow: { on: false } }],
@@ -261,6 +265,7 @@ export async function createLightingStudio(container, opts = {}) {
   const loaded = new Map();
   const loadGlb = (name) => loaded.get(name) || (loaded.set(name, loader.loadAsync(asset(name)).then((g) => g.scene)), loaded.get(name));
   const subjectRoot = new THREE.Group();
+  const subjectSphere = new THREE.Sphere(new THREE.Vector3(0, 1, 0), 2.5);
   content.add(subjectRoot);
   let subjectId = null, subjectTarget = new THREE.Vector3(0, 1.3, 0);
   const plaster = new THREE.MeshStandardMaterial({ color: '#b9b6b0', roughness: 0.85 });
@@ -467,6 +472,7 @@ export async function createLightingStudio(container, opts = {}) {
     subjectRoot.add(g);
     cove.visible = id !== 'dof-test';      // the DoF set brings its own long floor and far wall
     subjectRoot.updateMatrixWorld(true);   // raycasts (auto focus) may run before the next frame
+    new THREE.Box3().setFromObject(subjectRoot).getBoundingSphere(subjectSphere);
     subjectId = id;
     const prev = subjectTarget.clone();
     subjectTarget.fromArray(subjects[id].target);
@@ -483,6 +489,7 @@ export async function createLightingStudio(container, opts = {}) {
     }
     camera.lookAt(targets.camera); studioCam.lookAt(targets.studio); controls.update(); camDirty = true;
     for (const L of lights.values()) if (!L.spec.target) { L.aim.add(d); L.pos.add(d); applyLight(L); }
+      else if (L.spec.type === 'sun') applyLight(L);   // its shadow box follows the subject's size
     emit('change', { what: 'subject', subject: id });
   }
 
@@ -558,17 +565,20 @@ export async function createLightingStudio(container, opts = {}) {
       o.angle = THREE.MathUtils.degToRad(THREE.MathUtils.clamp(s.cone ?? 40, 2, 170) / 2);
       o.penumbra = THREE.MathUtils.clamp(s.softness ?? 0.4, 0, 1);
       o.target.position.copy(L.aim);
-      o.shadow.camera.near = 0.1; o.shadow.camera.far = 30;
+      o.shadow.camera.near = 0.1; o.shadow.camera.far = 50;
       setShadow(o);
     } else if (s.type === 'point') {
       o.intensity = s.intensity * CANDELA;
-      o.shadow.camera.near = 0.05; o.shadow.camera.far = 30;
+      o.shadow.camera.near = 0.05; o.shadow.camera.far = 50;     // decay 2 = pure 1/d²; far covers long sets (dof-test)
       setShadow(o);
     } else if (s.type === 'sun') {
       o.intensity = s.intensity * SUN_LUX;
       o.target.position.copy(L.aim);
-      const c = o.shadow.camera;
-      c.left = c.bottom = -2.5; c.right = c.top = 2.5; c.near = 0.1; c.far = 40;
+      // the ortho shadow box wraps the whole subject (bust: the cove around it; dof-test: the 17 m corridor)
+      const c = o.shadow.camera, r = Math.max(2.5, subjectSphere.radius);
+      const rot = new THREE.Matrix4().lookAt(L.pos, L.aim, new THREE.Vector3(0, 1, 0)).transpose();
+      const v = subjectSphere.center.clone().sub(L.pos).applyMatrix4(rot);
+      c.left = v.x - r; c.right = v.x + r; c.bottom = v.y - r; c.top = v.y + r; c.near = -v.z - r; c.far = -v.z + r;
       c.updateProjectionMatrix();
       setShadow(o);
     } else if (s.type === 'area') {
@@ -582,7 +592,7 @@ export async function createLightingStudio(container, opts = {}) {
       e.intensity = s.intensity * CANDELA * share;
       e.angle = Math.PI / 3; e.penumbra = 1;
       e.visible = shadowOn;
-      e.shadow.camera.near = 0.1; e.shadow.camera.far = 30;
+      e.shadow.camera.near = 0.1; e.shadow.camera.far = 50;
       setShadow(e, 0.6 + size / 2);       // bigger box → softer shadow
     }
     updateHandle(L, color);
@@ -974,6 +984,20 @@ export async function createLightingStudio(container, opts = {}) {
     pip.width = Math.round(pw * renderer.getPixelRatio()); pip.height = Math.round(pip.width / other);
     pip.style.display = showMonitor ? 'block' : 'none';
     camDirty = true; invalidate();
+    emit('resize', { view, width: w, height: h, left: (W - w) / 2, top: (H - h) / 2 });
+  }
+  /**
+   * A world point → CSS px in the container (letterbox included), through the camera of the current view.
+   * null when it is behind the camera or outside the picture. For tags floating over the 3D view; re-project
+   * on 'camera' / 'resize' / 'view' events.
+   */
+  function project(p) {
+    const cam = viewCam(), v = Array.isArray(p) ? new THREE.Vector3().fromArray(p) : new THREE.Vector3(p.x, p.y, p.z);
+    if (cam === camera) camera.lookAt(targets.camera);
+    cam.updateMatrixWorld(); v.project(cam);
+    if (v.z < -1 || v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) return null;
+    const w = parseFloat(canvas.style.width), h = parseFloat(canvas.style.height);
+    return { x: parseFloat(canvas.style.left) + (v.x + 1) / 2 * w, y: parseFloat(canvas.style.top) + (1 - v.y) / 2 * h };
   }
   const ro = new ResizeObserver(resize);
   ro.observe(container);
@@ -1312,6 +1336,48 @@ export async function createLightingStudio(container, opts = {}) {
     challenge.lights.forEach((l) => addLight({ ...l, id: undefined }));
   }
   /**
+   * Illuminance at a point from the current lights, the same model the renderer uses (engine lux: a point
+   * light of `intensity` 1 gives 12/d²): inverse square, the surface cosine (`facing` = its normal; default
+   * = facing each light), spot cone fall-off, soft box emission angle; blocked by geometry only when that
+   * light casts a shadow (as in the picture). Ambient/bounce is not included.
+   * → { lux, lights: [{ id, lux, dist, blocked }] }
+   */
+  const meterRay = new THREE.Raycaster();
+  function meterAt(p, { facing = null } = {}) {
+    const P = Array.isArray(p) ? new THREE.Vector3().fromArray(p) : new THREE.Vector3(p.x, p.y, p.z);
+    const N = facing ? (Array.isArray(facing) ? new THREE.Vector3().fromArray(facing) : new THREE.Vector3(facing.x, facing.y, facing.z)).normalize() : null;
+    content.updateMatrixWorld(true);
+    const out = [];
+    for (const L of lights.values()) {
+      const s = L.spec, sun = s.type === 'sun';
+      const toL = sun ? L.pos.clone().sub(L.aim).normalize() : L.pos.clone().sub(P);
+      const dist = sun ? Infinity : toL.length(); toL.normalize();
+      const cosS = N ? Math.max(0, N.dot(toL)) : 1;
+      let blocked = false;
+      if (s.shadow?.on && cosS > 0) {
+        meterRay.set(P.clone().addScaledVector(toL, 0.02), toL); meterRay.far = sun ? 100 : dist - 0.05;
+        blocked = meterRay.intersectObject(content, true).some((h) => h.object.isMesh && h.object.visible && h.object.castShadow !== false);
+      }
+      let e = 0;
+      if (sun) e = s.intensity * SUN_LUX;
+      else {
+        const axis = L.aim.clone().sub(L.pos).normalize(), cosE = axis.dot(toL.clone().negate());
+        const I = s.intensity * CANDELA / (dist * dist);
+        const spot = (half, pen) => { const co = Math.cos(half), ci = Math.cos(half * (1 - pen)); return THREE.MathUtils.smoothstep(cosE, co, ci); };
+        if (s.type === 'point') e = I;
+        else if (s.type === 'spot') e = I * spot(THREE.MathUtils.degToRad(THREE.MathUtils.clamp(s.cone ?? 40, 2, 170) / 2), THREE.MathUtils.clamp(s.softness ?? 0.4, 0, 1));
+        else if (s.type === 'area') {
+          const share = s.shadow?.on ? 0.5 : 0;
+          e = I * (1 - share) * Math.max(0, cosE) + (blocked ? 0 : I * share * spot(Math.PI / 3, 1));
+          blocked = false;                   // only the shadow-casting half is blocked (counted above)
+        }
+      }
+      const lux = blocked ? 0 : e * cosS;
+      out.push({ id: s.id, lux: +lux.toFixed(3), dist: sun ? null : +dist.toFixed(3), blocked });
+    }
+    return { lux: +out.reduce((a, l) => a + l.lux, 0).toFixed(3), lights: out };
+  }
+  /**
    * Free practice: the preset (default: the last one applied) next to the student's own lighting, both shot
    * with the CURRENT camera and subject. The student's lights are put back exactly as they were.
    * → { id, name, description, reference: Blob, mine: Blob } (PNGs; `info: true` adds the settings card)
@@ -1626,7 +1692,7 @@ export async function createLightingStudio(container, opts = {}) {
     // your own models (optional — everything else works without downloading anything)
     importModel,
     // challenge: recreate a reference
-    startChallenge, checkChallenge, solveChallenge, endChallenge, comparePreset, getLastPreset: () => lastPreset, getChallenge: () => (challenge ? { id: challenge.id, reference: challenge.reference } : null),
+    startChallenge, checkChallenge, solveChallenge, endChallenge, comparePreset, project, meterAt, getLastPreset: () => lastPreset, getChallenge: () => (challenge ? { id: challenge.id, reference: challenge.reference } : null),
     three: { THREE, renderer, scene, camera, controls, _post: { dofPass, smoothPass, depthRT, composer } },   // escape hatch (advanced use)
   };
 }
