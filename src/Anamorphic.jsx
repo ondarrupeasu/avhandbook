@@ -263,62 +263,68 @@ const mix=(a,b,t)=>a.map((v,i)=>Math.round(v*(1-t)+b[i]*t));
 
 /* ------------------------------------------------------------------ 4 · FLARES */
 const TINTS={blue:[70,140,255],amber:[255,160,60],clear:[230,230,240]};
-const LAMP=[781/1920,600/1080];
+const LAMP=[781,600];          // the oil lamp's flame in ws.jpg (px of the 1920×1080 render)
+const VIEW=0.6;                // the camera sees 60 % of the set picture: drag to pan/tilt across it
 function Flares(){
   const ref=useRef(null); const img=useImage(wideShot); const rt=useResizeTick();
-  const [lens,setLens]=useState("ana"); const [tint,setTint]=useState("blue"); const [blades,setBlades]=useState(9);
-  const [k,setK]=useState(1); const [torch,setTorch]=useState([0.72,0.28]); const [lampOn,setLampOn]=useState(true); const [torchOn,setTorchOn]=useState(true);
-  const dims=useRef({W:0,Hh:0});
+  const [lens,setLens]=useState("ana"); const [tint,setTint]=useState("blue"); const [blades,setBlades]=useState(9); const [k,setK]=useState(1);
+  const [cam,setCam]=useState([0.62,0.55]);   // camera aim, 0..1 over the pannable range
+  const [auto,setAuto]=useState(false);
+  useEffect(()=>{ if(!auto) return; let raf, t0=performance.now();
+    const step=(now)=>{ const u=((now-t0)/7000)%1, p=0.5-0.5*Math.cos(u*2*Math.PI); setCam([p,0.5+0.12*Math.sin(u*4*Math.PI)]); raf=requestAnimationFrame(step); };
+    raf=requestAnimationFrame(step); return ()=>cancelAnimationFrame(raf); },[auto]);
   useEffect(()=>{
     const c=ref.current; if(!c||!img) return;
     const pe=c.parentElement, cw=(pe?.clientWidth||900)-32;
     const Hh=Math.round(clamp(Math.min(cw*9/16,vh()-300),220,720)), W=Math.round(Hh*16/9);
     const dpr=window.devicePixelRatio||1; c.width=W*dpr; c.height=Hh*dpr; c.style.width=W+"px"; c.style.height=Hh+"px";
-    const x=c.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0); dims.current={W,Hh};
-    x.drawImage(img,0,0,W,Hh);
-    x.fillStyle="rgba(0,0,0,.25)"; x.fillRect(0,0,W,Hh);    // a touch darker, as if exposed for the practicals
+    const x=c.getContext("2d"); x.setTransform(dpr,0,0,dpr,0,0);
+    const vw=img.width*VIEW, vhh=img.height*VIEW, ox=cam[0]*(img.width-vw), oy=cam[1]*(img.height-vhh);
+    x.drawImage(img,ox,oy,vw,vhh,0,0,W,Hh);
+    x.fillStyle="rgba(0,0,0,.22)"; x.fillRect(0,0,W,Hh);
+    // where the lamp lands in this frame (0..1; outside = off-frame)
+    const lx=(LAMP[0]-ox)/vw, ly=(LAMP[1]-oy)/vhh;
+    const out=Math.max(0,-lx,lx-1,-ly,ly-1), vis=clamp(1-out/0.18,0,1);   // fades out just beyond the frame edge
     x.globalCompositeOperation="lighter";
-    const opt={blades,tint:TINTS[tint]};
-    const one=(sx,sy,kk,ln)=>flare(x,W,Hh,sx*W,sy*Hh,kk,ln,opt);
-    const doLens=(ln)=>{ if(lampOn) one(LAMP[0],LAMP[1],k*0.7,ln); if(torchOn) one(torch[0],torch[1],k,ln); };
-    if(lens==="split"){
-      x.save(); x.beginPath(); x.rect(0,0,W/2,Hh); x.clip(); doLens("sph"); x.restore();
-      x.save(); x.beginPath(); x.rect(W/2,0,W/2,Hh); x.clip(); doLens("ana"); x.restore();
-    } else doLens(lens);
+    if(vis>0){ const opt={blades,tint:TINTS[tint]};
+      const draw=(ln)=>flare(x,W,Hh,lx*W,ly*Hh,k*vis,ln,opt);
+      if(lens==="split"){ x.save(); x.beginPath(); x.rect(0,0,W/2,Hh); x.clip(); draw("sph"); x.restore(); x.save(); x.beginPath(); x.rect(W/2,0,W/2,Hh); x.clip(); draw("ana"); x.restore(); }
+      else draw(lens); }
     x.globalCompositeOperation="source-over";
+    // centre cross: the ghosts always line up through it
+    x.strokeStyle="rgba(255,255,255,.35)"; x.lineWidth=1; x.beginPath(); x.moveTo(W/2-9,Hh/2); x.lineTo(W/2+9,Hh/2); x.moveTo(W/2,Hh/2-9); x.lineTo(W/2,Hh/2+9); x.stroke();
     if(lens==="split"){ x.strokeStyle="rgba(255,255,255,.5)"; x.setLineDash([6,5]); x.beginPath(); x.moveTo(W/2,0); x.lineTo(W/2,Hh); x.stroke(); x.setLineDash([]);
       x.font="bold 12px monospace"; x.fillStyle="#fff"; x.textAlign="left"; x.fillText("SPHERICAL",10,20); x.textAlign="right"; x.fillText("ANAMORPHIC",W-10,20); }
-    if(torchOn){ x.strokeStyle="rgba(255,255,255,.55)"; x.lineWidth=1; x.beginPath(); x.arc(torch[0]*W,torch[1]*Hh,14,0,7); x.stroke(); }
-  },[img,lens,tint,blades,k,torch,lampOn,torchOn,rt]);
-  const drag=useRef(false);
-  const move=(e)=>{ const c=ref.current; if(!c) return; const r=c.getBoundingClientRect(); setTorch([clamp((e.clientX-r.left)/r.width,0,1),clamp((e.clientY-r.top)/r.height,0,1)]); };
+    if(vis<1){ x.font="12px sans-serif"; x.fillStyle="rgba(255,255,255,.75)"; x.textAlign="center"; x.fillText(vis>0?"lamp just out of frame — the flare fades":"lamp out of frame — no flare",W/2,Hh-14); }
+  },[img,lens,tint,blades,k,cam,rt]);
+  const drag=useRef(null);
+  const down=(e)=>{ setAuto(false); drag.current={x:e.clientX,y:e.clientY,c:cam}; e.currentTarget.setPointerCapture(e.pointerId); };
+  const move=(e)=>{ const d=drag.current; if(!d) return; const r=e.currentTarget.getBoundingClientRect();
+    // drag the camera: moving the mouse right turns the camera right (the set slides left)
+    setCam([clamp(d.c[0]+(e.clientX-d.x)/r.width*1.2,0,1),clamp(d.c[1]+(e.clientY-d.y)/r.height*1.2,0,1)]); };
   return (
     <div style={{display:"flex",gap:14,flexWrap:"wrap",alignItems:"stretch"}}>
       <div style={{...panel,flex:"2 1 640px",minWidth:320,display:"flex",justifyContent:"center",alignItems:"center",padding:12}}>
-        <canvas ref={ref} style={{display:"block",borderRadius:6,cursor:"crosshair",touchAction:"none"}}
-          onPointerDown={e=>{ drag.current=true; e.currentTarget.setPointerCapture(e.pointerId); setTorchOn(true); move(e); }}
-          onPointerMove={e=>{ if(drag.current) move(e); }} onPointerUp={()=>{ drag.current=false; }}/>
+        <canvas ref={ref} style={{display:"block",borderRadius:6,cursor:"grab",touchAction:"none"}}
+          onPointerDown={down} onPointerMove={move} onPointerUp={()=>{ drag.current=null; }}/>
       </div>
       <div style={{...panel,flex:"1 1 330px",minWidth:300}}>
-        <H>Point a light at the lens</H>
-        <P style={{fontSize:12.5}}>Drag on the picture to move the <strong>torch</strong>. The oil lamp is a second source. Switch lenses and watch the flare change shape.</P>
+        <H>Move the camera, watch the flare</H>
+        <P style={{fontSize:12.5}}>The oil lamp is the light source. <strong>Drag on the picture to pan and tilt the camera</strong>: as the lamp moves across the frame, the flare moves with it — and the ghosts swing round the centre of the frame (+).</P>
         <div style={{display:"flex",gap:6,flexWrap:"wrap",margin:"10px 0 4px"}}>
           {[["sph","Spherical"],["ana","Anamorphic"],["split","Split ⇆"]].map(([id,l])=><button key={id} style={sBtn(lens===id)} onClick={()=>setLens(id)}>{l}</button>)}
+          <button style={sBtn(auto)} onClick={()=>setAuto(a=>!a)}>{auto?"❚❚ Stop pan":"▶ Auto pan"}</button>
         </div>
         <Ctl label="Brightness" min={0.2} max={1.6} step={0.05} value={k} onChange={setK} disp={v=>Math.round(v*100)+"%"}/>
         {lens!=="ana" && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0"}}><span style={{color:C.muted,fontSize:12,width:96}}>Aperture blades</span>
           {[6,8,9].map(n=><button key={n} style={sBtn(blades===n)} onClick={()=>setBlades(n)}>{n}</button>)}</div>}
         {lens!=="sph" && <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0"}}><span style={{color:C.muted,fontSize:12,width:96}}>Coating</span>
           {[["blue","Blue"],["amber","Amber"],["clear","Clear"]].map(([id,l])=><button key={id} style={sBtn(tint===id)} onClick={()=>setTint(id)}>{l}</button>)}</div>}
-        <div style={{display:"flex",gap:14,margin:"6px 0 10px",fontSize:12.5,color:C.text}}>
-          <label><input type="checkbox" checked={torchOn} onChange={e=>setTorchOn(e.target.checked)}/> Torch</label>
-          <label><input type="checkbox" checked={lampOn} onChange={e=>setLampOn(e.target.checked)}/> Oil lamp</label>
-        </div>
-        <P style={{fontSize:12.4}}>
+        <P style={{fontSize:12.4,marginTop:8}}>
           <strong style={{color:C.text}}>Spherical:</strong> a <strong>star</strong> (light diffracting on the aperture blades: 6 blades → 6 points, 9 blades → 18) and <strong>ghosts</strong> — reflections between glass elements, shaped like the aperture, lined up through the centre of the frame.<br/>
-          <strong style={{color:C.text}}>Anamorphic:</strong> the light scattering inside the cylindrical elements spreads along the one axis they act on, so after the desqueeze it becomes a long <strong>horizontal streak</strong>. Its colour comes from the lens <strong>coatings</strong> (classic blue, some amber). The ghosts are <strong>tall ovals</strong>, like the bokeh.
+          <strong style={{color:C.text}}>Anamorphic:</strong> the light scattering inside the cylindrical elements spreads along the one axis they act on, so after the desqueeze it becomes a long <strong>horizontal streak</strong> at the lamp's height. Its colour comes from the lens <strong>coatings</strong> (classic blue, some amber). The ghosts are <strong>tall ovals</strong>, like the bokeh.
         </P>
-        <P style={{fontSize:12,color:C.muted,marginTop:8}}>Many films chase this on purpose — shining torches into Panavision anamorphics was the signature of <em>Star Trek</em> (2009). Streak filters fake it on spherical lenses, and you can tell: no oval ghosts, no oval bokeh.</P>
+        <P style={{fontSize:12,color:C.muted,marginTop:8}}>Camera operators "play" the flare by panning a few degrees — shining torches into Panavision anamorphics was the signature of <em>Star Trek</em> (2009). Streak filters fake it on spherical lenses, and you can tell: no oval ghosts, no oval bokeh.</P>
       </div>
     </div>
   );
@@ -328,7 +334,9 @@ function Flares(){
 function Compare3D(){
   return (
     <div style={{...panel,padding:"40px 24px",textAlign:"center",color:C.muted,fontSize:13}}>
-      The live 3D comparison (spherical vs anamorphic: oval bokeh and the lamp's streak) needs the anamorphic mode of the lighting engine — on its way from SetFrameR.
+      <div style={{color:C.text,fontSize:15,fontWeight:"bold",marginBottom:6}}>Coming soon</div>
+      Two live 3D cameras side by side on the same set — spherical and anamorphic — with real oval bokeh and the oil lamp's streak, focus and aperture under your control.
+      <div style={{marginTop:6}}>The 3D engine is getting its anamorphic lens right now. Meanwhile, tabs 1, 2 and 4 show the squeeze, the look and the flares.</div>
     </div>
   );
 }
