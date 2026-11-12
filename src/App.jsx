@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import LightingStudio3D from "./LightingStudio.jsx";
 import DepthOfField3D from "./DepthOfField3D.jsx";
 import InverseSquare from "./InverseSquare.jsx";
+import Anamorphic from "./Anamorphic.jsx";
 import heroScene from "./assets/shots/ls.jpg";
 import sceneColor from "./assets/scene/color.png";
 import sceneDepth from "./assets/scene/depth16.png";
@@ -61,6 +62,7 @@ const STRINGS = {
       vignetting: { title: "Vignetting", desc: "Light falloff at the edges of the frame" },
       chromaticAberration: { title: "Chromatic Aberration", desc: "Fringing and lens colour errors" },
       depthOfField: { title: "Depth of Field", desc: "Aperture, focal length and focus distance" },
+      anamorphic: { title: "Anamorphic Lenses", desc: "The squeeze, why cinema uses it, oval bokeh and horizontal flares" },
       shotTypes: { title: "Shot Types", desc: "ECU to EWS — the visual language of framing" },
       cameraMovement: { title: "Camera Movement", desc: "Pan, tilt, track, zoom — motion vocabulary" },
       timecode: { title: "Timecode", desc: "SMPTE timecode — the language of synchronisation" },
@@ -117,7 +119,7 @@ const CATEGORIES = [
   },
   {
     id: "optics", label: T.categories.optics,
-    modules: ["depthOfField"],
+    modules: ["depthOfField","anamorphic"],
   },
   {
     id: "narrative", label: T.categories.narrative,
@@ -4918,6 +4920,7 @@ const MODULE_COMPONENTS = {
   chromaticAberration: ModuleChromaticAberration,
   depthOfField: DepthOfField3D,
   inverseSquare: InverseSquare,
+  anamorphic: Anamorphic,
   shotTypes: ModuleShotTypes,
   cameraMovement: ModuleCameraMovement,
   timecode: ModuleTimecode,
@@ -5080,7 +5083,7 @@ export default function AVHandbook() {
 
       {/* Content */}
       {activeModule && ActiveComp ? (
-        <div key={(activeModule==="lightingStudio"||activeModule==="depthOfField"||activeModule==="inverseSquare")?activeModule:activeModule+"-"+rk} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1680,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
+        <div key={(activeModule==="lightingStudio"||activeModule==="depthOfField"||activeModule==="inverseSquare"||activeModule==="anamorphic")?activeModule:activeModule+"-"+rk} className="avh-fade" style={{maxWidth:activeModule==="lightingStudio"?"100%":1680,margin:"0 auto",padding:activeModule==="lightingStudio"?"18px 16px":"24px 20px"}}>
           <div style={{marginBottom:16}}>
             <div style={{color:CATEGORY_COLORS[activeCat?.id]||"#f59e0b",fontSize:11,fontFamily:"monospace",fontWeight:"bold",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>
               {T.categories[activeCat?.id]}
