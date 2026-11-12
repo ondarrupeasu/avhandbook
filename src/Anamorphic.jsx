@@ -244,7 +244,7 @@ function useStudio(ref, setup){
     (async()=>{
       try{
         const mod=await import("./lighting-studio/lighting-studio.js"); if(disposed) return;
-        st=await mod.createLightingStudio(ref.current,{subject:"dof-test",preset:"anamorphic-night"});
+        st=await mod.createLightingStudio(ref.current,{subject:"dof-test",preset:"anamorphic-night",monitor:false});
         if(disposed){ try{st.dispose();}catch{} return; }
         st.setView("camera"); setup(st);
         offs.push(st.on("camera",()=>setTick(t=>t+1)));

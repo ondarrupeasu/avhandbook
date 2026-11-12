@@ -194,7 +194,7 @@ export async function createLightingStudio(container, opts = {}) {
   camera.setFocalLength(85);
   const studioCam = new THREE.PerspectiveCamera(45, 1, 0.05, 200);
   const targets = { camera: new THREE.Vector3(), studio: new THREE.Vector3() };
-  let view = opts.view === 'camera' ? 'camera' : 'studio', photoAspect = 3 / 2, showGuides = true, showMonitor = true;
+  let view = opts.view === 'camera' ? 'camera' : 'studio', photoAspect = 3 / 2, showGuides = true, showMonitor = opts.monitor !== false;
   const viewCam = () => (view === 'camera' ? camera : studioCam);
   const controls = new OrbitControls(view === 'camera' ? camera : studioCam, canvas);
   controls.target = targets[view];
