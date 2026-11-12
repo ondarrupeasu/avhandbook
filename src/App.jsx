@@ -3,6 +3,7 @@ import LightingStudio3D from "./LightingStudio.jsx";
 import DepthOfField3D from "./DepthOfField3D.jsx";
 import InverseSquare from "./InverseSquare.jsx";
 import Anamorphic from "./Anamorphic.jsx";
+import Connectors from "./Connectors.jsx";
 import heroScene from "./assets/shots/ls.jpg";
 import sceneColor from "./assets/scene/color.png";
 import sceneDepth from "./assets/scene/depth16.png";
@@ -74,6 +75,7 @@ const STRINGS = {
       containers: { title: "Containers & Wrappers", desc: "MOV, MP4, MXF, MKV — codec ≠ container" },
       storageCalc: { title: "Storage Calculator", desc: "Resolution × bitrate × codec × time → disk space" },
       signals: { title: "Signals & Connectivity", desc: "HDMI, SDI, fibre, NDI, SRT, XLR, DMX — cables vs IP transports" },
+      connectors: { title: "Connectors", desc: "Every plug on set — video, audio, data, power — what it carries and how far it goes" },
       cableReach: { title: "Cable Reach Calculator", desc: "How far SDI runs by cable type & resolution (Percon)" },
       inverseSquare: { title: "Inverse-Square Law", desc: "How light falls off with distance — lumen, candela, lux, nits and E = I/d²" },
       lightingStudio: { title: "3D Lighting Studio", desc: "Light a 3D subject with movable lights — exposure, DoF, challenges" },
@@ -131,7 +133,7 @@ const CATEGORIES = [
   },
   {
     id: "signals", label: T.categories.signals,
-    modules: ["signals","cableReach"],
+    modules: ["signals","connectors","cableReach"],
   },
   {
     id: "lighting", label: T.categories.lighting,
@@ -4921,6 +4923,7 @@ const MODULE_COMPONENTS = {
   depthOfField: DepthOfField3D,
   inverseSquare: InverseSquare,
   anamorphic: Anamorphic,
+  connectors: Connectors,
   shotTypes: ModuleShotTypes,
   cameraMovement: ModuleCameraMovement,
   timecode: ModuleTimecode,
