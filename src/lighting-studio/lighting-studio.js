@@ -101,7 +101,7 @@ const PRESETS = {
   'anamorphic-night': { es: ['Noche anamórfica', 'Set de profundidad de campo de noche: la lámpara de aceite es la práctica protagonista (flares, bokeh) y un key suave y frío modela la figura.'],
     en: ['Anamorphic night', 'The depth of field set at night: the oil lamp is the hero practical (flares, bokeh) and a soft, cool key models the figure.'],
     lights: [{ role: 'key', type: 'area', position: [-1.9, 2.3, 0.4], target: [-0.45, 1.4, -1.0], kelvin: 4300, intensity: 1.1, size: 1.0, shadow: { on: true, softness: 0.7 } },
-      { role: 'practical', type: 'point', position: [-0.75, 0.95, -5.0], kelvin: 2200, intensity: 0.25, shadow: { on: false } }],
+      { role: 'practical', type: 'point', position: [-0.75, 1.0, -5.0], kelvin: 2400, intensity: 0.5, shadow: { on: false } }],
     world: { ambient: 0.03 } },
   silhouette: { es: ['Silueta', 'Solo se ilumina el fondo; el sujeto queda como una forma oscura recortada.'],
     en: ['Silhouette', 'Only the background is lit; the subject stays a dark shape against it.'],
@@ -720,7 +720,7 @@ export async function createLightingStudio(container, opts = {}) {
   const expo = { iso: 400, shutter: 1 / 50, wb: 5600 };
   // The lens. Anamorphic: the vertical field is the focal's, the horizontal one is squeezed in (focal / squeeze),
   // on a sensor area whose aspect × squeeze gives the frame (trimmed to 2.39). Bokeh, flares, distortion follow it.
-  const lens = { kind: 'spherical', squeeze: 2, focal: 85, coating: 'blue', blades: 9, flare: { on: false, amount: 1 }, distortion: 0, yaw: 0, pitch: 0, sphAspect: null };
+  const lens = { kind: 'spherical', squeeze: 2, focal: 85, coating: 'blue', blades: 9, flare: { on: false, amount: 1, haze: 1, streak: 1 }, distortion: 0, yaw: 0, pitch: 0, sphAspect: null };
   const ANA_SENSOR = { 2: 4 / 3, 1.8: 3 / 2, 1.5: 3 / 2, 1.33: 16 / 9 };
   const COATING = { blue: [0.35, 0.58, 1.0], amber: [1.0, 0.6, 0.26], clear: [0.92, 0.9, 0.86] };
   const anam = () => lens.kind === 'anamorphic';
@@ -930,17 +930,22 @@ export async function createLightingStudio(container, opts = {}) {
   const MAXF = 4;
   const flareQuad = new FullScreenQuad(new THREE.ShaderMaterial({
     uniforms: { n: { value: 0 }, res: { value: new THREE.Vector2(1, 1) }, anam: { value: 0 }, squeeze: { value: 1 }, blades: { value: 9 }, star: { value: 0.5 },
+      veil: { value: 1 }, streak: { value: 1 },
       tint: { value: new THREE.Vector3(1, 1, 1) }, pos: { value: Array.from({ length: MAXF }, () => new THREE.Vector2()) },
       amt: { value: Array.from({ length: MAXF }, () => new THREE.Vector4()) }, col: { value: Array.from({ length: MAXF }, () => new THREE.Vector3()) } },
     vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-    fragmentShader: `uniform int n; uniform vec2 res; uniform float anam, squeeze, blades, star; uniform vec3 tint;
+    fragmentShader: `uniform int n; uniform vec2 res; uniform float anam, squeeze, blades, star, veil, streak; uniform vec3 tint;
       uniform vec2 pos[${MAXF}]; uniform vec4 amt[${MAXF}]; uniform vec3 col[${MAXF}];
       varying vec2 vUv;
       float poly(float a) { if (blades < 3.0) return 1.0; float s = 6.2831853 / blades; return cos(3.14159265 / blades) / cos(mod(a + 1.5707963, s) - s * 0.5); }
+      float shape(vec2 q) { return anam > 0.5 ? length(q) : length(q) / poly(atan(q.y, q.x)); }
       // a soft disc with a slightly brighter rim; q in units of its radius
-      float disc(vec2 q) { float d = anam > 0.5 ? length(q) : length(q) / poly(atan(q.y, q.x)); return smoothstep(1.0, 0.9, d) * (0.75 + 0.25 * smoothstep(0.5, 1.0, d)); }
+      float disc(vec2 q) { float d = shape(q); return smoothstep(1.0, 0.9, d) * (0.75 + 0.25 * smoothstep(0.5, 1.0, d)); }
+      // a ghost: a hoop (bright rim, dim inside); s = edge softness
+      float hoop(float d, float s) { return smoothstep(1.0, 1.0 - s, d) * (0.2 + 0.8 * smoothstep(1.0 - 4.0 * s, 1.0 - 0.6 * s, d)); }
+      vec3 ghost(vec2 q, float s) { float d = shape(q); return vec3(hoop(d * 1.035, s), hoop(d, s), hoop(d * 0.965, s)); }   // chromatic fringe
       void main() {
-        vec2 p = vUv * res, c = res * 0.5; vec3 o = vec3(0.0); float H = res.y;
+        vec2 p = vUv * res, c = res * 0.5; vec3 o = vec3(0.0); float H = res.y, W = res.x;
         for (int i = 0; i < ${MAXF}; i++) {
           if (i >= n) break;
           vec2 sp = pos[i] * res, d = p - sp; float B = amt[i].x, r = length(d);
@@ -948,25 +953,45 @@ export async function createLightingStudio(container, opts = {}) {
           // highlight bokeh: the defocused source as a disc (oval for anamorphic, the blades' polygon otherwise)
           if (amt[i].y > 0.0) o += sc * amt[i].z * disc(d / vec2(amt[i].y / (anam > 0.5 ? squeeze : 1.0), amt[i].y));
           if (B <= 0.0) continue;
-          o += mix(sc, vec3(1.0), 0.4) * B * 0.9 * exp(-r / (H * 0.012)) / (1.0 + amt[i].y / 3.0);   // core glow (spread out when defocused)
+          float dz = 1.0 + amt[i].y / 3.0;                              // defocus spreads the hot core
+          float inFrame = 1.0 - smoothstep(0.0, 0.6 * W, max(abs(sp.x - c.x) - 0.5 * W, abs(sp.y - c.y) - 0.5 * H));
+          // bloom: hot white core + soft halo (wider than tall through an anamorphic)
+          float re = length(d / vec2(anam > 0.5 ? 1.7 : 1.0, 1.0));
+          o += mix(sc, vec3(1.0), 0.75) * B * 1.1 * exp(-r / (H * 0.005 * dz)) / dz;
+          o += mix(sc, vec3(1.0), 0.3) * B * (0.32 * exp(-re / (H * 0.025)) + 0.09 * exp(-re / (H * 0.11))) * inFrame;
+          // veiling glare: the blacks lift, more the nearer the source is to the centre
+          float cen = 1.0 - clamp(length((sp - c) / vec2(W, H)) * 1.4, 0.0, 1.0);
+          o += mix(sc, anam > 0.5 ? tint : vec3(1.0), 0.5) * B * veil * (0.006 + 0.014 * cen + 0.035 * exp(-r / (H * 0.35))) * inFrame;
           if (anam > 0.5) {
-            float t = H * 0.0022 * (1.0 + 0.6 * B);
-            o += tint * B * 0.55 * exp(-abs(d.y) / t) * (0.3 + 0.7 * exp(-abs(d.x) / (res.x * 0.3)));      // the streak
-            o += tint * B * 0.10 * exp(-abs(d.y) / (t * 10.0)) * exp(-abs(d.x) / (res.x * 0.18));         // its haze
-            for (int g = 0; g < 5; g++) {
-              float k = g == 0 ? -0.3 : g == 1 ? -0.65 : g == 2 ? -1.15 : g == 3 ? 0.45 : 1.5;
-              float sz = H * (g == 0 ? 0.025 : g == 1 ? 0.055 : g == 2 ? 0.1 : g == 3 ? 0.018 : 0.045);
-              vec2 q = (p - (c + (sp - c) * k)) / vec2(sz / squeeze, sz);
-              o += mix(tint, sc, 0.25 * float(g)) * B * 0.07 * disc(q);
+            // the streak: brightest and thickest at the source, white there turning to the coating's colour, fading out
+            float ax = abs(d.x), len = W * streak * (0.05 + 0.13 * B);
+            float fall = exp(-ax / len) * (0.6 + 0.4 * exp(-ax / (len * 0.25)));
+            float th = H * 0.0024 * (1.0 + 0.5 * B) * (0.4 + 0.6 * exp(-ax / (W * 0.12)));
+            float sh = 0.85 + 0.15 * sin(ax * 0.045 + sp.x * 0.013 + sp.y * 0.021) * sin(ax * 0.011 - sp.y * 0.017);   // shimmer
+            vec3 sk = mix(vec3(1.0), tint, smoothstep(0.0, W * 0.07, ax));
+            o += sk * B * 0.9 * exp(-abs(d.y) / th) * fall * sh;
+            o += tint * B * 0.12 * exp(-abs(d.y) / (th * 9.0)) * fall;                                        // its haze
+            float th2 = H * 0.0012, f2 = exp(-ax / (len * 0.55));                                             // faint parallel streaks
+            o += tint * B * 0.16 * (exp(-abs(d.y - H * 0.016) / th2) + 0.7 * exp(-abs(d.y + H * 0.027) / th2)) * f2 * sh;
+            for (int g = 0; g < 7; g++) {
+              float k = g == 0 ? -0.25 : g == 1 ? -0.6 : g == 2 ? -1.05 : g == 3 ? 0.4 : g == 4 ? 1.4 : g == 5 ? -1.6 : 0.8;
+              float sz = H * (g == 0 ? 0.03 : g == 1 ? 0.06 : g == 2 ? 0.13 : g == 3 ? 0.022 : g == 4 ? 0.05 : g == 5 ? 0.22 : 0.09);
+              float soft = g == 2 || g == 5 ? 0.35 : 0.1, w = g == 5 ? 0.05 : g == 2 ? 0.09 : 0.14;
+              vec3 gc = g == 1 ? vec3(0.45, 1.0, 0.7) : g == 3 ? vec3(1.0, 0.7, 0.35) : g == 6 ? vec3(0.8, 0.6, 1.0) : tint;
+              o += mix(gc, sc, 0.2) * B * w * ghost((p - (c + (sp - c) * k)) / vec2(sz / squeeze, sz), soft);
             }
           } else {
+            // starburst: spikes thick at the root, tapering
             float nsp = mod(blades, 2.0) > 0.5 ? blades * 2.0 : blades, a = atan(d.y, d.x);
-            o += mix(sc, vec3(1.0), 0.5) * B * star * pow(abs(cos(a * nsp * 0.5)), 60.0) * exp(-r / (H * 0.07 * (0.6 + B)));   // starburst
-            for (int g = 0; g < 5; g++) {
-              float k = g == 0 ? -0.35 : g == 1 ? -0.75 : g == 2 ? -1.25 : g == 3 ? 0.5 : 1.6;
-              float sz = H * (g == 0 ? 0.03 : g == 1 ? 0.05 : g == 2 ? 0.09 : g == 3 ? 0.02 : 0.04);
-              vec3 gc = g == 0 ? vec3(0.4, 1.0, 0.6) : g == 1 ? vec3(1.0, 0.45, 0.9) : g == 2 ? vec3(0.5, 0.7, 1.0) : g == 3 ? vec3(1.0, 0.8, 0.4) : vec3(0.6, 1.0, 0.9);
-              o += gc * B * 0.06 * disc((p - (c + (sp - c) * k)) / sz);
+            float sharp = 3.0 + 140.0 * pow(clamp(r / (H * 0.25), 0.0, 1.0), 0.8);
+            o += mix(sc, vec3(1.0), 0.6) * B * star * 1.2 * pow(abs(cos(a * nsp * 0.5)), sharp)
+              * exp(-r / (H * 0.045 * (0.5 + B) * streak * (0.45 + 0.55 * fract(sin(floor(a / 6.2831853 * nsp + 0.5) * 12.9898) * 43758.5))));   // spikes of uneven length
+            for (int g = 0; g < 6; g++) {
+              float k = g == 0 ? -0.35 : g == 1 ? -0.75 : g == 2 ? -1.25 : g == 3 ? 0.5 : g == 4 ? 1.6 : -1.7;
+              float sz = H * (g == 0 ? 0.03 : g == 1 ? 0.055 : g == 2 ? 0.1 : g == 3 ? 0.02 : g == 4 ? 0.045 : 0.16);
+              float soft = g == 2 || g == 5 ? 0.3 : 0.1, w = g == 5 ? 0.04 : 0.11;
+              vec3 gc = g == 0 ? vec3(0.4, 1.0, 0.6) : g == 1 ? vec3(1.0, 0.45, 0.9) : g == 2 ? vec3(0.5, 0.7, 1.0) : g == 3 ? vec3(1.0, 0.8, 0.4) : g == 4 ? vec3(0.6, 1.0, 0.9) : vec3(1.0, 0.65, 0.4);
+              o += gc * B * w * ghost((p - (c + (sp - c) * k)) / sz, soft);
             }
           }
         }
@@ -989,6 +1014,17 @@ export async function createLightingStudio(container, opts = {}) {
     if (occCache.size > 200) occCache.clear();
     occCache.set(key, hit); return hit;
   }
+  // how bright a source is: its own glow + any point light sitting in it (a bulb in the lamp)
+  function sourceLum(src, wp) {
+    const m = src.material; let L = m.emissiveIntensity * (0.2126 * m.emissive.r + 0.7152 * m.emissive.g + 0.0722 * m.emissive.b);
+    for (const l of lights.values()) if (l.spec.type === 'point' && l.pos.distanceTo(wp) < 0.3) L += l.spec.intensity * 60;
+    return L;
+  }
+  function getFlareSources() {
+    const gain = 2 ** (world.exposure + cameraStops());
+    return brightSources.filter((s) => s.visible).map((s, i) => { const wp = s.getWorldPosition(new THREE.Vector3());
+      return { id: s.name || `source-${i}`, position: wp.toArray(), strength: +((sourceLum(s, wp) / 25) * gain).toFixed(3) }; });
+  }
   function drawFlares(dofOn, S, cocScale, maxR) {
     const fwd = camera.getWorldDirection(new THREE.Vector3()), gain = 2 ** (world.exposure + cameraStops());
     const vp = renderer.getCurrentViewport(_vp), u = flareQuad.material.uniforms;
@@ -1000,7 +1036,7 @@ export async function createLightingStudio(container, opts = {}) {
       _v.copy(wp).project(camera);
       const out = Math.max(Math.abs(_v.x), Math.abs(_v.y));
       if (out > 1.7 || occluded(src, wp)) continue;
-      const m = src.material, L = m.emissiveIntensity * (0.2126 * m.emissive.r + 0.7152 * m.emissive.g + 0.0722 * m.emissive.b);
+      const m = src.material, L = sourceLum(src, wp);
       const B = lens.flare.on ? lens.flare.amount * Math.min(3, (L / 25) * gain) * (1 - THREE.MathUtils.smoothstep(out, 1.0, 1.7)) : 0;
       // the defocused source's disc: its light spread over the circle of confusion (energy kept)
       let rad = 0, I = 0;
@@ -1020,7 +1056,7 @@ export async function createLightingStudio(container, opts = {}) {
     if (!n) return;
     u.n.value = n; u.res.value.set(vp.z, vp.w); u.anam.value = anam() ? 1 : 0; u.squeeze.value = lens.squeeze;
     u.blades.value = lens.blades; u.star.value = 0.15 + 0.85 * THREE.MathUtils.smoothstep(dof.fstop, 2.8, 11);
-    u.tint.value.fromArray(COATING[lens.coating]);
+    u.tint.value.fromArray(COATING[lens.coating]); u.veil.value = lens.flare.haze ?? 1; u.streak.value = lens.flare.streak ?? 1;
     const ac = renderer.autoClear; renderer.autoClear = false; flareQuad.render(renderer); renderer.autoClear = ac;
   }
   const out = new OutputPass(), outRender = out.render.bind(out);
@@ -1039,7 +1075,7 @@ export async function createLightingStudio(container, opts = {}) {
       float h(vec2 p) { return fract(sin(dot(p + seed, vec2(12.9898, 78.233))) * 43758.5453); }
       void main() { vec2 p = floor(gl_FragCoord.xy);
         vec3 n = vec3(h(p) - 0.5) + 0.3 * (vec3(h(p + 1.3), h(p + 2.7), h(p + 4.1)) - 0.5);
-        gl_FragColor = vec4(max(${sign} * n, 0.0) * amount, 1.0); }`,
+        gl_FragColor = vec4(max(${sign.toFixed(1)} * n, 0.0) * amount, 0.0); }   // alpha 0: leaves the picture's alpha alone`,
     transparent: true, depthTest: false, depthWrite: false, toneMapped: false,
     blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
     blendEquation: sign > 0 ? THREE.AddEquation : THREE.ReverseSubtractEquation,
@@ -1869,7 +1905,7 @@ export async function createLightingStudio(container, opts = {}) {
     // your own models (optional — everything else works without downloading anything)
     importModel,
     // challenge: recreate a reference
-    startChallenge, checkChallenge, solveChallenge, endChallenge, comparePreset, project, meterAt, getLastPreset: () => lastPreset, getChallenge: () => (challenge ? { id: challenge.id, reference: challenge.reference } : null),
+    startChallenge, checkChallenge, solveChallenge, endChallenge, comparePreset, project, meterAt, getFlareSources, getLastPreset: () => lastPreset, getChallenge: () => (challenge ? { id: challenge.id, reference: challenge.reference } : null),
     three: { THREE, renderer, scene, camera, controls, _post: { dofPass, smoothPass, depthRT, composer } },   // escape hatch (advanced use)
   };
 }

@@ -255,9 +255,9 @@ function useStudio(ref, setup){
   },[]);  // eslint-disable-line
   return [S,err];
 }
-function View3D({vref,S,err,label,col,h}){
+function View3D({vref,S,err,label,col,h,grow=true}){
   return (
-    <div style={{flex:"1 1 420px",minWidth:300,display:"flex",flexDirection:"column",gap:4}}>
+    <div style={{flex:grow?"1 1 420px":"none",minWidth:300,display:"flex",flexDirection:"column",gap:4}}>
       {label && <div style={{color:col,fontSize:11.5,fontFamily:"monospace",fontWeight:"bold",letterSpacing:".06em"}}>{label}</div>}
       <div ref={vref} style={{position:"relative",width:"100%",height:h,background:"#08080a",borderRadius:10,overflow:"hidden",border:`1px solid ${C.line}`,touchAction:"none"}}>
         {!S && <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",color:err?"#fca5a5":C.muted,fontSize:13,textAlign:"center",padding:20}}>
@@ -270,52 +270,103 @@ const COAT=[["blue","Blue"],["amber","Amber"],["clear","Clear"]];
 const fmtSq=(s)=>Math.abs(s-1.33)<0.02?"1.33":String(s);
 
 /* ------------------------------------------------------------------ 3 · 3D: spherical vs anamorphic */
+// Guided experiments: each one sets both cameras and says what to look at.
+const EXPS = [
+  {id:"dof", n:"A", title:"Same framing, different focus",
+   look:<>Both cameras frame <strong>the same width</strong>. To do that the anamorphic needs a lens <strong>×2 longer</strong> (75 mm vs ~42 mm), so at the same f-stop its sharp zone is <strong>shallower</strong>: look at the 2 m sign and the shelf at 11 m — softer on the right. Compare the sharp zones below.</>,
+   cam:{focal:75,fstop:2.8,exp:2.5,focus:4,flare:false}, mag:null},
+  {id:"bokeh", n:"B", title:"The shape of the bokeh",
+   look:<>Focus close (2 m) and open the iris: the lamp at 8 m turns into a big out-of-focus disc. The magnifiers show it: <strong>round</strong> (the shape of the aperture) through the spherical lens, a <strong>tall oval</strong> through the anamorphic — the cylinder squeezes the blur horizontally.</>,
+   cam:{focal:75,fstop:1.4,exp:0.5,focus:2,flare:false}, mag:{hf:0.17,label:"magnifier: the lamp, out of focus"}},
+  {id:"flare", n:"C", title:"The shape of the flare",
+   look:<>Focus on the lamp (8 m) and let it flare. Spherical: a <strong>star</strong> from the aperture blades plus round/polygonal ghosts. Anamorphic: a <strong>horizontal streak</strong> through the light plus tall-oval ghosts. Same light, same scene — only the lens changed.</>,
+   cam:{focal:75,fstop:4,exp:3,focus:8,flare:true}, mag:{hf:0.42,label:"magnifier: around the lamp"}},
+];
+const LAMP_FLAME=[-0.75,1.0,-5.0];   // the oil-lamp flame on dof-test (the anamorphic-night practical sits there)
+const fmtD=(m)=>m===Infinity||m>1e4?"∞":(Math.round(m*100)/100).toFixed(2);
+
 function Compare3D(){
-  const ra=useRef(null), rs=useRef(null);
-  const [focal,setFocal]=useState(75), [fstop,setFstop]=useState(1.4), [focus,setFocus]=useState(2), [sq,setSq]=useState(2);
-  const [match,setMatch]=useState("width"), [coat,setCoat]=useState("blue"), [flareOn,setFlareOn]=useState(true), [dist,setDist]=useState(0.35);
-  const base={dof:{on:true}, flare:{on:true,amount:1}};
-  const [A,errA]=useStudio(ra,(st)=>{ st.setCamera({...base,lens:"anamorphic",squeeze:2,focalMm:75,fstop:1.4}); st.focusOn(2); });
-  const [B,errB]=useStudio(rs,(st)=>{ st.setCamera({...base,lens:"spherical",blades:9,focalMm:37.5,fstop:1.4}); st.setAspect("2.39:1"); st.focusOn(2); });
+  const ra=useRef(null), rs=useRef(null), ma=useRef(null), ms=useRef(null);
+  const [exp,setExp]=useState("dof");
+  const E=EXPS.find(x=>x.id===exp);
+  const [focal,setFocal]=useState(75), [fstop,setFstop]=useState(2.8), [ev,setEv]=useState(2.5), [focus,setFocus]=useState(4), [sq,setSq]=useState(2), [flareOn,setFlareOn]=useState(false);
+  const [match,setMatch]=useState("width"), [coat,setCoat]=useState("blue"), [dist,setDist]=useState(0), [adv,setAdv]=useState(false);
+  const base={dof:{on:true}, flare:{on:false,amount:1}};
+  const [A,errA]=useStudio(ra,(st)=>{ st.setCamera({...base,lens:"anamorphic",squeeze:2,focalMm:75,fstop:2.8}); st.focusOn(4); });
+  const [B,errB]=useStudio(rs,(st)=>{ st.setCamera({...base,lens:"spherical",blades:9,focalMm:42,fstop:2.8}); st.setAspect("2.39:1"); st.focusOn(4); });
+  const pick=(id)=>{ const x=EXPS.find(e=>e.id===id); setExp(id); setFocal(x.cam.focal); setFstop(x.cam.fstop); setEv(x.cam.exp); setFocus(x.cam.focus); setFlareOn(x.cam.flare); setSq(2); setMatch("width"); };
   // keep both cameras in step
-  useEffect(()=>{ if(!A) return; A.setCamera({lens:"anamorphic",squeeze:sq,focalMm:focal,fstop,coating:coat,flare:{on:flareOn,amount:1},distortion:dist}); A.focusOn(focus); },[A,sq,focal,fstop,focus,coat,flareOn,dist]);
+  useEffect(()=>{ if(!A) return; A.setWorld({exposure:ev}); A.setCamera({lens:"anamorphic",squeeze:sq,focalMm:focal,fstop,coating:coat,flare:{on:flareOn,amount:1.4},distortion:dist}); A.focusOn(focus); },[A,sq,focal,fstop,ev,focus,coat,flareOn,dist]);
   useEffect(()=>{ if(!A||!B) return;
-    // same width: the spherical focal that gives the anamorphic's horizontal field on a 2.39 frame of the same sensor
-    let f=focal;
-    if(match==="width"){ const ca=A.getCamera(), cb=B.getCamera(); const sw=cb.sensorMm||36; f=Math.max(8,(sw/2)/Math.tan((ca.fovH*Math.PI/180)/2)); }
-    B.setCamera({lens:"spherical",focalMm:f,fstop,flare:{on:flareOn,amount:1}}); B.setAspect("2.39:1"); B.focusOn(focus);
-  },[A,B,match,sq,focal,fstop,focus,flareOn]);
+    let f=focal;   // same width: the spherical focal with the anamorphic's horizontal field on a 2.39 frame of the same sensor
+    if(match==="width"){ const ca=A.getCamera(), cb=B.getCamera(); f=Math.max(8,((cb.sensorMm||36)/2)/Math.tan((ca.fovH*Math.PI/180)/2)); }
+    B.setWorld({exposure:ev}); B.setCamera({lens:"spherical",focalMm:f,fstop,flare:{on:flareOn,amount:1.4}}); B.setAspect("2.39:1"); B.focusOn(focus);
+  },[A,B,match,sq,focal,fstop,ev,focus,flareOn]);
+  // magnifiers: a still of each view, cropped around the lamp (the preset's warm practical sits at the flame)
+  useEffect(()=>{
+    if(!A||!B||!E.mag) return; let gone=false;
+    const t=setTimeout(async()=>{
+      for(const [S,vref,cref] of [[A,ra,ma],[B,rs,ms]]){ try{
+        const c=cref.current, host=vref.current; if(!c||!host||gone) continue;
+        const lamp={position:S.getFlareSources?.()[0]?.position||LAMP_FLAME};
+        const p=S.project(lamp.position), cv=host.querySelector("canvas"); if(!cv) continue;
+        const L=parseFloat(cv.style.left)||0, T=parseFloat(cv.style.top)||0, W=parseFloat(cv.style.width)||host.clientWidth, Hh=parseFloat(cv.style.height)||host.clientHeight;
+        const blob=await S.snapshot({width:1600}); if(gone) return;
+        const img=await createImageBitmap(blob);
+        const [x,cw,ch]=prep(c,140); x.fillStyle="#08080a"; x.fillRect(0,0,cw,ch);
+        if(!p){ x.fillStyle=C.muted; x.font="12px sans-serif"; x.textAlign="center"; x.fillText("lamp out of frame",cw/2,ch/2); continue; }
+        const nx=(p.x-L)/W, ny=(p.y-T)/Hh, sh=img.height*E.mag.hf, sw=sh*cw/ch;
+        x.drawImage(img,nx*img.width-sw/2,ny*img.height-sh/2,sw,sh,0,0,cw,ch);
+        x.fillStyle="rgba(0,0,0,.55)"; x.fillRect(0,0,cw,18); x.fillStyle="#e5e7eb"; x.font="11px monospace"; x.textAlign="left"; x.fillText(E.mag.label,6,13);
+      }catch(e){ console.warn("[Anamorphic] magnifier",e); } }
+    },450);
+    return ()=>{ gone=true; clearTimeout(t); };
+  },[A,B,exp,focal,fstop,ev,focus,sq,flareOn,coat,dist,match]);
   const ca=A?.getCamera(), cb=B?.getCamera();
-  const h="min(39vh,340px)";
+  const zone=(c)=>c?.dof ? <>sharp from <strong>{fmtD(c.dof.near)}</strong> to <strong>{fmtD(c.dof.far)}</strong> m · depth <strong style={{color:C.text}}>{c.dof.far===Infinity?"∞":fmtD(c.dof.far-c.dof.near)+" m"}</strong></> : null;
+  const h="min(29vh,280px)";
+  const side=(vref,S,err,col,label,cref,c)=>(
+    <div style={{flex:"1 1 420px",minWidth:300,display:"flex",flexDirection:"column",gap:6}}>
+      <View3D vref={vref} S={S} err={err} h={h} col={col} label={label} grow={false}/>
+      {E.mag && <div style={{width:340,maxWidth:"100%",alignSelf:"center"}}><canvas ref={cref} style={{display:"block",borderRadius:8,border:`1px solid ${col}`}}/></div>}
+      {exp==="dof" && <div style={{fontSize:12.5,color:"#b8bcc6",fontFamily:"monospace"}}>{zone(c)}</div>}
+    </div>);
   return (
     <div style={{display:"flex",flexDirection:"column",gap:10}}>
-      <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-        <View3D vref={rs} S={B} err={errB} h={h} col="#9ca3af" label={`SPHERICAL · ${cb?Math.round(cb.focalMm)+" mm":""} · round bokeh, star flare`}/>
-        <View3D vref={ra} S={A} err={errA} h={h} col={C.accent} label={`ANAMORPHIC ×${fmtSq(sq)} · ${focal} mm · oval bokeh, streak flare`}/>
-      </div>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"stretch"}}>
-        <div style={{...panel,flex:"1 1 420px",minWidth:300,padding:"10px 14px"}}>
-          <Ctl label="Focal (anam.)" min={35} max={135} value={focal} onChange={setFocal} disp={v=>v+" mm"}/>
-          <Ctl label="Aperture" min={1.4} max={11} step={0.1} value={fstop} onChange={setFstop} disp={v=>"f/"+v.toFixed(1)}/>
-          <Ctl label="Focus" min={1.5} max={12} step={0.1} value={focus} onChange={setFocus} disp={v=>v.toFixed(1)+" m"}/>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:4}}>
-            <span style={{color:C.muted,fontSize:12}}>Focus at:</span>{[2,4,6,8,11].map(d=><button key={d} style={sBtn(Math.abs(focus-d)<0.15)} onClick={()=>setFocus(d)}>{d} m</button>)}
-            <button style={{...sBtn(false),marginLeft:"auto"}} title="Long lens, wide open, focus near: big ovals on the lamp" onClick={()=>{ setFocal(75); setFstop(1.4); setFocus(2); }}>Big bokeh</button>
+        <div style={{display:"flex",flexDirection:"column",gap:6,flex:"0 0 auto"}}>
+          {EXPS.map(x=><button key={x.id} onClick={()=>pick(x.id)} style={{...sBtn(exp===x.id),textAlign:"left",padding:"7px 12px",fontSize:13}}><strong>{x.n}</strong> · {x.title}</button>)}
+        </div>
+        <div style={{...panel,flex:"1 1 500px",minWidth:300,padding:"10px 14px",borderLeft:`3px solid ${C.accent}`}}>
+          <div style={{color:C.accent,fontSize:11,fontFamily:"monospace",letterSpacing:".08em",marginBottom:3}}>WHAT TO LOOK AT</div>
+          <P style={{fontSize:13}}>{E.look}</P>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+        {side(rs,B,errB,"#9ca3af",`SPHERICAL · ${cb?Math.round(cb.focalMm)+" mm":""} · f/${fstop.toFixed(1)}`,ms,cb)}
+        {side(ra,A,errA,C.accent,`ANAMORPHIC ×${fmtSq(sq)} · ${focal} mm · f/${fstop.toFixed(1)}`,ma,ca)}
+      </div>
+      <div>
+        <button style={sBtn(adv)} onClick={()=>setAdv(a=>!a)}>{adv?"▾":"▸"} Advanced controls</button>
+        {adv && <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:8}}>
+          <div style={{...panel,flex:"1 1 420px",minWidth:300,padding:"8px 14px"}}>
+            <Ctl label="Focal (anam.)" min={35} max={135} value={focal} onChange={setFocal} disp={v=>v+" mm"}/>
+            <Ctl label="Aperture" min={1.4} max={11} step={0.1} value={fstop} onChange={setFstop} disp={v=>"f/"+v.toFixed(1)}/>
+            <Ctl label="Exposure" min={-2} max={5} step={0.1} value={ev} onChange={setEv} disp={v=>(v>=0?"+":"")+v.toFixed(1)+" EV"}/>
+            <Ctl label="Focus" min={1.5} max={12} step={0.1} value={focus} onChange={setFocus} disp={v=>v.toFixed(1)+" m"}/>
           </div>
-        </div>
-        <div style={{...panel,flex:"1 1 420px",minWidth:300,padding:"10px 14px"}}>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0 8px"}}><span style={{color:C.muted,fontSize:12,width:92}}>Squeeze</span>
-            {[2,1.8,1.5,1.33].map(v=><button key={v} style={sBtn(sq===v)} onClick={()=>setSq(v)}>×{fmtSq(v)}</button>)}</div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0 8px"}}><span style={{color:C.muted,fontSize:12,width:92}}>Spherical lens</span>
-            <button style={sBtn(match==="width")} onClick={()=>setMatch("width")} title="Shorter spherical lens so both see the same width">same width</button>
-            <button style={sBtn(match==="focal")} onClick={()=>setMatch("focal")} title="Same focal length: the anamorphic sees wider">same focal</button></div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0 8px"}}><span style={{color:C.muted,fontSize:12,width:92}}>Coating</span>
-            {COAT.map(([id,l])=><button key={id} style={sBtn(coat===id)} onClick={()=>setCoat(id)}>{l}</button>)}
-            <label style={{fontSize:12.5,color:C.text,marginLeft:8}}><input type="checkbox" checked={flareOn} onChange={e=>setFlareOn(e.target.checked)}/> Flares</label></div>
-          <Ctl label="Distortion" min={0} max={1} step={0.05} value={dist} onChange={setDist} disp={v=>Math.round(v*100)+"%"} w={92}/>
-          <P style={{fontSize:12,color:C.muted}}>{ca&&cb?<>Field of view — anamorphic {Math.round(ca.fovH)}° × {Math.round(ca.fovV)}°, spherical {Math.round(cb.fovH)}° × {Math.round(cb.fovV)}°. </>:null}
-            With <strong>same width</strong> both frames match, but the anamorphic uses a lens ×{fmtSq(sq)} longer: shallower focus, bigger (oval) bokeh.</P>
-        </div>
+          <div style={{...panel,flex:"1 1 420px",minWidth:300,padding:"8px 14px"}}>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0 6px"}}><span style={{color:C.muted,fontSize:12,width:92}}>Squeeze</span>
+              {[2,1.8,1.5,1.33].map(v=><button key={v} style={sBtn(sq===v)} onClick={()=>setSq(v)}>×{fmtSq(v)}</button>)}</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0 6px"}}><span style={{color:C.muted,fontSize:12,width:92}}>Spherical lens</span>
+              <button style={sBtn(match==="width")} onClick={()=>setMatch("width")}>same width</button>
+              <button style={sBtn(match==="focal")} onClick={()=>setMatch("focal")}>same focal</button></div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",margin:"4px 0 6px"}}><span style={{color:C.muted,fontSize:12,width:92}}>Coating</span>
+              {COAT.map(([id,l])=><button key={id} style={sBtn(coat===id)} onClick={()=>setCoat(id)}>{l}</button>)}
+              <label style={{fontSize:12.5,color:C.text,marginLeft:8}}><input type="checkbox" checked={flareOn} onChange={e=>setFlareOn(e.target.checked)}/> Flares</label></div>
+            <Ctl label="Distortion" min={0} max={1} step={0.05} value={dist} onChange={setDist} disp={v=>Math.round(v*100)+"%"} w={92}/>
+          </div>
+        </div>}
       </div>
     </div>
   );
@@ -324,10 +375,10 @@ function Compare3D(){
 /* ------------------------------------------------------------------ 4 · FLARES (live: drag = pan/tilt the camera) */
 function Flares(){
   const ref=useRef(null);
-  const [lens,setLens]=useState("anamorphic"), [coat,setCoat]=useState("blue"), [blades,setBlades]=useState(9), [amount,setAmount]=useState(1.4), [fstop,setFstop]=useState(2);
+  const [lens,setLens]=useState("anamorphic"), [coat,setCoat]=useState("blue"), [blades,setBlades]=useState(9), [amount,setAmount]=useState(1), [fstop,setFstop]=useState(2);
   const [aim,setAim]=useState([-6,0]);   // yaw, pitch (deg)
   const [auto,setAuto]=useState(false);
-  const [S,err]=useStudio(ref,(st)=>{ st.setCamera({lens:"anamorphic",squeeze:2,focalMm:50,fstop:2,dof:{on:false},flare:{on:true,amount:1.4},yaw:-6,pitch:0}); });
+  const [S,err]=useStudio(ref,(st)=>{ st.setWorld({exposure:1.5}); st.setCamera({lens:"anamorphic",squeeze:2,focalMm:50,fstop:2,dof:{on:false},flare:{on:true,amount:1},yaw:-6,pitch:0}); });
   useEffect(()=>{ if(S) S.setCamera({lens,squeeze:2,coating:coat,blades,fstop,flare:{on:true,amount}}); },[S,lens,coat,blades,amount,fstop]);
   useEffect(()=>{ if(S) S.setCamera({yaw:aim[0],pitch:aim[1]}); },[S,aim]);
   useEffect(()=>{ if(!auto) return; let raf, t0=performance.now();
