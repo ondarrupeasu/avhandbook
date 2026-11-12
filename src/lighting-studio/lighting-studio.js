@@ -98,6 +98,11 @@ const PRESETS = {
     en: ['Fall-off (inverse-square law)', 'One bare bulb next to the camera and nothing else: double the distance, a quarter of the light (−2 stops). Made for the depth of field set.'],
     lights: [{ role: 'key', type: 'point', position: [0.25, 1.9, 3.0], target: [0.25, 1.0, -8], intensity: 1, shadow: { on: true, softness: 0.2 } }],
     world: { ambient: 0 } },
+  'anamorphic-night': { es: ['Noche anamórfica', 'Set de profundidad de campo de noche: la lámpara de aceite es la práctica protagonista (flares, bokeh) y un key suave y frío modela la figura.'],
+    en: ['Anamorphic night', 'The depth of field set at night: the oil lamp is the hero practical (flares, bokeh) and a soft, cool key models the figure.'],
+    lights: [{ role: 'key', type: 'area', position: [-1.9, 2.3, 0.4], target: [-0.45, 1.4, -1.0], kelvin: 4300, intensity: 1.1, size: 1.0, shadow: { on: true, softness: 0.7 } },
+      { role: 'practical', type: 'point', position: [-0.75, 0.95, -5.0], kelvin: 2200, intensity: 0.25, shadow: { on: false } }],
+    world: { ambient: 0.03 } },
   silhouette: { es: ['Silueta', 'Solo se ilumina el fondo; el sujeto queda como una forma oscura recortada.'],
     en: ['Silhouette', 'Only the background is lit; the subject stays a dark shape against it.'],
     lights: [{ role: 'background', type: 'spot', az: 0, el: 25, dist: 1.8, target: [0, 1.4, -3.4], intensity: 1.6, cone: 90, softness: 0.9, shadow: { on: false } }],
@@ -459,7 +464,7 @@ export async function createLightingStudio(container, opts = {}) {
     // frame it: fit the larger of height / width with the current focal length
     const fovV = THREE.MathUtils.degToRad(camera.fov), fovH = 2 * Math.atan(Math.tan(fovV / 2) * photoAspect);
     const dist = Math.max(0.6, 1.25 * Math.max(size.y / 2 / Math.tan(fovV / 2), Math.max(size.x, size.z) / 2 / Math.tan(fovH / 2)) + size.z / 2);
-    subjects.custom = { name: name || 'Imported model', target, view: { az: 0, el: 5, dist, focal: camera.getFocalLength() },
+    subjects.custom = { name: name || 'Imported model', target, view: { az: 0, el: 5, dist, focal: focalMm() },
       credit: `Imported (${unit === 1 ? 'm' : unit === 0.01 ? 'cm → m' : 'mm → m'}; ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} m)` };
     await loadSubject('custom');
     return { id: 'custom', ...subjects.custom, size: size.toArray(), unit };
@@ -481,13 +486,16 @@ export async function createLightingStudio(container, opts = {}) {
     if (v && !opts.keepCamera) {           // each subject has a natural shot
       if (v.position) { targets.camera.fromArray(v.look); camera.position.fromArray(v.position); }   // a fixed camera spot
       else { targets.camera.copy(subjectTarget); camera.position.copy(sph(v.az, v.el, v.dist, subjectTarget)); }
-      if (v.focal) camera.setFocalLength(v.focal);
+      if (v.focal) setFocal(v.focal);
       targets.studio.copy(subjectTarget);
       studioCam.position.copy(v.position ? new THREE.Vector3(v.position[0] + 4, v.position[1] + 3, v.position[2] + 2) : sph(v.az + 30, v.el + 20, v.dist * 1.8, subjectTarget));
     } else {                               // keep the view of the subject: move by the change of aim point
       camera.position.add(d); targets.camera.add(d); studioCam.position.add(d); targets.studio.add(d);
     }
     camera.lookAt(targets.camera); studioCam.lookAt(targets.studio); controls.update(); camDirty = true;
+    lookBase = null; lens.yaw = lens.pitch = 0;
+    brightSources.length = 0;              // emissive things bright enough to flare (the lamp flames)
+    g.traverse((o) => { const m = o.material; if (o.isMesh && m?.emissive && m.emissiveIntensity * (0.2126 * m.emissive.r + 0.7152 * m.emissive.g + 0.0722 * m.emissive.b) > 5) brightSources.push(o); });
     for (const L of lights.values()) if (!L.spec.target) { L.aim.add(d); L.pos.add(d); applyLight(L); }
       else if (L.spec.type === 'sun') applyLight(L);   // its shadow box follows the subject's size
     emit('change', { what: 'subject', subject: id });
@@ -710,6 +718,33 @@ export async function createLightingStudio(container, opts = {}) {
   // The exposure triangle. Reference (0 EV offset) = ISO 400 · 1/50 s · f/2.8: the presets are lit for it.
   // The iris also drives the depth of field; ISO the grain.
   const expo = { iso: 400, shutter: 1 / 50, wb: 5600 };
+  // The lens. Anamorphic: the vertical field is the focal's, the horizontal one is squeezed in (focal / squeeze),
+  // on a sensor area whose aspect × squeeze gives the frame (trimmed to 2.39). Bokeh, flares, distortion follow it.
+  const lens = { kind: 'spherical', squeeze: 2, focal: 85, coating: 'blue', blades: 9, flare: { on: false, amount: 1 }, distortion: 0, yaw: 0, pitch: 0, sphAspect: null };
+  const ANA_SENSOR = { 2: 4 / 3, 1.8: 3 / 2, 1.5: 3 / 2, 1.33: 16 / 9 };
+  const COATING = { blue: [0.35, 0.58, 1.0], amber: [1.0, 0.6, 0.26], clear: [0.92, 0.9, 0.86] };
+  const anam = () => lens.kind === 'anamorphic';
+  const sensorH = () => camera.filmGauge / ANA_SENSOR[lens.squeeze];
+  const focalMm = () => (anam() ? lens.focal : camera.getFocalLength());
+  function applyLens() { camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(sensorH() / 2 / lens.focal)); camera.updateProjectionMatrix(); }
+  function setFocal(f) { lens.focal = f; if (anam()) applyLens(); else camera.setFocalLength(f); }
+  function setLens(kind, sq) {
+    sq = [2, 1.8, 1.5, 1.33].reduce((a, b) => (Math.abs(b - sq) < Math.abs(a - sq) ? b : a));
+    const f = focalMm(), was = lens.kind;
+    lens.kind = kind === 'anamorphic' ? 'anamorphic' : 'spherical'; lens.squeeze = sq; lens.focal = f;
+    if (anam()) {
+      if (was !== 'anamorphic') lens.sphAspect = photoAspect;
+      setAspect(Math.min(2.39, ANA_SENSOR[sq] * sq)); applyLens();
+    } else if (was === 'anamorphic') { setAspect(lens.sphAspect || 1.5); camera.setFocalLength(f); }
+  }
+  // pan / tilt (degrees) from the set's look direction (the fixed camera spot's, or the one at first use)
+  let lookBase = null;
+  function aimYawPitch() {
+    if (!lookBase) { const d = targets.camera.clone().sub(camera.position); lookBase = { dir: d.clone().normalize(), dist: d.length() || 3 }; }
+    const d = lookBase.dir, h = Math.atan2(d.x, -d.z) + THREE.MathUtils.degToRad(lens.yaw);
+    const e = THREE.MathUtils.clamp(Math.asin(d.y) + THREE.MathUtils.degToRad(lens.pitch), -1.5, 1.5);
+    targets.camera.copy(camera.position).add(new THREE.Vector3(Math.sin(h) * Math.cos(e), Math.sin(e), -Math.cos(h) * Math.cos(e)).multiplyScalar(lookBase.dist));
+  }
   // White balance: camera gains = 1 / (colour of a light at the camera's kelvin) → a light at the same
   // kelvin as the camera comes out neutral; warmer lights go orange, cooler ones blue.
   const wbGain = new THREE.Vector3(1, 1, 1);
@@ -725,14 +760,21 @@ export async function createLightingStudio(container, opts = {}) {
   const REF = { iso: 400, shutter: 1 / 50, fstop: 2.8 };
   const cameraStops = () => Math.log2((expo.shutter / REF.shutter) * (expo.iso / REF.iso) * (REF.fstop / Math.max(0.5, dof.fstop)) ** 2);
   function setCamera(c = {}) {
-    if (c.sensorMm) camera.filmGauge = c.sensorMm;
-    if (c.focalMm) camera.setFocalLength(c.focalMm);
-    else if (c.fov) { camera.fov = c.fov; camera.updateProjectionMatrix(); }
+    if (c.sensorMm) { camera.filmGauge = c.sensorMm; if (anam() && !c.focalMm) applyLens(); }
+    if (c.lens !== undefined || c.squeeze !== undefined) setLens(c.lens ?? lens.kind, c.squeeze ?? lens.squeeze);
+    if (c.focalMm) setFocal(c.focalMm);
+    else if (c.fov) { camera.fov = c.fov; camera.updateProjectionMatrix(); if (anam()) lens.focal = sensorH() / 2 / Math.tan(THREE.MathUtils.degToRad(c.fov / 2)); }
+    if (c.coating && COATING[c.coating]) lens.coating = c.coating;
+    if (c.blades !== undefined) lens.blades = THREE.MathUtils.clamp(Math.round(+c.blades), 0, 16);
+    if (c.flare) Object.assign(lens.flare, c.flare);
+    if (c.distortion !== undefined) lens.distortion = THREE.MathUtils.clamp(+c.distortion, 0, 1);
     if ('azimuth' in c || 'elevation' in c || 'distance' in c) {
       const cur = getCamera();
       camera.position.copy(sph(c.azimuth ?? cur.azimuth, c.elevation ?? cur.elevation, c.distance ?? cur.distance, targets.camera));
+      lookBase = null; lens.yaw = lens.pitch = 0;
     }
-    if (c.target) targets.camera.fromArray(c.target);
+    if (c.target) { targets.camera.fromArray(c.target); lookBase = null; lens.yaw = lens.pitch = 0; }
+    if ('yaw' in c || 'pitch' in c) { lens.yaw = +(c.yaw ?? lens.yaw); lens.pitch = +(c.pitch ?? lens.pitch); aimYawPitch(); }
     if (c.aspect) setAspect(c.aspect);
     if (c.iso) expo.iso = THREE.MathUtils.clamp(+c.iso, 25, 102400);
     if (c.shutter) expo.shutter = THREE.MathUtils.clamp(+c.shutter, 1 / 16000, 30);
@@ -753,7 +795,8 @@ export async function createLightingStudio(container, opts = {}) {
     return {
       azimuth: THREE.MathUtils.radToDeg(Math.atan2(v.x, v.z)), elevation: THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(v.y / distance, -1, 1))),
       distance, target: targets.camera.toArray(), position: camera.position.toArray(),
-      focalMm: camera.getFocalLength(), sensorMm: camera.filmGauge, fovV: camera.fov, fovH, aspect: photoAspect,
+      focalMm: focalMm(), sensorMm: camera.filmGauge, fovV: camera.fov, fovH, aspect: photoAspect,
+      lens: lens.kind, squeeze: lens.squeeze, coating: lens.coating, blades: lens.blades, flare: { ...lens.flare }, distortion: lens.distortion, yaw: lens.yaw, pitch: lens.pitch,
       dof: { on: dof.on, fstop: dof.fstop, focus: dof.focus, focusDist: r.focus, near: r.near, far: r.far },
       fstop: dof.fstop, iso: expo.iso, shutter: expo.shutter, wb: expo.wb,
       ev100: Math.log2(dof.fstop ** 2 / expo.shutter) - Math.log2(expo.iso / 100),   // the camera's exposure value
@@ -792,7 +835,7 @@ export async function createLightingStudio(container, opts = {}) {
   }
   /** Acceptably sharp range [near, far] (m), circle of confusion = sensor width / 1500. */
   function dofRange() {
-    const S = focusDistance() * 1000, f = camera.getFocalLength(), N = Math.max(0.5, dof.fstop), c = camera.filmGauge / 1500;
+    const S = focusDistance() * 1000, f = focalMm(), N = Math.max(0.5, dof.fstop), c = camera.filmGauge / 1500;
     const H = f * f / (N * c) + f;
     return { focus: S / 1000, near: S * (H - f) / (H + S - 2 * f) / 1000, far: S < H ? S * (H - f) / (H - S) / 1000 : Infinity };
   }
@@ -808,12 +851,19 @@ export async function createLightingStudio(container, opts = {}) {
   }));
   const N_SAMPLES = 160;
   const dofUniforms = () => ({ tDiffuse: { value: null }, tDepth: { value: depthRT.depthTexture }, texel: { value: new THREE.Vector2() },
-    near: { value: 0.1 }, far: { value: 100 }, focus: { value: 3 }, cocScale: { value: 0 }, maxR: { value: 1 } });
+    near: { value: 0.1 }, far: { value: 100 }, focus: { value: 3 }, cocScale: { value: 0 }, maxR: { value: 1 },
+    squeeze: { value: 1 }, blades: { value: 0 } });
   const DOF_COMMON = `
     #include <packing>
     uniform sampler2D tDiffuse, tDepth; uniform vec2 texel;
-    uniform float near, far, focus, cocScale, maxR;
+    uniform float near, far, focus, cocScale, maxR, squeeze, blades;
     varying vec2 vUv;
+    // the bokeh's shape: a polygon (aperture blades) or a circle, squeezed into a tall oval by an anamorphic
+    vec2 shape(float a) {
+      float k = 1.0;
+      if (blades >= 3.0) { float s = 6.2831853 / blades; k = cos(3.14159265 / blades) / cos(mod(a + 1.5707963, s) - s * 0.5); }
+      return vec2(cos(a) / squeeze, sin(a)) * k;
+    }
     float depthAt(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, near, far); }
     float coc(float z) { return min(maxR, cocScale * abs(z - focus) / max(z, 1e-3)); }`;
   const VERT = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
@@ -826,7 +876,7 @@ export async function createLightingStudio(container, opts = {}) {
       for (int i = 0; i < ${N_SAMPLES}; i++) {
         float r = maxR * sqrt((float(i) + 0.5) / float(${N_SAMPLES}));
         float a = float(i) * 2.39996323 + rot;
-        vec2 uv = vUv + vec2(cos(a), sin(a)) * r * texel;
+        vec2 uv = vUv + shape(a) * r * texel;
         float z = depthAt(uv), rs = coc(z);
         if (z > z0) rs = min(rs, r0 * 2.0);
         float m = smoothstep(r - spacing, r + spacing, rs);
@@ -843,7 +893,7 @@ export async function createLightingStudio(container, opts = {}) {
       vec4 acc = c; float tot = 1.0;
       for (int i = 0; i < 12; i++) {
         float a = float(i) * 0.5235988;
-        vec2 uv = vUv + vec2(cos(a), sin(a)) * rad * (mod(float(i), 2.0) < 0.5 ? 1.0 : 0.5) * texel;
+        vec2 uv = vUv + shape(a) * rad * (mod(float(i), 2.0) < 0.5 ? 1.0 : 0.5) * texel;
         if (coc(depthAt(uv)) < rad * 0.5) continue;
         acc += texture2D(tDiffuse, uv); tot += 1.0;
       }
@@ -855,6 +905,124 @@ export async function createLightingStudio(container, opts = {}) {
   composer.addPass(new RenderPass(scene, camera, null, new THREE.Color(0, 0, 0), 0));
   composer.addPass(dofPass);
   composer.addPass(smoothPass);
+  // lens distortion (barrel; the frame stays filled) + focus falling off towards the corners
+  const distPass = new ShaderPass({ uniforms: { tDiffuse: { value: null }, k: { value: 0 }, soft: { value: 0 }, aspect: { value: 1.5 }, texel: { value: new THREE.Vector2() } },
+    vertexShader: VERT, fragmentShader: `uniform sampler2D tDiffuse; uniform float k, soft, aspect; uniform vec2 texel; varying vec2 vUv;
+    void main() {
+      vec2 d = vUv - 0.5; d.x *= aspect;
+      float R = 0.25 * aspect * aspect + 0.25, r2 = dot(d, d);
+      vec2 s = d * (1.0 + k * r2) / (1.0 + k * R); s.x /= aspect; s += 0.5;
+      float b = soft * pow(r2 / R, 2.0);
+      vec4 c = texture2D(tDiffuse, s);
+      if (b > 0.3) { for (int i = 0; i < 8; i++) { float a = float(i) * 0.785398; c += texture2D(tDiffuse, s + vec2(cos(a), sin(a)) * b * texel); } c /= 9.0; }
+      gl_FragColor = c;
+    }` });
+  composer.addPass(distPass);
+  const distort = (x, y, a) => {                 // where a point of the undistorted picture lands (uv), for flares
+    const k = distPass.uniforms.k.value; if (!k) return [x, y];
+    const R = 0.25 * a * a + 0.25, tx = (x - 0.5) * a, ty = y - 0.5;
+    let px = tx, py = ty;
+    for (let i = 0; i < 4; i++) { const f = (1 + k * (px * px + py * py)) / (1 + k * R); px = tx / f; py = ty / f; }
+    return [px / a + 0.5, py + 0.5];
+  };
+  // Flares and highlight bokeh from the bright sources, drawn analytically over the photo (additive), from where
+  // each source projects on screen — so they follow the camera, and survive with the source just out of frame.
+  const MAXF = 4;
+  const flareQuad = new FullScreenQuad(new THREE.ShaderMaterial({
+    uniforms: { n: { value: 0 }, res: { value: new THREE.Vector2(1, 1) }, anam: { value: 0 }, squeeze: { value: 1 }, blades: { value: 9 }, star: { value: 0.5 },
+      tint: { value: new THREE.Vector3(1, 1, 1) }, pos: { value: Array.from({ length: MAXF }, () => new THREE.Vector2()) },
+      amt: { value: Array.from({ length: MAXF }, () => new THREE.Vector4()) }, col: { value: Array.from({ length: MAXF }, () => new THREE.Vector3()) } },
+    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: `uniform int n; uniform vec2 res; uniform float anam, squeeze, blades, star; uniform vec3 tint;
+      uniform vec2 pos[${MAXF}]; uniform vec4 amt[${MAXF}]; uniform vec3 col[${MAXF}];
+      varying vec2 vUv;
+      float poly(float a) { if (blades < 3.0) return 1.0; float s = 6.2831853 / blades; return cos(3.14159265 / blades) / cos(mod(a + 1.5707963, s) - s * 0.5); }
+      // a soft disc with a slightly brighter rim; q in units of its radius
+      float disc(vec2 q) { float d = anam > 0.5 ? length(q) : length(q) / poly(atan(q.y, q.x)); return smoothstep(1.0, 0.9, d) * (0.75 + 0.25 * smoothstep(0.5, 1.0, d)); }
+      void main() {
+        vec2 p = vUv * res, c = res * 0.5; vec3 o = vec3(0.0); float H = res.y;
+        for (int i = 0; i < ${MAXF}; i++) {
+          if (i >= n) break;
+          vec2 sp = pos[i] * res, d = p - sp; float B = amt[i].x, r = length(d);
+          vec3 sc = col[i];
+          // highlight bokeh: the defocused source as a disc (oval for anamorphic, the blades' polygon otherwise)
+          if (amt[i].y > 0.0) o += sc * amt[i].z * disc(d / vec2(amt[i].y / (anam > 0.5 ? squeeze : 1.0), amt[i].y));
+          if (B <= 0.0) continue;
+          o += mix(sc, vec3(1.0), 0.4) * B * 0.9 * exp(-r / (H * 0.012)) / (1.0 + amt[i].y / 3.0);   // core glow (spread out when defocused)
+          if (anam > 0.5) {
+            float t = H * 0.0022 * (1.0 + 0.6 * B);
+            o += tint * B * 0.55 * exp(-abs(d.y) / t) * (0.3 + 0.7 * exp(-abs(d.x) / (res.x * 0.3)));      // the streak
+            o += tint * B * 0.10 * exp(-abs(d.y) / (t * 10.0)) * exp(-abs(d.x) / (res.x * 0.18));         // its haze
+            for (int g = 0; g < 5; g++) {
+              float k = g == 0 ? -0.3 : g == 1 ? -0.65 : g == 2 ? -1.15 : g == 3 ? 0.45 : 1.5;
+              float sz = H * (g == 0 ? 0.025 : g == 1 ? 0.055 : g == 2 ? 0.1 : g == 3 ? 0.018 : 0.045);
+              vec2 q = (p - (c + (sp - c) * k)) / vec2(sz / squeeze, sz);
+              o += mix(tint, sc, 0.25 * float(g)) * B * 0.07 * disc(q);
+            }
+          } else {
+            float nsp = mod(blades, 2.0) > 0.5 ? blades * 2.0 : blades, a = atan(d.y, d.x);
+            o += mix(sc, vec3(1.0), 0.5) * B * star * pow(abs(cos(a * nsp * 0.5)), 60.0) * exp(-r / (H * 0.07 * (0.6 + B)));   // starburst
+            for (int g = 0; g < 5; g++) {
+              float k = g == 0 ? -0.35 : g == 1 ? -0.75 : g == 2 ? -1.25 : g == 3 ? 0.5 : 1.6;
+              float sz = H * (g == 0 ? 0.03 : g == 1 ? 0.05 : g == 2 ? 0.09 : g == 3 ? 0.02 : 0.04);
+              vec3 gc = g == 0 ? vec3(0.4, 1.0, 0.6) : g == 1 ? vec3(1.0, 0.45, 0.9) : g == 2 ? vec3(0.5, 0.7, 1.0) : g == 3 ? vec3(1.0, 0.8, 0.4) : vec3(0.6, 1.0, 0.9);
+              o += gc * B * 0.06 * disc((p - (c + (sp - c) * k)) / sz);
+            }
+          }
+        }
+        gl_FragColor = vec4(o, 1.0);
+      }`,
+    transparent: true, depthTest: false, depthWrite: false, toneMapped: false,
+    blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneFactor,
+  }));
+  const brightSources = [];
+  const flareRay = new THREE.Raycaster(), occCache = new Map(), _v = new THREE.Vector3(), _vp = new THREE.Vector4();
+  function occluded(src, wp) {                   // anything solid between the lens and the source? (glass doesn't count)
+    const key = `${src.uuid}|${camera.position.toArray().map((v) => v.toFixed(3))}|${wp.toArray().map((v) => v.toFixed(3))}`;
+    if (occCache.has(key)) return occCache.get(key);
+    const dir = wp.clone().sub(camera.position), dist = dir.length();
+    flareRay.set(camera.position, dir.normalize()); flareRay.far = dist - 0.03;
+    const hit = flareRay.intersectObject(content, true).some((h) => {
+      const m = h.object.material;
+      return h.object !== src && h.object.isMesh && h.object.visible && !(m.transparent || m.transmission > 0 || m.opacity < 1);
+    });
+    if (occCache.size > 200) occCache.clear();
+    occCache.set(key, hit); return hit;
+  }
+  function drawFlares(dofOn, S, cocScale, maxR) {
+    const fwd = camera.getWorldDirection(new THREE.Vector3()), gain = 2 ** (world.exposure + cameraStops());
+    const vp = renderer.getCurrentViewport(_vp), u = flareQuad.material.uniforms;
+    let n = 0;
+    for (const src of brightSources) {
+      if (n >= MAXF || !src.visible) break;
+      const wp = src.getWorldPosition(new THREE.Vector3()), z = wp.clone().sub(camera.position).dot(fwd);
+      if (z < camera.near) continue;
+      _v.copy(wp).project(camera);
+      const out = Math.max(Math.abs(_v.x), Math.abs(_v.y));
+      if (out > 1.7 || occluded(src, wp)) continue;
+      const m = src.material, L = m.emissiveIntensity * (0.2126 * m.emissive.r + 0.7152 * m.emissive.g + 0.0722 * m.emissive.b);
+      const B = lens.flare.on ? lens.flare.amount * Math.min(3, (L / 25) * gain) * (1 - THREE.MathUtils.smoothstep(out, 1.0, 1.7)) : 0;
+      // the defocused source's disc: its light spread over the circle of confusion (energy kept)
+      let rad = 0, I = 0;
+      if (dofOn && out < 1.05) {
+        rad = Math.min(maxR, cocScale * Math.abs(z - S) / z);
+        const rs = (src.geometry.boundingSphere || (src.geometry.computeBoundingSphere(), src.geometry.boundingSphere)).radius * src.getWorldScale(new THREE.Vector3()).x;
+        const rpx = rs / z / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * vp.w / 2;
+        I = Math.min(1.5, L * gain * rpx * rpx / Math.max(1, (rad * rad) / (anam() ? lens.squeeze : 1)));
+        if (rad < 2) rad = I = 0;
+      }
+      if (B <= 0 && I <= 0) continue;
+      const [x, y] = distort((_v.x + 1) / 2, (_v.y + 1) / 2, vp.z / vp.w);
+      u.pos.value[n].set(x, y); u.amt.value[n].set(B, rad, I, 0);
+      const e = m.emissive, mx = Math.max(e.r, e.g, e.b, 1e-3); u.col.value[n].set(e.r / mx, e.g / mx, e.b / mx);
+      n++;
+    }
+    if (!n) return;
+    u.n.value = n; u.res.value.set(vp.z, vp.w); u.anam.value = anam() ? 1 : 0; u.squeeze.value = lens.squeeze;
+    u.blades.value = lens.blades; u.star.value = 0.15 + 0.85 * THREE.MathUtils.smoothstep(dof.fstop, 2.8, 11);
+    u.tint.value.fromArray(COATING[lens.coating]);
+    const ac = renderer.autoClear; renderer.autoClear = false; flareQuad.render(renderer); renderer.autoClear = ac;
+  }
   const out = new OutputPass(), outRender = out.render.bind(out);
   // laid over the plain background colour (premultiplied), so the background is never tone mapped
   Object.assign(out.material, { transparent: true, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor });
@@ -901,7 +1069,7 @@ export async function createLightingStudio(container, opts = {}) {
   }
 
   /** Draw `cam` into the current viewport. DoF only for the photo camera; handles only in the studio view. */
-  function draw(cam = viewCam(), { handles = cam === studioCam, dofOk = true, width = 0 } = {}) {
+  function draw(cam = viewCam(), { handles = cam === studioCam, dofOk = true, width = 0, lensFx = true } = {}) {
     const size = renderer.getDrawingBufferSize(_size);
     if (shadowsDirty) { renderer.shadowMap.needsUpdate = true; shadowsDirty = false; }
     overlay.visible = handles;
@@ -912,8 +1080,9 @@ export async function createLightingStudio(container, opts = {}) {
     let dofOn = false, maxR = 0, cocScale = 0, S = 0;
     if (photo && dofOk && dof.on) {
       S = focusDistance();
-      const f = camera.getFocalLength(), N = Math.max(0.5, dof.fstop);
-      cocScale = 0.5 * (f * f / N) / Math.max(1e-3, 1000 * S - f) / camera.filmGauge * size.x;
+      const f = focalMm(), N = Math.max(0.5, dof.fstop);
+      // radius in px (vertical for an anamorphic: its focal is the vertical one; horizontally it is / squeeze)
+      cocScale = 0.5 * (f * f / N) / Math.max(1e-3, 1000 * S - f) * (anam() ? size.y / sensorH() : size.x / camera.filmGauge);
       maxR = Math.min(0.045 * size.x, 2.5 * cocScale);
       dofOn = maxR >= 0.5;
     }
@@ -921,7 +1090,12 @@ export async function createLightingStudio(container, opts = {}) {
     // the neutral ambient fill doesn't turn blue/orange with them.
     const wb = photo && wbActive(), saved = [];
     if (wb) for (const L of lights.values()) for (const o of [L.obj, L.extra]) if (o) { saved.push([o, o.color.clone()]); o.color.multiply(new THREE.Color(wbGain.x, wbGain.y, wbGain.z)); }
-    try { renderContent(cam, photo, dofOn, S, cocScale, maxR, size); } finally { for (const [o, c] of saved) o.color.copy(c); }
+    const distOn = photo && dofOk && lensFx && lens.distortion > 0;
+    distPass.enabled = distOn; distPass.uniforms.k.value = distOn ? 0.14 * lens.distortion : 0;
+    distPass.uniforms.soft.value = distOn ? 6 * lens.distortion : 0;
+    distPass.uniforms.aspect.value = size.x / size.y; distPass.uniforms.texel.value.set(1 / size.x, 1 / size.y);
+    try { renderContent(cam, photo, dofOn, S, cocScale, maxR, size, distOn); } finally { for (const [o, c] of saved) o.color.copy(c); }
+    if (photo && lensFx) drawFlares(dofOn, S, cocScale, maxR);
     if (photo) {
       const g = grainAmount();
       if (g > 0.002) {
@@ -932,8 +1106,8 @@ export async function createLightingStudio(container, opts = {}) {
       }
     }
   }
-  function renderContent(cam, photo, dofOn, S, cocScale, maxR, size) {
-    if (!dofOn) {
+  function renderContent(cam, photo, dofOn, S, cocScale, maxR, size, distOn) {
+    if (!dofOn && !distOn) {
       renderer.render(scene, cam);
     } else {
       dofPass.enabled = smoothPass.enabled = dofOn;
@@ -941,6 +1115,7 @@ export async function createLightingStudio(container, opts = {}) {
       if (dofOn) {
         for (const u of [dofPass.uniforms, smoothPass.uniforms]) {
           u.focus.value = S; u.cocScale.value = cocScale; u.near.value = camera.near; u.far.value = camera.far; u.maxR.value = maxR;
+          u.squeeze.value = anam() ? lens.squeeze : 1; u.blades.value = anam() ? 0 : lens.blades;
           u.texel.value.set(1 / size.x, 1 / size.y);
         }
         if (depthRT.width !== size.x || depthRT.height !== size.y) depthRT.setSize(size.x, size.y);
@@ -1398,7 +1573,7 @@ export async function createLightingStudio(container, opts = {}) {
   function snapshotInfo() {
     const c = getCamera(), f1 = (x) => (Math.round(x * 10) / 10).toString(), tt = (t) => (t >= 1 ? `${t}"` : `1/${Math.round(1 / t)}`);
     const sensor = { 36: 'FF', 24.89: 'S35', 23.5: 'APS-C', 17.3: 'MFT' }[c.sensorMm] || `${c.sensorMm} mm`;
-    const camera = `${f1(c.focalMm)} mm · ${sensor} · f/${f1(c.fstop)} · ${tt(c.shutter)} · ISO ${c.iso} · WB ${c.wb} K` +
+    const camera = `${f1(c.focalMm)} mm${c.lens === 'anamorphic' ? ` anamorphic ${c.squeeze}× (${c.coating} coating)` : ''} · ${sensor} · f/${f1(c.fstop)} · ${tt(c.shutter)} · ISO ${c.iso} · WB ${c.wb} K` +
       ` · ${f1(c.distance)} m · ${(Math.round(photoAspect * 100) / 100)}:1` + (c.dof.on ? ` · focus ${f1(c.dof.focusDist)} m (${f1(c.dof.near)}–${c.dof.far === Infinity ? '∞' : f1(c.dof.far)})` : ' · DoF off') +
       ` · meter ${c.meter >= 0 ? '+' : ''}${f1(c.meter)} EV`;
     const ls = listLights().map((l) => {
@@ -1509,7 +1684,7 @@ export async function createLightingStudio(container, opts = {}) {
     const toBlob = (c) => new Promise((res) => c.toBlob(res, 'image/png'));
     const grab = () => { const c = document.createElement('canvas'); c.width = width; c.height = h; c.getContext('2d').drawImage(canvas, 0, 0); return c; };
     // 1. colour
-    draw(camera, { handles: false });
+    draw(camera, { handles: false, lensFx: false });
     const color = await toBlob(grab());
     // 2. depth: render the depth texture, linearise and pack it on the GPU, read it back
     const bg = scene.background;
@@ -1575,7 +1750,7 @@ export async function createLightingStudio(container, opts = {}) {
       }
       // (shadow maps are not redrawn: a hidden sofa still shades the wall — right for a background plate)
       const shots = [];
-      for (const c of ['#000000', '#ffffff']) { scene.background = new THREE.Color(c); draw(camera, { handles: false }); shots.push(grab()); }
+      for (const c of ['#000000', '#ffffff']) { scene.background = new THREE.Color(c); draw(camera, { handles: false, lensFx: false }); shots.push(grab()); }
       const own = await depthMap();          // this layer's own depth (the others hidden / clipped)
       scene.background = bg; renderer.clippingPlanes = [];
       hidden.forEach((o) => { o.visible = true; });
@@ -1612,6 +1787,7 @@ export async function createLightingStudio(container, opts = {}) {
       lights: listLights().map(({ id, type, role, kelvin, color, intensity, cone, softness, size, shadow, position, target }) =>
         ({ id, type, role, kelvin, color, intensity, cone, softness, size, shadow, position, target })),
       camera: { position: c.position, target: c.target, focalMm: c.focalMm, sensorMm: c.sensorMm, aspect: photoAspect,
+        lens: lens.kind, squeeze: lens.squeeze, coating: lens.coating, blades: lens.blades, flare: { ...lens.flare }, distortion: lens.distortion,
         dof: { on: dof.on, fstop: dof.fstop, focus: dof.focus, focusDist: dof.focusDist, point: dof.point?.toArray() || null },
         iso: expo.iso, shutter: expo.shutter, wb: expo.wb },
       world: { ...world },
@@ -1625,7 +1801,8 @@ export async function createLightingStudio(container, opts = {}) {
       const c = st.camera;
       if (c.position) camera.position.fromArray(c.position);
       if (c.target) targets.camera.fromArray(c.target);
-      setCamera({ focalMm: c.focalMm, sensorMm: c.sensorMm, aspect: c.aspect, iso: c.iso, shutter: c.shutter, wb: c.wb });
+      setCamera({ sensorMm: c.sensorMm, lens: c.lens || 'spherical', squeeze: c.squeeze || 2, focalMm: c.focalMm, aspect: c.aspect, iso: c.iso, shutter: c.shutter, wb: c.wb,
+        coating: c.coating, blades: c.blades, flare: c.flare, distortion: c.distortion });
       if (c.dof) { Object.assign(dof, c.dof); dof.point = c.dof.point ? new THREE.Vector3().fromArray(c.dof.point) : null; }
       controls.update();
     }
